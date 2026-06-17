@@ -3,7 +3,7 @@
 
 **Ultima sessione:** 2026-06-17
 **Branch corrente:** `claude/zen-edison-riyzlr`
-**PR in corso:** da aprire per M1 (branch `claude/zen-edison-riyzlr`)
+**PR in corso:** PR #4 — M1 Auth + Core Models (`claude/zen-edison-riyzlr`)
 
 ---
 
@@ -133,4 +133,4 @@ M1 completata e pushata sul branch `claude/zen-edison-riyzlr`.
 |-----------|--------|-------------|
 | #1 | `claude/sharp-mayer-u2wdwk` | M0 — scaffold monorepo backend + frontend |
 | #2 | `fix/railway-frontend-port` | Fix nginx: porta dinamica Railway via `${PORT}` |
-| TBD | `claude/zen-edison-riyzlr` | M1 — Auth, User model, Room model, JWT, dev-login, route /auth /users /rooms |
+| #4 | `claude/zen-edison-riyzlr` | M1 — Auth, User model, Room model, JWT, dev-login, route /auth /users /rooms |
