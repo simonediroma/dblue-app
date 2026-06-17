@@ -29,10 +29,10 @@ Note UI-4:
 
 ### Prerequisiti (una-tantum, fuori da Claude Code)
 - [x] Creare repo GitHub e connettere Claude Code
-- [ ] Creare progetto su Railway → collegare il repo GitHub → aggiungere plugin MongoDB
-- [ ] Configurare Google OAuth su Google Cloud Console (redirect URI: URL pubblico Railway)
-- [ ] Nelle variabili d'ambiente Railway (servizio backend): `MONGODB_URI`, `JWT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `APP_URL`, `BACKEND_URL`, `NODE_ENV=production`
-- [ ] Nelle variabili d'ambiente Railway (servizio frontend): `VITE_API_URL` = URL pubblico del backend Railway
+- [x] Creare progetto su Railway → collegare il repo GitHub → aggiungere plugin MongoDB
+- [ ] Configurare Google OAuth su Google Cloud Console (redirect URI: URL pubblico Railway) — rimandato
+- [x] Nelle variabili d'ambiente Railway (servizio backend): `MONGODB_URI`, `JWT_SECRET`, `APP_URL`, `BACKEND_URL`, `NODE_ENV=production` (OAuth rimandato)
+- [x] Nelle variabili d'ambiente Railway (servizio frontend): `VITE_API_URL` = URL pubblico del backend Railway
 - [ ] Credenziali SMTP (opzionale — senza di esse le email vengono simulate in console)
 
 ---
@@ -97,10 +97,8 @@ Note UI-4:
 
 ## Blockers aperti
 
-- Credenziali Google OAuth (richiederle al gestore GCP aziendale)
-- Nome database MongoDB Atlas per staging
+- Credenziali Google OAuth (rimandato — da configurare quando pronto)
 - Credenziali SMTP (opzionale — in dev le email vengono loggate in console)
-- Railway: variabili d'ambiente backend da configurare (`MONGODB_URI` richiesto per avviare il server)
 
 ---
 
