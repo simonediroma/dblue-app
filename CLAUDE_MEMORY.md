@@ -116,7 +116,7 @@ Note UI-4:
 | PR-8 | UI-1 | Frontend setup, Auth, Login |
 | PR-9 | UI-2 | Status e colleghi reali |
 | PR-10 | UI-3 | Check-in, onboarding, teammates |
-| PR-11 | UI-4 | Stats, preferenze, WebSocket real-time |
+| PR-11 | UI-4 | Stats, preferenze, WebSocket real-time | ✅ merged (#13) |
 
 ---
 
@@ -150,4 +150,5 @@ Note UI-4:
 | #6 | `claude/keen-babbage-wgq96x` | M3 — Desk booking, waiting list FIFO, check-in |
 | #7 | `claude/zealous-turing-id3yqf` | M4 — WebSocket, Change Streams, replica set |
 | #8 | `claude/ecstatic-curie-og52av` | M5 — Stats API, RBAC middleware, requireRole centralizzato |
-| PR-8 | `claude/prossimo-task-vfcgsv` | UI-1 — Frontend setup, componenti POC, AuthContext, Login, ProtectedRoute |
+| #8 | `claude/prossimo-task-vfcgsv` | UI-1 — Frontend setup, componenti POC, AuthContext, Login, ProtectedRoute |
+| #13 | `claude/compassionate-cray-0fn6i5` | UI-4 — Stats, preferenze, WebSocket real-time |
