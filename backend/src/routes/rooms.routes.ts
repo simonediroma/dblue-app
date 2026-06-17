@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { requireAuth } from '../middleware/auth.middleware';
+import { requireRole } from '../middleware/rbac.middleware';
 import { Room, IRoom } from '../models/room.model';
 import { WorkingStatus } from '../models/working-status.model';
 import { IUser } from '../models/user.model';
@@ -23,24 +24,14 @@ router.get('/', requireAuth, async (req: Request, res: Response): Promise<void> 
   res.json(rooms);
 });
 
-router.post('/', requireAuth, async (req: Request, res: Response): Promise<void> => {
+router.post('/', requireAuth, requireRole('owner'), async (req: Request, res: Response): Promise<void> => {
   const user = req.user as IUser;
-  if (user.role !== 'owner') {
-    res.status(403).json({ error: 'Permesso negato' });
-    return;
-  }
   const { name, capacity, type } = req.body as Pick<IRoom, 'name' | 'capacity' | 'type'>;
   const room = await Room.create({ name, capacity, type, createdBy: user._id });
   res.status(201).json(room);
 });
 
-router.patch('/:id', requireAuth, async (req: Request, res: Response): Promise<void> => {
-  const user = req.user as IUser;
-  if (user.role !== 'owner') {
-    res.status(403).json({ error: 'Permesso negato' });
-    return;
-  }
-
+router.patch('/:id', requireAuth, requireRole('owner'), async (req: Request, res: Response): Promise<void> => {
   const { name, capacity, isActive } = req.body as Partial<Pick<IRoom, 'name' | 'capacity' | 'isActive'>>;
 
   if (isActive === false) {
@@ -72,12 +63,7 @@ router.patch('/:id', requireAuth, async (req: Request, res: Response): Promise<v
   res.json(updated);
 });
 
-router.delete('/:id', requireAuth, async (req: Request, res: Response): Promise<void> => {
-  const user = req.user as IUser;
-  if (user.role !== 'owner') {
-    res.status(403).json({ error: 'Permesso negato' });
-    return;
-  }
+router.delete('/:id', requireAuth, requireRole('owner'), async (req: Request, res: Response): Promise<void> => {
   const room = await Room.findById(req.params.id).lean();
   if (room) {
     const todayStr = new Date().toISOString().slice(0, 10);
