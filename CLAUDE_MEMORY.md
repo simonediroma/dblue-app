@@ -3,19 +3,24 @@
 
 **Ultima sessione:** 2026-06-17
 **Branch corrente:** `claude/prossimo-task-vfcgsv`
-**PR in corso:** UI-1 Setup Frontend + Auth (`claude/prossimo-task-vfcgsv`)
+**PR in corso:** #10 — UI-1+UI-2 Frontend Setup + Auth + Working Status reale
 
 ---
 
 ## Prossima sessione — inizia da qui
 
-UI-1 completata e pushata su `claude/prossimo-task-vfcgsv`. Frontend ha zero errori TypeScript.
+UI-2 completata e pushata su `claude/prossimo-task-vfcgsv` (PR #10 aggiornata).
+`npm run lint` → zero errori TypeScript.
 
-1. Aprire PR per UI-1 dal branch `claude/prossimo-task-vfcgsv` → `main` (titolo: "UI-1 — Setup Frontend + Auth")
-2. Aprire PR per M6 dal branch `claude/dreamy-cori-gvl174` → `main` (se non già aperta)
-3. Procedere con UI-2 → `prompts/UI-2_working_status_data.md`
+1. Procedere con UI-3 → `prompts/UI-3_checkin_onboarding_teammates.md`
 
-Nota: il frontend usa ancora dati mock (INITIAL_DAYS hardcoded in App.tsx). UI-2 sostituirà con dati reali dall'API.
+Nota architettura UI-2:
+- `usePresence([CUR_MONTH_STR, NEXT_MONTH_STR])` carica dati reali dal backend; mesi calcolati dinamicamente da `new Date()`
+- `useColleagues()` carica utenti reali da `/users` con hashColor deterministico
+- Status changes persistiti fire-and-forget tramite hook `updateStatus`/`bulkUpdateStatus`/`persistOffTime`
+- Historical month view: carica dal backend on-demand via `loadHistoricalMonth(monthStr)`
+- Backend normalizzazione: status lowercase → uppercase in `normalizeDayFromApi` (api.ts)
+- `upsertStatus` e `updateOffTime` ritornano `IWorkingStatus` (no bookedCount/totalCapacity/colleagueAvatars) — il hook fa merge con i campi calcolati esistenti nello stato locale
 
 ---
 
@@ -76,8 +81,9 @@ Nota: il frontend usa ancora dati mock (INITIAL_DAYS hardcoded in App.tsx). UI-2
   Copia presence---office-planner/ in frontend/src/, AuthContext, Login page, dev-login form, ProtectedRoute
   Branch: `claude/prossimo-task-vfcgsv` — npm run lint zero errori
 
-- [ ] **UI-2** — Working Status + Dati reali → `prompts/UI-2_working_status_data.md`
+- [x] **UI-2** — Working Status + Dati reali → `prompts/UI-2_working_status_data.md`
   api.ts esteso, usePresence con optimistic updates + rollback, useColleagues con hash colori
+  Branch: `claude/prossimo-task-vfcgsv` — npm run lint zero errori
 
 - [ ] **UI-3** — Check-in + Onboarding + Teammates → `prompts/UI-3_checkin_onboarding_teammates.md`
   checkIn API, RoomSelection con room reali, waiting list server-driven, salvataggio teammates
