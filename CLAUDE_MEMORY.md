@@ -2,27 +2,26 @@
 > Gitignored. Aggiornato da Claude a fine sessione.
 
 **Ultima sessione:** 2026-06-17
-**Branch corrente:** *(aggiornato da Claude a inizio sessione)*
-**PR in corso:** nessuna
+**Branch corrente:** `fix/railway-frontend-port`
+**PR in corso:** PR #1 (M0 scaffold), PR #2 (fix nginx port)
 
 ---
 
 ## Prossima sessione — inizia da qui
 
-Il backend e il frontend sono completamente pianificati e i prompt pronti.
-**Partire da M0**: crea la struttura del repo, poi procedi in sequenza con M1.
+M0 completata e pushata (PR #1). Fix Railway healthcheck pushato (PR #2).
+**Partire da M1**: prima assicurarsi che PR #2 sia mergiata e Railway sia verde, poi procedere.
 
-1. Connetti Claude Code al repo GitHub
-2. Esegui M0 → `prompts/M0_scaffold.md`
-3. Configura Railway: collega il repo, aggiungi plugin MongoDB, imposta le variabili d'ambiente
-4. Esegui M1 → `prompts/M1_auth_core_models.md`
+1. Verificare che PR #2 (`fix/railway-frontend-port`) sia mergiata e Railway frontend sia healthy
+2. Configurare Railway: variabili d'ambiente backend (`MONGODB_URI`, `JWT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `APP_URL`, `BACKEND_URL`, `NODE_ENV=production`)
+3. Eseguire M1 → `prompts/M1_auth_core_models.md`
 
 ---
 
 ## Sequenza completa di sviluppo
 
 ### Prerequisiti (una-tantum, fuori da Claude Code)
-- [ ] Creare repo GitHub e connettere Claude Code
+- [x] Creare repo GitHub e connettere Claude Code
 - [ ] Creare progetto su Railway → collegare il repo GitHub → aggiungere plugin MongoDB
 - [ ] Configurare Google OAuth su Google Cloud Console (redirect URI: URL pubblico Railway)
 - [ ] Nelle variabili d'ambiente Railway (servizio backend): `MONGODB_URI`, `JWT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `APP_URL`, `BACKEND_URL`, `NODE_ENV=production`
@@ -33,9 +32,12 @@ Il backend e il frontend sono completamente pianificati e i prompt pronti.
 
 ### Bootstrap (prima sessione in assoluto)
 
-- [ ] **M0** — Scaffold monorepo → `prompts/M0_scaffold.md`
+- [x] **M0** — Scaffold monorepo → `prompts/M0_scaffold.md`
   Crea cartelle, package.json, tsconfig, Dockerfile, railway.toml, placeholder src/.
-  Poi: git push → Railway fa il primo build automatico.
+  Pushato su PR #1 (`claude/sharp-mayer-u2wdwk`).
+
+- [x] **Fix Railway frontend port** — PR #2 (`fix/railway-frontend-port`)
+  nginx hardcodato su porta 80 → usa `${PORT}` via envsubst template (`/etc/nginx/templates/`).
 
 ---
 
@@ -82,6 +84,7 @@ Il backend e il frontend sono completamente pianificati e i prompt pronti.
 - Credenziali Google OAuth (richiederle al gestore GCP aziendale)
 - Nome database MongoDB Atlas per staging
 - Credenziali SMTP (opzionale — in dev le email vengono loggate in console)
+- Railway: variabili d'ambiente backend da configurare prima di M1
 
 ---
 
@@ -108,7 +111,6 @@ Il backend e il frontend sono completamente pianificati e i prompt pronti.
 | File | Scopo |
 |------|-------|
 | `DEV_SETUP_GUIDE.md` | Guida completa setup ambiente + deploy Railway |
-| `setup.sh` | Script bash scaffolding monorepo |
 | `docs/architecture.md` | Stack tecnico, schema I/O, env vars, flusso OAuth, WS pattern |
 | `docs/lessons.md` | Pattern consolidati, errori da evitare, decisioni prese |
 | `prompts/M1_auth_core_models.md` | Prompt Claude Code — backend M1 |
@@ -126,4 +128,7 @@ Il backend e il frontend sono completamente pianificati e i prompt pronti.
 
 ## PR completate
 
-nessuna
+| PR GitHub | Branch | Descrizione |
+|-----------|--------|-------------|
+| #1 | `claude/sharp-mayer-u2wdwk` | M0 — scaffold monorepo backend + frontend |
+| #2 | `fix/railway-frontend-port` | Fix nginx: porta dinamica Railway via `${PORT}` |
