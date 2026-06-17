@@ -53,7 +53,7 @@ router.get('/me', requireAuth, (req: Request, res: Response) => {
 });
 
 router.post('/dev-login', async (req: Request, res: Response): Promise<void> => {
-  if (process.env.NODE_ENV === 'production') {
+  if (!process.env.ENABLE_DEV_LOGIN) {
     res.status(404).end();
     return;
   }
