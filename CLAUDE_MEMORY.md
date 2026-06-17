@@ -2,19 +2,18 @@
 > Gitignored. Aggiornato da Claude a fine sessione.
 
 **Ultima sessione:** 2026-06-17
-**Branch corrente:** `claude/dreamy-wozniak-692bs4`
-**PR in corso:** M2 Working Status CRUD (`claude/dreamy-wozniak-692bs4`)
+**Branch corrente:** `claude/keen-babbage-wgq96x`
+**PR in corso:** M3 Desk Booking + Waiting List FIFO (`claude/keen-babbage-wgq96x`)
 
 ---
 
 ## Prossima sessione — inizia da qui
 
-M2 completata e pushata sul branch `claude/dreamy-wozniak-692bs4`.
-**Partire da M3**: aprire PR per M2 se non già fatto, poi procedere.
+M3 completata e pushata sul branch `claude/keen-babbage-wgq96x`.
+**Partire da M4**: aprire PR per M3 se non già fatto, poi procedere.
 
-1. Aprire PR per M2 dal branch `claude/dreamy-wozniak-692bs4` → `main`
-2. Configurare Railway se non ancora fatto: variabili d'ambiente backend (`MONGODB_URI`, `JWT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `APP_URL`, `BACKEND_URL`, `NODE_ENV=production`)
-3. Eseguire M3 → `prompts/M3_desk_booking_waitinglist.md`
+1. Aprire PR per M3 dal branch `claude/keen-babbage-wgq96x` → `main`
+2. Eseguire M4 → `prompts/M4_websocket_changestreams.md`
 
 ---
 
@@ -51,8 +50,9 @@ M2 completata e pushata sul branch `claude/dreamy-wozniak-692bs4`.
   Modello WorkingStatus, upsertStatus, bulkUpsert, offTime, retrofit, cron auto-confirm 23:59
   Branch: `claude/dreamy-wozniak-692bs4` — build TypeScript zero errori
 
-- [ ] **M3** — Desk Booking + Waiting List FIFO → `prompts/M3_desk_booking_waitinglist.md`
+- [x] **M3** — Desk Booking + Waiting List FIFO → `prompts/M3_desk_booking_waitinglist.md`
   capacity.service, FIFO promozione, endpoint /presence/:date/checkin, fix TODO rooms
+  Branch: `claude/keen-babbage-wgq96x` — build TypeScript zero errori
 
 - [ ] **M4** — WebSocket + MongoDB Change Streams → `prompts/M4_websocket_changestreams.md`
   WS server con room pattern date→Set, Change Stream su WorkingStatus, heartbeat, replica set
