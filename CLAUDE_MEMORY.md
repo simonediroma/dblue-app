@@ -2,18 +2,18 @@
 > Gitignored. Aggiornato da Claude a fine sessione.
 
 **Ultima sessione:** 2026-06-17
-**Branch corrente:** `claude/keen-babbage-wgq96x`
-**PR in corso:** M3 Desk Booking + Waiting List FIFO (`claude/keen-babbage-wgq96x`)
+**Branch corrente:** `claude/zealous-turing-id3yqf`
+**PR in corso:** M4 WebSocket + Change Streams (`claude/zealous-turing-id3yqf`)
 
 ---
 
 ## Prossima sessione — inizia da qui
 
-M3 completata e pushata sul branch `claude/keen-babbage-wgq96x`.
-**Partire da M4**: aprire PR per M3 se non già fatto, poi procedere.
+M4 completata e pushata sul branch `claude/zealous-turing-id3yqf`.
+**Partire da M5**: aprire PR per M4 se non già fatto, poi procedere.
 
-1. Aprire PR per M3 dal branch `claude/keen-babbage-wgq96x` → `main`
-2. Eseguire M4 → `prompts/M4_websocket_changestreams.md`
+1. Aprire PR per M4 dal branch `claude/zealous-turing-id3yqf` → `main`
+2. Eseguire M5 → `prompts/M5_stats_presencedays_rbac.md`
 
 ---
 
@@ -54,8 +54,9 @@ M3 completata e pushata sul branch `claude/keen-babbage-wgq96x`.
   capacity.service, FIFO promozione, endpoint /presence/:date/checkin, fix TODO rooms
   Branch: `claude/keen-babbage-wgq96x` — build TypeScript zero errori
 
-- [ ] **M4** — WebSocket + MongoDB Change Streams → `prompts/M4_websocket_changestreams.md`
-  WS server con room pattern date→Set, Change Stream su WorkingStatus, heartbeat, replica set
+- [x] **M4** — WebSocket + MongoDB Change Streams → `prompts/M4_websocket_changestreams.md`
+  WS server con room pattern date→Set, Change Stream su WorkingStatus, heartbeat, replica set, docker-compose con rs0
+  Branch: `claude/zealous-turing-id3yqf` — build TypeScript zero errori
 
 - [ ] **M5** — Stats API + Presence Days + RBAC → `prompts/M5_stats_presencedays_rbac.md`
   stats.service mensili/annuali/area, requireRole middleware centralizzato, RBAC colleghi
@@ -135,3 +136,5 @@ M3 completata e pushata sul branch `claude/keen-babbage-wgq96x`.
 | #1 | `claude/sharp-mayer-u2wdwk` | M0 — scaffold monorepo backend + frontend |
 | #2 | `fix/railway-frontend-port` | Fix nginx: porta dinamica Railway via `${PORT}` |
 | #4 | `claude/zen-edison-riyzlr` | M1 — Auth, User model, Room model, JWT, dev-login, route /auth /users /rooms |
+| #6 | `claude/keen-babbage-wgq96x` | M3 — Desk booking, waiting list FIFO, check-in |
+| #7 | `claude/zealous-turing-id3yqf` | M4 — WebSocket, Change Streams, replica set |

@@ -26,7 +26,9 @@ Client verso API esterne (DB, cloud) vanno istanziati una volta sola e riusati. 
 Una query per elemento in un loop è sempre un bug di performance. Usare `find({ _id: { $in: ids } })` per batch lookup.
 
 **Change Streams richiedono replica set**
-MongoDB Change Streams non funzionano su istanze standalone. Il plugin MongoDB di Railway non ha il replica set abilitato — usare MongoDB Atlas (anche M0 free supporta Change Streams). Copiare la connection string Atlas come variabile `MONGODB_URL` nel servizio backend Railway.
+MongoDB Change Streams non funzionano su istanze standalone. Il plugin MongoDB di Railway non ha il replica set abilitato — usare MongoDB Atlas (anche M0 free supporta Change Streams). Copiare la connection string Atlas come variabile `MONGODB_URI` nel servizio backend Railway.
+
+In locale con Docker, avviare MongoDB con `--replSet rs0` e inizializzare il replica set con un servizio one-shot (`mongo-init` in docker-compose.yml). Attendere ~10 secondi dopo `docker compose up -d` prima di avviare il backend. URI locale: `mongodb://localhost:27017/presence?replicaSet=rs0`.
 
 **Indici su colonne filtrate frequentemente**
 Qualsiasi campo usato in query `find()` va indicizzato. Definire gli indici nello schema Mongoose, non aggiungerli manualmente.
