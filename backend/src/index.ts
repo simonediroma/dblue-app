@@ -5,6 +5,9 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import mongoose from 'mongoose';
+import authRoutes from './routes/auth.routes';
+import userRoutes from './routes/users.routes';
+import roomRoutes from './routes/rooms.routes';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -16,6 +19,10 @@ app.use(cookieParser());
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+app.use('/auth', authRoutes);
+app.use('/users', userRoutes);
+app.use('/rooms', roomRoutes);
 
 async function bootstrap() {
   const uri = process.env.MONGODB_URI;
