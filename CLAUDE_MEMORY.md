@@ -137,3 +137,4 @@ M4 completata e pushata sul branch `claude/zealous-turing-id3yqf`.
 | #2 | `fix/railway-frontend-port` | Fix nginx: porta dinamica Railway via `${PORT}` |
 | #4 | `claude/zen-edison-riyzlr` | M1 — Auth, User model, Room model, JWT, dev-login, route /auth /users /rooms |
 | #6 | `claude/keen-babbage-wgq96x` | M3 — Desk booking, waiting list FIFO, check-in |
+| #7 | `claude/zealous-turing-id3yqf` | M4 — WebSocket, Change Streams, replica set |
