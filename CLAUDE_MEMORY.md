@@ -2,18 +2,20 @@
 > Gitignored. Aggiornato da Claude a fine sessione.
 
 **Ultima sessione:** 2026-06-17
-**Branch corrente:** `claude/dreamy-cori-gvl174`
-**PR in corso:** M6 Email + Retrofit + Permesso ore (`claude/dreamy-cori-gvl174`)
+**Branch corrente:** `claude/prossimo-task-vfcgsv`
+**PR in corso:** UI-1 Setup Frontend + Auth (`claude/prossimo-task-vfcgsv`)
 
 ---
 
 ## Prossima sessione — inizia da qui
 
-M6 completata e pushata sul branch `claude/dreamy-cori-gvl174`. Backend FEATURE-COMPLETE.
-**Partire da UI-1**: aprire PR per M6 se non già fatto, poi procedere col frontend.
+UI-1 completata e pushata su `claude/prossimo-task-vfcgsv`. Frontend ha zero errori TypeScript.
 
-1. Aprire PR per M6 dal branch `claude/dreamy-cori-gvl174` → `main`
-2. Eseguire UI-1 → `prompts/UI-1_setup_auth.md`
+1. Aprire PR per UI-1 dal branch `claude/prossimo-task-vfcgsv` → `main` (titolo: "UI-1 — Setup Frontend + Auth")
+2. Aprire PR per M6 dal branch `claude/dreamy-cori-gvl174` → `main` (se non già aperta)
+3. Procedere con UI-2 → `prompts/UI-2_working_status_data.md`
+
+Nota: il frontend usa ancora dati mock (INITIAL_DAYS hardcoded in App.tsx). UI-2 sostituirà con dati reali dall'API.
 
 ---
 
@@ -70,8 +72,9 @@ M6 completata e pushata sul branch `claude/dreamy-cori-gvl174`. Backend FEATURE-
 
 ### Frontend — UI-1 → UI-4 (dopo M1-M6 completati, in sequenza)
 
-- [ ] **UI-1** — Setup + Copia POC + Auth → `prompts/UI-1_setup_auth.md`
+- [x] **UI-1** — Setup + Copia POC + Auth → `prompts/UI-1_setup_auth.md`
   Copia presence---office-planner/ in frontend/src/, AuthContext, Login page, dev-login form, ProtectedRoute
+  Branch: `claude/prossimo-task-vfcgsv` — npm run lint zero errori
 
 - [ ] **UI-2** — Working Status + Dati reali → `prompts/UI-2_working_status_data.md`
   api.ts esteso, usePresence con optimistic updates + rollback, useColleagues con hash colori
@@ -141,3 +144,4 @@ M6 completata e pushata sul branch `claude/dreamy-cori-gvl174`. Backend FEATURE-
 | #6 | `claude/keen-babbage-wgq96x` | M3 — Desk booking, waiting list FIFO, check-in |
 | #7 | `claude/zealous-turing-id3yqf` | M4 — WebSocket, Change Streams, replica set |
 | #8 | `claude/ecstatic-curie-og52av` | M5 — Stats API, RBAC middleware, requireRole centralizzato |
+| PR-8 | `claude/prossimo-task-vfcgsv` | UI-1 — Frontend setup, componenti POC, AuthContext, Login, ProtectedRoute |
