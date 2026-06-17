@@ -2,26 +2,21 @@
 > Gitignored. Aggiornato da Claude a fine sessione.
 
 **Ultima sessione:** 2026-06-17
-**Branch corrente:** `claude/intelligent-brown-7sbqvm`
-**PR in corso:** #14 — Fix teammates + deploy setup (`claude/intelligent-brown-7sbqvm`)
+**Branch corrente:** nuovo branch (da creare per prossimo task)
+**PR in corso:** nessuna — PR #14 mergiata ✅
 
 ---
 
 ## Prossima sessione — inizia da qui
 
-UI-4 completata e pushata su `claude/compassionate-cray-0fn6i5`. Frontend build zero errori TypeScript.
+PR #14 mergiata (fix teammates reali + test suite backend). Iniziare nuovo branch per il prossimo task.
 
-1. Aprire PR per UI-4 dal branch `claude/compassionate-cray-0fn6i5` → `main` (titolo: "UI-4 — Stats, preferenze, WebSocket real-time")
-2. Il frontend wiring è chiuso (UI-1 → UI-4 completate). Prossimi step: deploy Railway + test E2E.
+**Prossimi step possibili:**
+1. Debugging app in produzione su Railway
+2. E2E tests con Playwright (opzione B — OAuth non ancora configurato, limita login reale)
+3. Google OAuth (rimandato — da configurare quando pronto)
 
-Note UI-4:
-- `types.ts`: aggiunte `RoomOccupancy`, `PresenceUpdate`; `DayPresence` estesa con `rooms?` e `extras?`
-- `api.ts`: aggiunte `MonthlyStats`, `AnnualStats`, `getStatsMonthly` (→ /stats/monthly), `getStatsAnnual` (→ /stats/annual)
-- `hooks/useWebSocket.ts`: nuovo hook con reconnect exponential backoff (1s→8s), subscribe to today's date
-- `components/Stats.tsx`: dati reali da API (inOfficeDays, targetDays, chartData, yearlyData, unbooking); dropdown mesi dinamico e tutto cliccabile; nota area per director/owner nella yearly view
-- `components/Profile.tsx`: `officeAvailable` toggle inizializzato da `user.preferences.notifications.waitingListPromotion`, persiste sul backend con rollback
-- `App.tsx`: `handleSetThemeMode` persiste tema sul backend; `handleToggleSimplifiedView` persiste reducedMotion; `useEffect([user])` carica preferenze all'avvio; `useWebSocket` integrato per aggiornare bookedCount/rooms in real-time
-- Nota: Profile teammates usa ancora COLLEAGUES hardcoded → da fixare in task futuro
+**Test backend:** scritti ma non eseguibili in ambiente remoto (MongoDB CDN bloccato). Per eseguire localmente: `MONGODB_URI_TEST=<atlas-uri> npm test` nella cartella `backend/`.
 
 ---
 
