@@ -910,7 +910,7 @@ export default function App() {
  <Organisation days={processedDays} activeMonth={activeMonth}/>
  </motion.div>
  ) : activeTab === 'plan' && !showOnboarding ? (
- <motion.div key="plan" initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} className="flex flex-col">
+ <motion.div key="plan" data-testid="plan-page" initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} className="flex flex-col">
  <div ref={stickyHeaderRef} className="sticky top-[52px] sm:top-[56px] z-40 bg-surface -mx-4 px-4 sm:-mx-6 sm:px-6 pt-6 sm:pt-12 pb-2 border-b border-outline-variant/10 transition-all flex flex-col">
  <section className="mb-2 sm:mb-4 text-center">
  <h2 className="font-headline text-2xl sm:text-4xl tracking-tight leading-tight">
@@ -1150,15 +1150,19 @@ export default function App() {
  </div>
  </motion.div>
  ) : activeTab === 'stats' && !showOnboarding ? (
+ <div data-testid="stats-page">
  <Stats days={processedDays} currentMonth={activeMonth} projectTeammates={projectTeammates} onAddTeammates={() => setActiveTab('profile')}
  />
+ </div>
  ) : !showOnboarding ? (
+ <div data-testid="profile-page">
  <Profile themeMode={themeMode} onSetThemeMode={handleSetThemeMode} isSimplifiedView={isSimplifiedView} onToggleSimplifiedView={handleToggleSimplifiedView}
  projectTeammates={projectTeammates}
  onUpdateProjectTeammates={handleUpdateProjectTeammates}
  allColleagues={colleagues}
  onLogout={logout}
  />
+ </div>
  ) : null}
  </AnimatePresence>
 
@@ -1265,7 +1269,7 @@ export default function App() {
  
  {/* Responsive Container */}
  <div className="fixed inset-0 z-[101] flex items-end sm:items-center justify-center p-0 sm:p-6 pointer-events-none">
- <motion.div initial={{y: '100%', opacity: 0}} animate={{y: 0, opacity: 1}} exit={{y: '100%', opacity: 0}} transition={{type: 'spring', damping: 25, stiffness: 300}} className="w-full sm:max-w-md bg-surface-container-lowest sm:rounded-[32px] rounded-t-[32px] p-8 sm:p-10 shadow-2xl pointer-events-auto border-t sm:border border-outline-variant/20 flex flex-col items-center text-center relative">
+ <motion.div data-testid="last-minute-warning" initial={{y: '100%', opacity: 0}} animate={{y: 0, opacity: 1}} exit={{y: '100%', opacity: 0}} transition={{type: 'spring', damping: 25, stiffness: 300}} className="w-full sm:max-w-md bg-surface-container-lowest sm:rounded-[32px] rounded-t-[32px] p-8 sm:p-10 shadow-2xl pointer-events-auto border-t sm:border border-outline-variant/20 flex flex-col items-center text-center relative">
  {/* Close Button */}
  <button onClick={() => setLastMinuteWarning(null)}
  className="absolute top-6 right-6 p-2 hover:bg-surface-container rounded-full transition-colors text-on-surface-variant"
@@ -1336,7 +1340,7 @@ export default function App() {
  ![WorkStatus.PENDING, WorkStatus.WAITING_LIST].includes(days.find(d => d.date === TODAY)!.status) &&
  !(days.find(d => d.date === TODAY)?.isCheckedIn && fabCheckStatus === 'idle') && (
  <motion.div initial={{opacity: 0, y: 100}} animate={{opacity: 1, y: 0}} exit={{opacity: 0, y: 100, transition: { duration: 0.3, ease: "easeInOut" }}} transition={{duration: 0.4, ease: "easeOut"}} className="fixed bottom-24 right-6 z-50 pointer-events-auto">
- <motion.button onClick={(e) => { e.stopPropagation(); handleFabCheckIn(); }}
+ <motion.button data-testid="fab-checkin" onClick={(e) => { e.stopPropagation(); handleFabCheckIn(); }}
  className="bg-primary text-white text-[11px] font-bold h-10 sm:h-12 px-6 rounded-full shadow-2xl hover:opacity-90 active:scale-95 transition-all outline-none flex items-center justify-center min-w-[3.5rem] overflow-hidden"
  style={{
  boxShadow: themeMode === 'dark' ? '0 10px 25px -5px rgba(0, 0, 0, 0.5)' : '0 10px 25px -5px rgba(54, 169, 194, 0.3)'

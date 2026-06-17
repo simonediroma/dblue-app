@@ -37,7 +37,7 @@ export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
  selectedColleagues.some(c => c.initials === Colleague.initials && c.name === Colleague.name);
 
  return (
- <div className="fixed inset-0 z-[500] bg-surface flex flex-col font-sans overflow-hidden">
+ <div data-testid="onboarding" className="fixed inset-0 z-[500] bg-surface flex flex-col font-sans overflow-hidden">
  <AnimatePresence mode="wait">
  {step === 1 ? (
  <motion.div key="step1" initial={{opacity: 0, y: 20}} animate={{opacity: 1, y: 0}} exit={{opacity: 0, scale: 0.95}} className="flex-grow flex flex-col items-center justify-center p-8 max-w-lg mx-auto text-center">

@@ -104,7 +104,7 @@ export default function DayCard({ day, onClick, onDoubleClick, onCheckIn, isSimp
 
  if (day.isHighlighted) {
  return (
- <div ref={containerRef} className={`w-full relative group rounded-[24px] sm:rounded-[28px] overflow-hidden dynamic-border-card mb-2 sm:mb-4 ${marginClass} ${isClosed ? 'opacity-40 pointer-events-none' : 'cursor-pointer'} animate-card-entrance ${isVisible ? 'is-visible' : ''} ${shouldWillChange ? 'will-change' : ''}`} style={{...cardStyle, '--angle-start-delay': `${cardStartTime - 100}ms` } as any} onClick={onClick} onDoubleClick={(!isClosed && !isOfficeClosed) ? onDoubleClick : undefined}>
+ <div data-testid="day-card" ref={containerRef} className={`w-full relative group rounded-[24px] sm:rounded-[28px] overflow-hidden dynamic-border-card mb-2 sm:mb-4 ${marginClass} ${isClosed ? 'opacity-40 pointer-events-none' : 'cursor-pointer'} animate-card-entrance ${isVisible ? 'is-visible' : ''} ${shouldWillChange ? 'will-change' : ''}`} style={{...cardStyle, '--angle-start-delay': `${cardStartTime - 100}ms` } as any} onClick={onClick} onDoubleClick={(!isClosed && !isOfficeClosed) ? onDoubleClick : undefined}>
  {showWeekSeparator && (
  <div className="absolute -top-7 sm:-top-8 left-1 right-0 flex items-center gap-3 z-20 pointer-events-none">
  <span className="font-sans text-[10px] sm:text-[11px] font-bold text-[#AEBECF] tracking-wider uppercase">New week</span>
@@ -268,7 +268,7 @@ export default function DayCard({ day, onClick, onDoubleClick, onCheckIn, isSimp
  }
 
  return (
- <div ref={containerRef} className={`bg-surface-container-lowest rounded-xl sm:rounded-2xl p-3 sm:p-4 flex flex-col justify-between h-28 sm:h-36 shadow-ambient hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 border border-transparent hover:border-outline-variant/30 relative ${marginClass} ${isClosed ? 'opacity-40 pointer-events-none' : 'cursor-pointer'} animate-card-entrance ${isVisible ? 'is-visible' : ''} ${shouldWillChange ? 'will-change' : ''}`} style={{...cardStyle, animationDelay: `${cardStartTime}ms`}} onClick={onClick} onDoubleClick={(!isClosed && !isOfficeClosed) ? onDoubleClick : undefined}>
+ <div data-testid="day-card" ref={containerRef} className={`bg-surface-container-lowest rounded-xl sm:rounded-2xl p-3 sm:p-4 flex flex-col justify-between h-28 sm:h-36 shadow-ambient hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 border border-transparent hover:border-outline-variant/30 relative ${marginClass} ${isClosed ? 'opacity-40 pointer-events-none' : 'cursor-pointer'} animate-card-entrance ${isVisible ? 'is-visible' : ''} ${shouldWillChange ? 'will-change' : ''}`} style={{...cardStyle, animationDelay: `${cardStartTime}ms`}} onClick={onClick} onDoubleClick={(!isClosed && !isOfficeClosed) ? onDoubleClick : undefined}>
  {showWeekSeparator && (
  <div className="absolute -top-6 left-1 right-0 flex items-center gap-3 z-0 pointer-events-none">
  <span className="font-sans text-[10px] sm:text-[11px] font-bold text-[#AEBECF] tracking-wider uppercase shrink-0">New week</span>

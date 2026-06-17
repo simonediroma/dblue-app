@@ -38,7 +38,7 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-surface px-4">
+    <div data-testid="login-page" className="min-h-screen flex flex-col items-center justify-center bg-surface px-4">
       <div className="w-full max-w-sm flex flex-col items-center gap-8">
         <div className="flex flex-col items-center gap-2">
           <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center">
