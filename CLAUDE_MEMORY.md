@@ -2,19 +2,25 @@
 > Gitignored. Aggiornato da Claude a fine sessione.
 
 **Ultima sessione:** 2026-06-17
-**Branch corrente:** `claude/zealous-noether-cu78zm`
-**PR in corso:** UI-2 Working Status + Dati reali (`claude/zealous-noether-cu78zm`)
+**Branch corrente:** `claude/happy-curie-kjytk0`
+**PR in corso:** UI-3 Check-in + Onboarding + Teammates (`claude/happy-curie-kjytk0`)
 
 ---
 
 ## Prossima sessione — inizia da qui
 
-UI-2 completata e pushata su `claude/zealous-noether-cu78zm`. Frontend ha zero errori TypeScript.
+UI-3 completata e pushata su `claude/happy-curie-kjytk0`. Frontend ha zero errori TypeScript.
 
-1. Aprire PR per UI-2 dal branch `claude/zealous-noether-cu78zm` → `main` (titolo: "UI-2 — Working Status + Dati reali")
-2. Procedere con UI-3 → `prompts/UI-3_checkin_onboarding_teammates.md`
+1. Aprire PR per UI-3 dal branch `claude/happy-curie-kjytk0` → `main` (titolo: "UI-3 — Check-in + Onboarding + Teammates")
+2. Procedere con UI-4 → `prompts/UI-4_stats_profile_websocket.md`
 
-Nota: INITIAL_DAYS rimosso, ora App.tsx usa `usePresence([currentMonth, nextMonth])`. Colleghi da API via `useColleagues()`. Mesi dropdown dinamici basati sulla data reale.
+Note UI-3:
+- `api.ts`: aggiunti `checkIn`, `getRooms`, interfaccia `Room`
+- `AuthContext`: aggiunto `refreshUser` per aggiornare user dopo onboarding
+- `useColleagues`: esportato `mapUserToColleague` per riuso in App.tsx
+- `RoomSelection`: ora accetta `rooms: Room[]` reali dall'API invece di lista hardcoded
+- `App.tsx`: check-in Remote/In-Office chiama l'API con rollback; onboarding salva teammates sul backend; Profile teammate aggiornamento con rollback; double-click delega al server (IN_OFFICE→backend decide); rooms caricate al mount; teammates caricati al mount se onboarding completato
+- Nota: Profile usa ancora COLLEAGUES hardcoded per selezione teammates (IDs non reali) → da fixare in UI-4 con useColleagues() reale
 
 ---
 
@@ -79,7 +85,7 @@ Nota: INITIAL_DAYS rimosso, ora App.tsx usa `usePresence([currentMonth, nextMont
   api.ts esteso, usePresence con optimistic updates + rollback, useColleagues con hash colori
   Branch: `claude/zealous-noether-cu78zm` — npm run lint zero errori
 
-- [ ] **UI-3** — Check-in + Onboarding + Teammates → `prompts/UI-3_checkin_onboarding_teammates.md`
+- [x] **UI-3** — Check-in + Onboarding + Teammates → `prompts/UI-3_checkin_onboarding_teammates.md`
   checkIn API, RoomSelection con room reali, waiting list server-driven, salvataggio teammates
 
 - [ ] **UI-4** — Stats + Profile + WebSocket → `prompts/UI-4_stats_profile_websocket.md`

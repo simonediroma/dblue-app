@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getUsers } from '../services/api';
+import type { User } from '../types/api';
 import type { Colleague } from '../constants/colleagues';
 
 const colors = [
@@ -20,21 +21,23 @@ function hashColor(id: string): string {
   return colors[Math.floor(Math.abs(hashString(id)) % colors.length)];
 }
 
+export function mapUserToColleague(u: User): Colleague {
+  const parts = u.name.split(' ');
+  return {
+    id: u.id,
+    name: parts[0],
+    surname: parts.slice(1).join(' '),
+    initials: parts.map((w: string) => w[0]).join('').toUpperCase().slice(0, 2),
+    color: hashColor(u.id),
+  };
+}
+
 export function useColleagues(): Colleague[] {
   const [colleagues, setColleagues] = useState<Colleague[]>([]);
 
   useEffect(() => {
     getUsers().then(users => {
-      setColleagues(users.map(u => {
-        const parts = u.name.split(' ');
-        return {
-          id: u.id,
-          name: parts[0],
-          surname: parts.slice(1).join(' '),
-          initials: parts.map((w: string) => w[0]).join('').toUpperCase().slice(0, 2),
-          color: hashColor(u.id),
-        };
-      }));
+      setColleagues(users.map(mapUserToColleague));
     }).catch(() => {});
   }, []);
 

@@ -1,6 +1,13 @@
 import type { User } from '../types/api';
 import type { DayPresence } from '../types';
 
+export interface Room {
+  id: string;
+  name: string;
+  capacity: number;
+  type: 'open_space' | 'lab' | 'admin' | 'management';
+}
+
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -76,6 +83,17 @@ export function bulkUpsertStatus(updates: Array<{
     method: 'POST',
     body: JSON.stringify({ updates }),
   });
+}
+
+export function checkIn(date: string, room?: string, isUsingDesk?: boolean): Promise<DayPresence> {
+  return request<DayPresence>(`/presence/${date}/checkin`, {
+    method: 'POST',
+    body: JSON.stringify({ room, isUsingDesk }),
+  });
+}
+
+export function getRooms(): Promise<Room[]> {
+  return request<Room[]>('/rooms');
 }
 
 export function updateOffTime(date: string, offTime: { type: string; hours?: number } | null): Promise<DayPresence> {
