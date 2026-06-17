@@ -2,8 +2,8 @@
 > Gitignored. Aggiornato da Claude a fine sessione.
 
 **Ultima sessione:** 2026-06-17
-**Branch corrente:** `claude/compassionate-cray-0fn6i5`
-**PR in corso:** UI-4 Stats + Profile + WebSocket (`claude/compassionate-cray-0fn6i5`)
+**Branch corrente:** `claude/intelligent-brown-7sbqvm`
+**PR in corso:** #14 — Fix teammates + deploy setup (`claude/intelligent-brown-7sbqvm`)
 
 ---
 
@@ -29,10 +29,10 @@ Note UI-4:
 
 ### Prerequisiti (una-tantum, fuori da Claude Code)
 - [x] Creare repo GitHub e connettere Claude Code
-- [ ] Creare progetto su Railway → collegare il repo GitHub → aggiungere plugin MongoDB
-- [ ] Configurare Google OAuth su Google Cloud Console (redirect URI: URL pubblico Railway)
-- [ ] Nelle variabili d'ambiente Railway (servizio backend): `MONGODB_URI`, `JWT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `APP_URL`, `BACKEND_URL`, `NODE_ENV=production`
-- [ ] Nelle variabili d'ambiente Railway (servizio frontend): `VITE_API_URL` = URL pubblico del backend Railway
+- [x] Creare progetto su Railway → collegare il repo GitHub → aggiungere plugin MongoDB
+- [ ] Configurare Google OAuth su Google Cloud Console (redirect URI: URL pubblico Railway) — rimandato
+- [x] Nelle variabili d'ambiente Railway (servizio backend): `MONGODB_URI`, `JWT_SECRET`, `APP_URL`, `BACKEND_URL`, `NODE_ENV=production` (OAuth rimandato)
+- [x] Nelle variabili d'ambiente Railway (servizio frontend): `VITE_API_URL` = URL pubblico del backend Railway
 - [ ] Credenziali SMTP (opzionale — senza di esse le email vengono simulate in console)
 
 ---
@@ -97,10 +97,8 @@ Note UI-4:
 
 ## Blockers aperti
 
-- Credenziali Google OAuth (richiederle al gestore GCP aziendale)
-- Nome database MongoDB Atlas per staging
+- Credenziali Google OAuth (rimandato — da configurare quando pronto)
 - Credenziali SMTP (opzionale — in dev le email vengono loggate in console)
-- Railway: variabili d'ambiente backend da configurare (`MONGODB_URI` richiesto per avviare il server)
 
 ---
 
@@ -118,7 +116,7 @@ Note UI-4:
 | PR-8 | UI-1 | Frontend setup, Auth, Login |
 | PR-9 | UI-2 | Status e colleghi reali |
 | PR-10 | UI-3 | Check-in, onboarding, teammates |
-| PR-11 | UI-4 | Stats, preferenze, WebSocket real-time |
+| PR-11 | UI-4 | Stats, preferenze, WebSocket real-time | ✅ merged (#13) |
 
 ---
 
@@ -152,4 +150,5 @@ Note UI-4:
 | #6 | `claude/keen-babbage-wgq96x` | M3 — Desk booking, waiting list FIFO, check-in |
 | #7 | `claude/zealous-turing-id3yqf` | M4 — WebSocket, Change Streams, replica set |
 | #8 | `claude/ecstatic-curie-og52av` | M5 — Stats API, RBAC middleware, requireRole centralizzato |
-| PR-8 | `claude/prossimo-task-vfcgsv` | UI-1 — Frontend setup, componenti POC, AuthContext, Login, ProtectedRoute |
+| #8 | `claude/prossimo-task-vfcgsv` | UI-1 — Frontend setup, componenti POC, AuthContext, Login, ProtectedRoute |
+| #13 | `claude/compassionate-cray-0fn6i5` | UI-4 — Stats, preferenze, WebSocket real-time |

@@ -1156,6 +1156,7 @@ export default function App() {
  <Profile themeMode={themeMode} onSetThemeMode={handleSetThemeMode} isSimplifiedView={isSimplifiedView} onToggleSimplifiedView={handleToggleSimplifiedView}
  projectTeammates={projectTeammates}
  onUpdateProjectTeammates={handleUpdateProjectTeammates}
+ allColleagues={colleagues}
  onLogout={logout}
  />
  ) : null}
