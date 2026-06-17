@@ -7,6 +7,7 @@ import {
   updateOffTime,
   retrofitStatus,
 } from '../services/working-status.service';
+import { WorkingStatus } from '../models/working-status.model';
 import { IUser } from '../models/user.model';
 import { Types } from 'mongoose';
 
@@ -83,6 +84,52 @@ router.patch('/:date/offtime', async (req: Request, res: Response): Promise<void
   try {
     const result = await updateOffTime(userId(req), date, offTime ?? null);
     res.json(result);
+  } catch (err) {
+    handleError(res, err);
+  }
+});
+
+// POST /presence/:date/checkin
+router.post('/:date/checkin', async (req: Request, res: Response): Promise<void> => {
+  const { date } = req.params;
+  const todayStr = new Date().toISOString().slice(0, 10);
+  if (date !== todayStr) {
+    res.status(400).json({ error: 'Il check-in è possibile solo per il giorno corrente' });
+    return;
+  }
+
+  const ws = await WorkingStatus.findOne({ userId: userId(req), date });
+  if (!ws) {
+    res.status(404).json({ error: 'Nessuna prenotazione trovata per questa data' });
+    return;
+  }
+
+  if (ws.status === 'waiting_list') {
+    res.status(400).json({ error: 'Sei in waiting list, non puoi fare check-in' });
+    return;
+  }
+
+  const checkinAllowed = ['in_office', 'office_no_desk', 'remote'];
+  if (!checkinAllowed.includes(ws.status)) {
+    res.status(400).json({ error: 'Check-in non applicabile per questo status' });
+    return;
+  }
+
+  const { room, isUsingDesk } = req.body as { room?: string; isUsingDesk?: boolean };
+  try {
+    const updated = await WorkingStatus.findByIdAndUpdate(
+      ws._id,
+      {
+        $set: {
+          isConfirmed: true,
+          confirmedAt: new Date(),
+          ...(room !== undefined && { room }),
+          ...(isUsingDesk !== undefined && { isUsingDesk }),
+        },
+      },
+      { new: true }
+    );
+    res.json(updated);
   } catch (err) {
     handleError(res, err);
   }
