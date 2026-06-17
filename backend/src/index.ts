@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+import http from 'http';
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -10,6 +11,8 @@ import userRoutes from './routes/users.routes';
 import roomRoutes from './routes/rooms.routes';
 import presenceRoutes from './routes/presence.routes';
 import { startScheduler } from './services/scheduler';
+import { initWebSocket } from './services/websocket.service';
+import { startChangeStream } from './services/change-stream.service';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -33,7 +36,10 @@ async function bootstrap() {
   await mongoose.connect(uri);
   console.log('✓ MongoDB connesso');
   startScheduler();
-  app.listen(PORT, () => {
+  await startChangeStream();
+  const server = http.createServer(app);
+  initWebSocket(server);
+  server.listen(PORT, () => {
     console.log(`✓ Backend in ascolto su :${PORT}`);
   });
 }
