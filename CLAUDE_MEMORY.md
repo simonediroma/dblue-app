@@ -2,19 +2,19 @@
 > Gitignored. Aggiornato da Claude a fine sessione.
 
 **Ultima sessione:** 2026-06-17
-**Branch corrente:** `fix/railway-frontend-port`
-**PR in corso:** PR #1 (M0 scaffold), PR #2 (fix nginx port)
+**Branch corrente:** `claude/zen-edison-riyzlr`
+**PR in corso:** da aprire per M1 (branch `claude/zen-edison-riyzlr`)
 
 ---
 
 ## Prossima sessione — inizia da qui
 
-M0 completata e pushata (PR #1). Fix Railway healthcheck pushato (PR #2).
-**Partire da M1**: prima assicurarsi che PR #2 sia mergiata e Railway sia verde, poi procedere.
+M1 completata e pushata sul branch `claude/zen-edison-riyzlr`.
+**Partire da M2**: aprire PR per M1 se non già fatto, poi procedere.
 
-1. Verificare che PR #2 (`fix/railway-frontend-port`) sia mergiata e Railway frontend sia healthy
-2. Configurare Railway: variabili d'ambiente backend (`MONGODB_URI`, `JWT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `APP_URL`, `BACKEND_URL`, `NODE_ENV=production`)
-3. Eseguire M1 → `prompts/M1_auth_core_models.md`
+1. Aprire PR per M1 dal branch `claude/zen-edison-riyzlr` → `main`
+2. Configurare Railway se non ancora fatto: variabili d'ambiente backend (`MONGODB_URI`, `JWT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `APP_URL`, `BACKEND_URL`, `NODE_ENV=production`)
+3. Eseguire M2 → `prompts/M2_working_status_crud.md`
 
 ---
 
@@ -43,8 +43,9 @@ M0 completata e pushata (PR #1). Fix Railway healthcheck pushato (PR #2).
 
 ### Backend — M1 → M6 (in sequenza, ogni macro = una sessione Claude Code)
 
-- [ ] **M1** — Auth + Core Models → `prompts/M1_auth_core_models.md`
+- [x] **M1** — Auth + Core Models → `prompts/M1_auth_core_models.md`
   Express setup, modello User + Room, Google OAuth, JWT, dev-login fallback, route /auth /users /rooms
+  Branch: `claude/zen-edison-riyzlr` — build TypeScript zero errori
 
 - [ ] **M2** — Working Status CRUD + State Machine → `prompts/M2_working_status_crud.md`
   Modello WorkingStatus, upsertStatus, bulkUpsert, offTime, retrofit, cron auto-confirm 23:59
@@ -84,7 +85,7 @@ M0 completata e pushata (PR #1). Fix Railway healthcheck pushato (PR #2).
 - Credenziali Google OAuth (richiederle al gestore GCP aziendale)
 - Nome database MongoDB Atlas per staging
 - Credenziali SMTP (opzionale — in dev le email vengono loggate in console)
-- Railway: variabili d'ambiente backend da configurare prima di M1
+- Railway: variabili d'ambiente backend da configurare (`MONGODB_URI` richiesto per avviare il server)
 
 ---
 
@@ -132,3 +133,4 @@ M0 completata e pushata (PR #1). Fix Railway healthcheck pushato (PR #2).
 |-----------|--------|-------------|
 | #1 | `claude/sharp-mayer-u2wdwk` | M0 — scaffold monorepo backend + frontend |
 | #2 | `fix/railway-frontend-port` | Fix nginx: porta dinamica Railway via `${PORT}` |
+| TBD | `claude/zen-edison-riyzlr` | M1 — Auth, User model, Room model, JWT, dev-login, route /auth /users /rooms |
