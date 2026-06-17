@@ -2,6 +2,7 @@ import { Types } from 'mongoose';
 import { WorkingStatus, IWorkingStatus, WorkingStatusValue } from '../models/working-status.model';
 import { User } from '../models/user.model';
 import { Room } from '../models/room.model';
+import { isCapacityAvailable, promoteFromWaitingList } from './capacity.service';
 
 // Returns true if date is today or tomorrow
 export function isLastMinute(date: string): boolean {
@@ -115,15 +116,26 @@ export async function upsertStatus(
   }
 
   const unbookingStatuses: WorkingStatusValue[] = ['remote', 'pending', 'leave', 'sick', 'mission'];
+  const wasOfficeBooked =
+    existing && (['in_office', 'office_no_desk'] as WorkingStatusValue[]).includes(existing.status);
   const wasBooked = existing && (['in_office', 'waiting_list'] as WorkingStatusValue[]).includes(existing.status);
   const isUnbooking = unbookingStatuses.includes(payload.status as WorkingStatusValue);
   const isLastMinuteUnbooking = !!(wasBooked && isUnbooking && isLastMinute(date));
+
+  // Capacity gate: if requesting in_office but office is full, downgrade to waiting_list
+  let finalStatus = payload.status;
+  if (payload.status === 'in_office') {
+    const available = await isCapacityAvailable(date);
+    if (!available) {
+      finalStatus = 'waiting_list';
+    }
+  }
 
   const result = await WorkingStatus.findOneAndUpdate(
     { userId, date },
     {
       $set: {
-        status: payload.status,
+        status: finalStatus,
         ...(payload.isUsingDesk !== undefined && { isUsingDesk: payload.isUsingDesk }),
         ...(payload.room !== undefined && { room: payload.room }),
         isLastMinuteUnbooking,
@@ -131,6 +143,13 @@ export async function upsertStatus(
     },
     { upsert: true, new: true, setDefaultsOnInsert: true }
   );
+
+  // Fire-and-forget promotion when a desk is freed
+  if (wasOfficeBooked && isUnbooking) {
+    promoteFromWaitingList(date).catch((err) =>
+      console.error('promoteFromWaitingList error:', err)
+    );
+  }
 
   return result!;
 }

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { requireAuth } from '../middleware/auth.middleware';
 import { Room, IRoom } from '../models/room.model';
+import { WorkingStatus } from '../models/working-status.model';
 import { IUser } from '../models/user.model';
 
 const router = Router();
@@ -43,9 +44,19 @@ router.patch('/:id', requireAuth, async (req: Request, res: Response): Promise<v
   const { name, capacity, isActive } = req.body as Partial<Pick<IRoom, 'name' | 'capacity' | 'isActive'>>;
 
   if (isActive === false) {
-    // TODO M3: check for active future bookings before deactivating
-    // const bookingCount = await Booking.countDocuments({ roomId: req.params.id, date: { $gte: new Date() } });
-    // if (bookingCount > 0) { res.status(409).json({ error: 'Room con prenotazioni attive', count: bookingCount }); return; }
+    const room = await Room.findById(req.params.id).lean();
+    if (room) {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const count = await WorkingStatus.countDocuments({
+        date: { $gt: todayStr },
+        status: { $in: ['in_office', 'waiting_list', 'office_no_desk'] },
+        room: room.name,
+      });
+      if (count > 0) {
+        res.status(409).json({ error: 'Room con prenotazioni attive', count });
+        return;
+      }
+    }
   }
 
   const patch: Partial<IRoom> = {};
@@ -67,7 +78,19 @@ router.delete('/:id', requireAuth, async (req: Request, res: Response): Promise<
     res.status(403).json({ error: 'Permesso negato' });
     return;
   }
-  // TODO M3: check for active future bookings before deactivating
+  const room = await Room.findById(req.params.id).lean();
+  if (room) {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const count = await WorkingStatus.countDocuments({
+      date: { $gt: todayStr },
+      status: { $in: ['in_office', 'waiting_list', 'office_no_desk'] },
+      room: room.name,
+    });
+    if (count > 0) {
+      res.status(409).json({ error: 'Room con prenotazioni attive', count });
+      return;
+    }
+  }
   const updated = await Room.findByIdAndUpdate(req.params.id, { isActive: false }, { new: true });
   if (!updated) {
     res.status(404).json({ error: 'Room non trovata' });
