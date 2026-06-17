@@ -72,6 +72,9 @@ export async function getStatusForUser(
     const officeEntries = officeByDate.get(date) ?? [];
     const bookedCount = officeEntries.length;
 
+    // TODO (RBAC area filter): employee/lab_responsible/admin_member should only see colleagues
+    // in their own area/floor. Director and owner see everyone. Add filter here once the
+    // `area` field is added to the User model. For now all roles see all in-office colleagues.
     const colleagueAvatars = officeEntries
       .filter((ws) => ws.userId.toString() !== userId.toString())
       .slice(0, 10)
