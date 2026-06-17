@@ -1,0 +1,213 @@
+import { Types } from 'mongoose';
+import { WorkingStatus, IWorkingStatus, WorkingStatusValue } from '../models/working-status.model';
+import { User } from '../models/user.model';
+import { Room } from '../models/room.model';
+
+// Returns true if date is today or tomorrow
+export function isLastMinute(date: string): boolean {
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+  return date === todayStr || date === tomorrowStr;
+}
+
+function getTodayStr(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function getWorkingDaysOfMonth(month: string): string[] {
+  const [year, mon] = month.split('-').map(Number);
+  const days: string[] = [];
+  const date = new Date(year, mon - 1, 1);
+  while (date.getMonth() === mon - 1) {
+    const dow = date.getDay();
+    if (dow !== 0 && dow !== 6) {
+      days.push(date.toISOString().slice(0, 10));
+    }
+    date.setDate(date.getDate() + 1);
+  }
+  return days;
+}
+
+const OFFICE_STATUSES: WorkingStatusValue[] = ['in_office', 'office_no_desk'];
+
+export async function getStatusForUser(
+  userId: Types.ObjectId,
+  month: string
+): Promise<object[]> {
+  const workingDays = getWorkingDaysOfMonth(month);
+  const startDate = workingDays[0];
+  const endDate = workingDays[workingDays.length - 1];
+
+  const [userStatuses, allOfficeStatuses, rooms, user] = await Promise.all([
+    WorkingStatus.find({ userId, date: { $gte: startDate, $lte: endDate } }).lean(),
+    WorkingStatus.find({
+      date: { $gte: startDate, $lte: endDate },
+      status: { $in: OFFICE_STATUSES },
+    })
+      .populate('userId', 'avatar _id teammates')
+      .lean(),
+    Room.find({}).lean(),
+    User.findById(userId).lean(),
+  ]);
+
+  const totalCapacity = rooms.reduce((sum, r) => sum + (r.capacity ?? 0), 0);
+  const teammateIds = new Set((user?.teammates ?? []).map((t: Types.ObjectId) => t.toString()));
+
+  const userStatusByDate = new Map(userStatuses.map((ws) => [ws.date, ws]));
+
+  // Group all office statuses by date
+  const officeByDate = new Map<string, typeof allOfficeStatuses>();
+  for (const ws of allOfficeStatuses) {
+    const arr = officeByDate.get(ws.date) ?? [];
+    arr.push(ws);
+    officeByDate.set(ws.date, arr);
+  }
+
+  return workingDays.map((date) => {
+    const existing = userStatusByDate.get(date);
+    const officeEntries = officeByDate.get(date) ?? [];
+    const bookedCount = officeEntries.length;
+
+    const colleagueAvatars = officeEntries
+      .filter((ws) => ws.userId.toString() !== userId.toString())
+      .slice(0, 10)
+      .map((ws) => {
+        const u = ws.userId as unknown as { _id: Types.ObjectId; avatar?: string };
+        return u.avatar ?? null;
+      })
+      .filter(Boolean);
+
+    const projectTeammatesCount = officeEntries.filter((ws) => {
+      const uid = (ws.userId as unknown as { _id: Types.ObjectId })._id.toString();
+      return teammateIds.has(uid);
+    }).length;
+
+    const base = existing ?? { date, status: 'pending', isConfirmed: false };
+
+    return {
+      ...base,
+      bookedCount,
+      totalCapacity,
+      colleagueAvatars,
+      projectTeammatesCount,
+    };
+  });
+}
+
+export async function upsertStatus(
+  userId: Types.ObjectId,
+  date: string,
+  payload: { status: string; isUsingDesk?: boolean; room?: string }
+): Promise<IWorkingStatus> {
+  const existing = await WorkingStatus.findOne({ userId, date });
+
+  if (existing?.isConfirmed) {
+    const err = Object.assign(new Error('Status già confermato, non modificabile'), { statusCode: 409 });
+    throw err;
+  }
+
+  if (payload.status === 'sick' && date !== getTodayStr()) {
+    const err = Object.assign(new Error('Malattia dichiarabile solo per il giorno corrente'), { statusCode: 400 });
+    throw err;
+  }
+
+  const unbookingStatuses: WorkingStatusValue[] = ['remote', 'pending', 'leave', 'sick', 'mission'];
+  const wasBooked = existing && (['in_office', 'waiting_list'] as WorkingStatusValue[]).includes(existing.status);
+  const isUnbooking = unbookingStatuses.includes(payload.status as WorkingStatusValue);
+  const isLastMinuteUnbooking = !!(wasBooked && isUnbooking && isLastMinute(date));
+
+  const result = await WorkingStatus.findOneAndUpdate(
+    { userId, date },
+    {
+      $set: {
+        status: payload.status,
+        ...(payload.isUsingDesk !== undefined && { isUsingDesk: payload.isUsingDesk }),
+        ...(payload.room !== undefined && { room: payload.room }),
+        isLastMinuteUnbooking,
+      },
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+
+  return result!;
+}
+
+export async function bulkUpsertStatus(
+  userId: Types.ObjectId,
+  updates: Array<{ date: string; status: string; isUsingDesk?: boolean; room?: string }>
+): Promise<{ succeeded: IWorkingStatus[]; failed: Array<{ date: string; error: string }> }> {
+  const succeeded: IWorkingStatus[] = [];
+  const failed: Array<{ date: string; error: string }> = [];
+
+  for (const update of updates) {
+    try {
+      const result = await upsertStatus(userId, update.date, update);
+      succeeded.push(result);
+    } catch (err) {
+      failed.push({ date: update.date, error: (err as Error).message });
+    }
+  }
+
+  return { succeeded, failed };
+}
+
+export async function updateOffTime(
+  userId: Types.ObjectId,
+  date: string,
+  offTime: { type: 'morning' | 'afternoon' | 'custom'; hours?: number } | null
+): Promise<IWorkingStatus> {
+  const result = await WorkingStatus.findOneAndUpdate(
+    { userId, date },
+    { $set: { offTime: offTime ?? undefined } },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+  return result!;
+}
+
+export async function retrofitStatus(
+  userId: Types.ObjectId,
+  date: string,
+  payload: { status: string; offTime?: { type: 'morning' | 'afternoon' | 'custom'; hours?: number } }
+): Promise<IWorkingStatus> {
+  const today = new Date();
+  const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  const prevMonth = (() => {
+    const d = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  })();
+
+  const dateMonth = date.slice(0, 7);
+  if (dateMonth !== prevMonth) {
+    const err = Object.assign(
+      new Error(`Retrofit consentito solo per il mese precedente (${prevMonth})`),
+      { statusCode: 400 }
+    );
+    throw err;
+  }
+
+  const existing = await WorkingStatus.findOne({ userId, date });
+  if (existing?.isConfirmed) {
+    const err = Object.assign(new Error('Status già confermato, non modificabile'), { statusCode: 409 });
+    throw err;
+  }
+
+  const result = await WorkingStatus.findOneAndUpdate(
+    { userId, date },
+    {
+      $set: {
+        status: payload.status,
+        isRetrofit: true,
+        ...(payload.offTime !== undefined && { offTime: payload.offTime }),
+      },
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+
+  // Suppress unused variable warning
+  void currentMonth;
+
+  return result!;
+}
