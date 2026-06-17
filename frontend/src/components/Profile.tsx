@@ -42,6 +42,7 @@ interface ProfileProps {
  onToggleSimplifiedView: () => void;
  projectTeammates: Colleague[];
  onUpdateProjectTeammates: (teammates: Colleague[]) => void;
+ allColleagues?: Colleague[];
  onLogout?: () => void;
 }
 
@@ -246,6 +247,7 @@ export default function Profile({
  onToggleSimplifiedView,
  projectTeammates,
  onUpdateProjectTeammates,
+ allColleagues = COLLEAGUES,
  onLogout
 }: ProfileProps) {
  const { user } = useAuth();
@@ -571,7 +573,7 @@ export default function Profile({
  }
 
  if (activeView === 'teammates') {
- const filteredColleaguesSelection = [...COLLEAGUES]
+ const filteredColleaguesSelection = [...allColleagues]
  .filter(c => `${c.name} ${c.surname}`.toLowerCase().includes(teammateSearchQuery.toLowerCase()))
  .sort((a, b) => a.name.localeCompare(b.name));
 
