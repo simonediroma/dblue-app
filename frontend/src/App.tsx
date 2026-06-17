@@ -21,8 +21,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from './context/AuthContext';
 import type { User } from './types/api';
 import { usePresence } from './hooks/usePresence';
-import { useColleagues } from './hooks/useColleagues';
-import { getPresence } from './services/api';
+import { useColleagues, mapUserToColleague } from './hooks/useColleagues';
+import { getPresence, checkIn, getRooms, getUsers, updateTeammates, completeOnboarding } from './services/api';
+import type { Room } from './services/api';
 
 const TODAY = getTodayStr();
 
@@ -73,12 +74,13 @@ function mapRole(apiRole: User['role']): UserRole {
 }
 
 export default function App() {
- const { user, logout } = useAuth();
+ const { user, logout, refreshUser } = useAuth();
  const userName = user?.name ?? '';
  const userRole = mapRole(user?.role ?? 'employee');
  const [showSplash, setShowSplash] = useState(!user?.onboardingCompleted);
  const [showOnboarding, setShowOnboarding] = useState(false);
  const [projectTeammates, setProjectTeammates] = useState<Colleague[]>([]);
+ const [rooms, setRooms] = useState<Room[]>([]);
 
  const today = new Date();
  const currentMonthKey = toAppDateStr(today).slice(0, 7);
@@ -318,16 +320,16 @@ export default function App() {
  }
  };
 
- const handleCheckIn = (date: string, autoOpen = false) => {
+ const handleCheckIn = async (date: string, autoOpen = false) => {
  const day = days.find(d => d.date === date);
  const isToday = date === TODAY;
- 
+
  if (isToday && day?.status === WorkStatus.IN_OFFICE) {
  setRoomSelectionDate(date);
  setSelectedDay(null); // Ensure the detailed view is closed when moving to room selection
  } else {
  setDays(prev => prev.map(d => d.date === date ? { ...d, isCheckedIn: true } : d));
- 
+
  setNotification({
  message: "Successfully checked in",
  date: date,
@@ -342,51 +344,72 @@ export default function App() {
  if (autoOpen) {
  if (day) handleOpenDay(day);
  }
+
+ try {
+  await checkIn(date);
+ } catch {
+  setDays(prev => prev.map(d => d.date === date ? { ...d, isCheckedIn: false } : d));
+  setNotification({ message: "Check-in failed. Please try again.", date });
+ }
  }
  };
 
- const handleRoomSelect = (roomName: string) => {
+ const handleRoomSelect = async (roomName: string) => {
  if (!roomSelectionDate) return;
- 
+
  const isUsingDesk = roomName !== 'No Desk';
  const oldDaySnapshot = days.find(d => d.date === roomSelectionDate);
  if (!oldDaySnapshot) return;
+ const dateForRequest = roomSelectionDate;
 
  setDays(prev => {
- const index = prev.findIndex(d => d.date === roomSelectionDate);
+ const index = prev.findIndex(d => d.date === dateForRequest);
  if (index === -1) return prev;
- 
+
  const newDays = [...prev];
  const oldDay = newDays[index];
  const wasConsuming = isConsumingDesk(oldDay.status, oldDay.isUsingDesk);
  const willConsume = isConsumingDesk(oldDay.status, isUsingDesk);
- 
+
  let newBookedCount = oldDay.bookedCount || 0;
  if (!wasConsuming && willConsume) newBookedCount++;
  if (wasConsuming && !willConsume) newBookedCount--;
- 
+
  newDays[index] = { ...oldDay, isCheckedIn: true, room: roomName, isUsingDesk, bookedCount: Math.max(0, newBookedCount) };
  return newDays;
  });
- 
+
  setNotification({
  message: isUsingDesk ? `Successfully checked in in the ${roomName}` : `Successfully checked in`,
- date: roomSelectionDate,
+ date: dateForRequest,
  isCheckInNotification: true,
  undoAction: () => {
- setDays(prev => prev.map(d => d.date === roomSelectionDate ? { 
- ...d, 
- isCheckedIn: false, 
- room: oldDaySnapshot.room, 
+ setDays(prev => prev.map(d => d.date === dateForRequest ? {
+ ...d,
+ isCheckedIn: false,
+ room: oldDaySnapshot.room,
  isUsingDesk: oldDaySnapshot.isUsingDesk,
- bookedCount: oldDaySnapshot.bookedCount 
+ bookedCount: oldDaySnapshot.bookedCount
  } : d));
  setNotification(null);
  setNotificationCountdown(null);
  }
  });
- 
+
  setRoomSelectionDate(null);
+
+ try {
+ await checkIn(dateForRequest, isUsingDesk ? roomName : undefined, isUsingDesk);
+ } catch {
+ setDays(prev => prev.map(d => d.date === dateForRequest ? {
+  ...d,
+  isCheckedIn: false,
+  room: oldDaySnapshot.room,
+  isUsingDesk: oldDaySnapshot.isUsingDesk,
+  bookedCount: oldDaySnapshot.bookedCount
+ } : d));
+ setNotification({ message: "Check-in failed. Please try again.", date: dateForRequest });
+ }
  };
 
  const isConsumingDesk = (status: WorkStatus, isUsingDesk?: boolean) => {
@@ -645,25 +668,60 @@ export default function App() {
  const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
  useEffect(() => {
- // Hide splash screen after 2 seconds, then show onboarding
+ getRooms().then(setRooms).catch(() => {});
+ }, []);
+
+ useEffect(() => {
+ if (user && user.onboardingCompleted && user.teammates.length > 0) {
+  getUsers().then(allUsers => {
+   const myTeammates = allUsers
+    .filter(u => user.teammates.includes(u.id))
+    .map(mapUserToColleague);
+   setProjectTeammates(myTeammates);
+  }).catch(() => {});
+ }
+ }, [user]);
+
+ useEffect(() => {
+ // Hide splash screen after 2 seconds, then show onboarding only for new users
  const timer = setTimeout(() => {
- setShowSplash(false);
- setShowOnboarding(true);
+  setShowSplash(false);
+  if (!user?.onboardingCompleted) {
+   setShowOnboarding(true);
+  }
  }, 2000);
  return () => clearTimeout(timer);
  }, []);
 
- const handleOnboardingComplete = (selected: Colleague[]) => {
+ const handleOnboardingComplete = async (selected: Colleague[]) => {
  setProjectTeammates(selected);
- setShowOnboarding(false);
- setTimeout(() => scrollToToday('auto'), 100);
- setTimeout(() => scrollToToday('auto'), 400);
+ try {
+  await updateTeammates(selected.map(c => c.id));
+  await completeOnboarding();
+  await refreshUser();
+  setShowOnboarding(false);
+  setTimeout(() => scrollToToday('auto'), 100);
+  setTimeout(() => scrollToToday('auto'), 400);
+ } catch {
+  setNotification({ message: "Failed to save teammates. Please try again.", date: TODAY });
+ }
  };
 
  const handleOnboardingSkip = () => {
  setShowOnboarding(false);
  setTimeout(() => scrollToToday('auto'), 100);
  setTimeout(() => scrollToToday('auto'), 400);
+ };
+
+ const handleUpdateProjectTeammates = async (newTeammates: Colleague[]) => {
+ const prev = projectTeammates;
+ setProjectTeammates(newTeammates);
+ try {
+  await updateTeammates(newTeammates.map(c => c.id));
+ } catch {
+  setProjectTeammates(prev);
+  setNotification({ message: "Failed to update teammates. Please try again.", date: TODAY });
+ }
  };
 
  // Re-inject project teammates into days avatars if they are in office
@@ -777,28 +835,9 @@ export default function App() {
  return;
  }
 
- // Book presence
- const booked = Number(day.bookedCount || 0);
- const capacity = Number(day.totalCapacity || 23);
- const isFull = booked >= capacity;
- const targetStatus = isFull ? WorkStatus.WAITING_LIST : WorkStatus.IN_OFFICE;
- 
- if (isFull) {
- // Directly update and show special toast, don't open modal
- handleUpdateStatus(day.date, targetStatus, undefined, false, undefined, false, true, false);
- 
- const dayNum = day.date.split('-')[2];
- setNotification({
- message: `You are in the waiting list for Day ${dayNum}`,
- date: day.date
- });
- } else {
- // First take snapshot and open
- handleOpenDay({ ...day, status: targetStatus }, 'WORKSPACE', true);
- 
- // Set isUsingDesk to undefined to indicate it hasn't been decided
- handleUpdateStatus(day.date, targetStatus, undefined, false, undefined, false, false, false); // No toast, no close in this context
- }
+ // Book presence — server decides if IN_OFFICE or WAITING_LIST
+ handleOpenDay({ ...day, status: WorkStatus.IN_OFFICE }, 'WORKSPACE', true);
+ handleUpdateStatus(day.date, WorkStatus.IN_OFFICE, undefined, false, undefined, false, false, false);
  };
 
  const handleNavigate = (direction: 'next' | 'prev') => {
@@ -1081,7 +1120,7 @@ export default function App() {
  ) : !showOnboarding ? (
  <Profile themeMode={themeMode} onSetThemeMode={setThemeMode} isSimplifiedView={isSimplifiedView} onToggleSimplifiedView={() => setIsSimplifiedView(!isSimplifiedView)}
  projectTeammates={projectTeammates}
- onUpdateProjectTeammates={setProjectTeammates}
+ onUpdateProjectTeammates={handleUpdateProjectTeammates}
  onLogout={logout}
  />
  ) : null}
@@ -1089,7 +1128,7 @@ export default function App() {
 
  <AnimatePresence>
  {roomSelectionDate && (
- <RoomSelection date={roomSelectionDate} mode="confirm" plannedRoom={days.find(d => d.date === roomSelectionDate)?.room}
+ <RoomSelection date={roomSelectionDate} rooms={rooms} mode="confirm" plannedRoom={days.find(d => d.date === roomSelectionDate)?.room}
  onBack={() => setRoomSelectionDate(null)}
  onSelect={handleRoomSelect}
  />
