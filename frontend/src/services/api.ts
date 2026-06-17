@@ -103,4 +103,43 @@ export function updateOffTime(date: string, offTime: { type: string; hours?: num
   });
 }
 
+export interface MonthlyStats {
+  month: string;
+  presenceDaysConfirmed: number;
+  presenceDaysTarget: number;
+  distribution: {
+    inOffice: number;
+    remote: number;
+    mission: number;
+    leave: number;
+    sick: number;
+  };
+  unbooking: {
+    standard: number;
+    lastMinute: number;
+  };
+}
+
+export interface AnnualStats {
+  year: number;
+  monthlyBreakdown: Array<{
+    month: string;
+    presenceDaysConfirmed: number;
+    presenceDaysTarget: number;
+  }>;
+  totalUnbooking: {
+    standard: number;
+    lastMinute: number;
+  };
+  averageMonthlyPresenceDays: number;
+}
+
+export function getStatsMonthly(month: string): Promise<MonthlyStats> {
+  return request<MonthlyStats>(`/stats/monthly?month=${encodeURIComponent(month)}`);
+}
+
+export function getStatsAnnual(year: number): Promise<AnnualStats> {
+  return request<AnnualStats>(`/stats/annual?year=${year}`);
+}
+
 export { BASE_URL };

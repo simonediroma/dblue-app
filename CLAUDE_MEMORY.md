@@ -2,25 +2,26 @@
 > Gitignored. Aggiornato da Claude a fine sessione.
 
 **Ultima sessione:** 2026-06-17
-**Branch corrente:** `claude/happy-curie-kjytk0`
-**PR in corso:** UI-3 Check-in + Onboarding + Teammates (`claude/happy-curie-kjytk0`)
+**Branch corrente:** `claude/compassionate-cray-0fn6i5`
+**PR in corso:** UI-4 Stats + Profile + WebSocket (`claude/compassionate-cray-0fn6i5`)
 
 ---
 
 ## Prossima sessione — inizia da qui
 
-UI-3 completata e pushata su `claude/happy-curie-kjytk0`. Frontend ha zero errori TypeScript.
+UI-4 completata e pushata su `claude/compassionate-cray-0fn6i5`. Frontend build zero errori TypeScript.
 
-1. Aprire PR per UI-3 dal branch `claude/happy-curie-kjytk0` → `main` (titolo: "UI-3 — Check-in + Onboarding + Teammates")
-2. Procedere con UI-4 → `prompts/UI-4_stats_profile_websocket.md`
+1. Aprire PR per UI-4 dal branch `claude/compassionate-cray-0fn6i5` → `main` (titolo: "UI-4 — Stats, preferenze, WebSocket real-time")
+2. Il frontend wiring è chiuso (UI-1 → UI-4 completate). Prossimi step: deploy Railway + test E2E.
 
-Note UI-3:
-- `api.ts`: aggiunti `checkIn`, `getRooms`, interfaccia `Room`
-- `AuthContext`: aggiunto `refreshUser` per aggiornare user dopo onboarding
-- `useColleagues`: esportato `mapUserToColleague` per riuso in App.tsx
-- `RoomSelection`: ora accetta `rooms: Room[]` reali dall'API invece di lista hardcoded
-- `App.tsx`: check-in Remote/In-Office chiama l'API con rollback; onboarding salva teammates sul backend; Profile teammate aggiornamento con rollback; double-click delega al server (IN_OFFICE→backend decide); rooms caricate al mount; teammates caricati al mount se onboarding completato
-- Nota: Profile usa ancora COLLEAGUES hardcoded per selezione teammates (IDs non reali) → da fixare in UI-4 con useColleagues() reale
+Note UI-4:
+- `types.ts`: aggiunte `RoomOccupancy`, `PresenceUpdate`; `DayPresence` estesa con `rooms?` e `extras?`
+- `api.ts`: aggiunte `MonthlyStats`, `AnnualStats`, `getStatsMonthly` (→ /stats/monthly), `getStatsAnnual` (→ /stats/annual)
+- `hooks/useWebSocket.ts`: nuovo hook con reconnect exponential backoff (1s→8s), subscribe to today's date
+- `components/Stats.tsx`: dati reali da API (inOfficeDays, targetDays, chartData, yearlyData, unbooking); dropdown mesi dinamico e tutto cliccabile; nota area per director/owner nella yearly view
+- `components/Profile.tsx`: `officeAvailable` toggle inizializzato da `user.preferences.notifications.waitingListPromotion`, persiste sul backend con rollback
+- `App.tsx`: `handleSetThemeMode` persiste tema sul backend; `handleToggleSimplifiedView` persiste reducedMotion; `useEffect([user])` carica preferenze all'avvio; `useWebSocket` integrato per aggiornare bookedCount/rooms in real-time
+- Nota: Profile teammates usa ancora COLLEAGUES hardcoded → da fixare in task futuro
 
 ---
 
@@ -88,8 +89,9 @@ Note UI-3:
 - [x] **UI-3** — Check-in + Onboarding + Teammates → `prompts/UI-3_checkin_onboarding_teammates.md`
   checkIn API, RoomSelection con room reali, waiting list server-driven, salvataggio teammates
 
-- [ ] **UI-4** — Stats + Profile + WebSocket → `prompts/UI-4_stats_profile_websocket.md`
+- [x] **UI-4** — Stats + Profile + WebSocket → `prompts/UI-4_stats_profile_websocket.md`
   Stats con dati reali, preferenze persistite, useWebSocket con backoff, integrazione in App.tsx
+  Branch: `claude/compassionate-cray-0fn6i5` — npm run build zero errori
 
 ---
 

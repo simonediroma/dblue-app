@@ -1,10 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
 import { WorkStatus, DayPresence } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { AlertCircle, CalendarX, AlertTriangle, ChevronDown, Users, Info, Settings } from 'lucide-react';
 import { Alert } from './Alert';
 import { Colleague } from '../constants/colleagues';
+import { useAuth } from '../context/AuthContext';
+import { getStatsMonthly, getStatsAnnual } from '../services/api';
+import type { MonthlyStats, AnnualStats } from '../services/api';
+import { months, shortMonths } from '../utils/dateUtils';
 
 interface StatsProps {
  days: DayPresence[];
@@ -24,83 +28,66 @@ const statusColors: Record<string, string> = {
  [WorkStatus.WAITING_LIST]: '#FBBF24',
 };
 
-const statusLabels: Record<string, string> = {
- [WorkStatus.IN_OFFICE]: 'Office',
- [WorkStatus.REMOTE]: 'Remote',
- [WorkStatus.MISSION]: 'Mission',
- [WorkStatus.LEAVE]: 'Leave',
- [WorkStatus.SICK]: 'Sick',
- [WorkStatus.PARENTAL_LEAVE]: 'Parental',
- [WorkStatus.PENDING]: 'Undefined',
- [WorkStatus.WAITING_LIST]: 'Waiting',
-};
 
-const historicalMonths = [
- 'October 2026',
- 'September 2026',
- 'August 2026',
- 'July 2026',
- 'June 2026',
- 'May 2026',
- 'April 2026',
- 'March 2026',
- 'February 2026',
- 'January 2026',
- 'December 2025',
- 'November 2025',
-];
+function monthLabelToKey(label: string): string {
+ const parts = label.split(' ');
+ const idx = months.indexOf(parts[0]);
+ return `${parts[1]}-${String(idx + 1).padStart(2, '0')}`;
+}
 
-export default function Stats({ days, currentMonth = 'October 2026', projectTeammates = [], onAddTeammates }: StatsProps) {
+export default function Stats({ currentMonth, projectTeammates = [], onAddTeammates }: Omit<StatsProps, 'days'> & { days?: DayPresence[] }) {
+ const { user } = useAuth();
+ const isDirectorOrOwner = user?.role === 'director' || user?.role === 'owner';
+
+ const defaultMonth = currentMonth || `${months[new Date().getMonth()]} ${new Date().getFullYear()}`;
+
+ const historicalMonths = useMemo(() => {
+  const result: string[] = [];
+  const now = new Date();
+  for (let i = 0; i < 12; i++) {
+   const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+   result.push(`${months[d.getMonth()]} ${d.getFullYear()}`);
+  }
+  return result;
+ }, []);
+
  const [view, setView] = useState<'monthly' | 'yearly'>('monthly');
- const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+ const [selectedMonth, setSelectedMonth] = useState(defaultMonth);
  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
  const [showTooltip, setShowTooltip] = useState(false);
+ const [monthlyStats, setMonthlyStats] = useState<MonthlyStats | null>(null);
+ const [annualStats, setAnnualStats] = useState<AnnualStats | null>(null);
 
- // Filter days by the selectedMonth prefix if in monthly view
- const monthlyDays = view === 'monthly' ? days.filter(d => {
- const monthPrefix = selectedMonth.startsWith('October') ? '2026-10' : 
- selectedMonth.startsWith('November') ? '2026-11' :
- selectedMonth.startsWith('September') ? '2026-09' : '';
- return d.date.startsWith(monthPrefix);
- }) : days;
+ useEffect(() => {
+  if (view !== 'monthly') return;
+  const key = monthLabelToKey(selectedMonth);
+  getStatsMonthly(key).then(setMonthlyStats).catch(() => setMonthlyStats(null));
+ }, [selectedMonth, view]);
 
- const isOctober = selectedMonth === 'October 2026';
- const isSeptember = selectedMonth === 'September 2026';
- 
- const targetDays = 10;
- const inOfficeDays = isSeptember ? 10 : isOctober ? 1 : monthlyDays.filter(d => d.status === WorkStatus.IN_OFFICE).length;
- const progress = Math.min((inOfficeDays / targetDays) * 100, 100);
+ useEffect(() => {
+  if (view !== 'yearly') return;
+  const year = parseInt(selectedMonth.split(' ')[1]) || new Date().getFullYear();
+  getStatsAnnual(year).then(setAnnualStats).catch(() => setAnnualStats(null));
+ }, [view, selectedMonth]);
 
- const chartData = isSeptember ? [
- { name: 'Office', count: 10, status: WorkStatus.IN_OFFICE },
- { name: 'Remote', count: 8, status: WorkStatus.REMOTE },
- { name: 'Leave', count: 2, status: WorkStatus.LEAVE }
- ] : isOctober ? [
- { name: 'Office', count: 1, status: WorkStatus.IN_OFFICE },
- { name: 'Remote', count: 3, status: WorkStatus.REMOTE },
- { name: 'Mission', count: 1, status: WorkStatus.MISSION },
- { name: 'Undefined', count: 1, status: WorkStatus.PENDING },
- { name: 'Leave', count: 0, status: WorkStatus.LEAVE }
- ] : Object.values(WorkStatus).map(status => ({
- name: statusLabels[status] || status,
- count: monthlyDays.filter(d => d.status === status).length,
- status: status
- })).filter(item => item.count > 0);
+ const inOfficeDays = monthlyStats?.presenceDaysConfirmed ?? 0;
+ const targetDays = monthlyStats?.presenceDaysTarget ?? user?.contract?.presenceDaysTarget ?? 10;
+ const progress = targetDays > 0 ? Math.min((inOfficeDays / targetDays) * 100, 100) : 0;
 
- const yearlyData = [
- { name: 'Jan', count: 12 },
- { name: 'Feb', count: 10 },
- { name: 'Mar', count: 14 },
- { name: 'Apr', count: 11 },
- { name: 'May', count: 13 },
- { name: 'Jun', count: 9 },
- { name: 'Jul', count: 7 },
- { name: 'Aug', count: 4 },
- { name: 'Sep', count: 11 },
- { name: 'Oct', count: 6 },
- ];
+ const chartData = monthlyStats ? [
+  { name: 'Office', count: monthlyStats.distribution.inOffice, status: WorkStatus.IN_OFFICE },
+  { name: 'Remote', count: monthlyStats.distribution.remote, status: WorkStatus.REMOTE },
+  { name: 'Mission', count: monthlyStats.distribution.mission, status: WorkStatus.MISSION },
+  { name: 'Leave', count: monthlyStats.distribution.leave, status: WorkStatus.LEAVE },
+  { name: 'Sick', count: monthlyStats.distribution.sick, status: WorkStatus.SICK },
+ ].filter(item => item.count > 0) : [];
 
- const averagePresence = yearlyData.reduce((acc, curr) => acc + curr.count, 0) / yearlyData.length;
+ const yearlyData = annualStats ? annualStats.monthlyBreakdown.map(m => ({
+  name: shortMonths[parseInt(m.month.split('-')[1]) - 1],
+  count: m.presenceDaysConfirmed,
+ })) : [];
+
+ const averagePresence = annualStats?.averageMonthlyPresenceDays ?? 0;
 
  return (
  <motion.div initial={{opacity: 0, y: 20}} animate={{opacity: 1, y: 0}} className="flex flex-col gap-6 pb-32 pt-8">
@@ -140,25 +127,20 @@ export default function Stats({ days, currentMonth = 'October 2026', projectTeam
  <div className="fixed inset-0 z-30" onClick={() => setIsDropdownOpen(false)} 
  />
  <motion.div initial={{opacity: 0, scale: 0.95, y: 10}} animate={{opacity: 1, scale: 1, y: 0}} exit={{opacity: 0, scale: 0.95, y: 10}} className="absolute left-0 mt-2 w-48 bg-surface-container-lowest border border-outline-variant/20 rounded-2xl shadow-2xl z-40 py-2 overflow-hidden">
- {historicalMonths.map((month) => {
- const isClickable = month === 'October 2026' || month === 'September 2026';
- return (
- <button key={month} disabled={!isClickable} onClick={() => {
+ {historicalMonths.map((month) => (
+ <button key={month} onClick={() => {
  setSelectedMonth(month);
  setIsDropdownOpen(false);
  }}
  className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
- !isClickable 
- ? 'text-on-surface-variant/20 cursor-not-allowed' 
- : month === selectedMonth 
- ? 'bg-primary/10 text-primary font-bold' 
+ month === selectedMonth
+ ? 'bg-primary/10 text-primary font-bold'
  : 'text-on-surface hover:bg-surface-container-high'
  }`}
  >
  {month}
  </button>
- );
- })}
+ ))}
  </motion.div>
  </>
  )}
@@ -166,7 +148,7 @@ export default function Stats({ days, currentMonth = 'October 2026', projectTeam
  </div>
  </div>
  ) : (
- <p className="font-sans text-on-surface-variant text-sm -mt-4">Year 2026 Summary</p>
+ <p className="font-sans text-on-surface-variant text-sm -mt-4">Year {selectedMonth.split(' ')[1]} Summary</p>
  )}
  </div>
  </header>
@@ -292,7 +274,7 @@ export default function Stats({ days, currentMonth = 'October 2026', projectTeam
  </div>
  <div>
  <p className="font-headline text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Unbookings</p>
- <span className="font-headline text-3xl font-extrabold text-on-surface">5</span>
+ <span className="font-headline text-3xl font-extrabold text-on-surface">{monthlyStats?.unbooking.standard ?? 0}</span>
  </div>
  </div>
  <div className="bg-warning-bg p-4 rounded-2xl border border-warning-stroke flex flex-col gap-3">
@@ -301,7 +283,7 @@ export default function Stats({ days, currentMonth = 'October 2026', projectTeam
  </div>
  <div>
  <p className="font-headline text-[10px] font-bold text-warning-text/80 uppercase tracking-wider mb-1">Last-minute</p>
- <span className="font-headline text-3xl font-extrabold text-warning-text">2</span>
+ <span className="font-headline text-3xl font-extrabold text-warning-text">{monthlyStats?.unbooking.lastMinute ?? 0}</span>
  </div>
  </div>
  </div>
@@ -320,8 +302,13 @@ export default function Stats({ days, currentMonth = 'October 2026', projectTeam
  <span className="text-on-surface-variant font-medium">days / month</span>
  </div>
  <p className="font-sans text-[10px] text-on-surface-variant mt-4 leading-relaxed">
- Calculated across the first 10 months of 2026.
+ Calculated across completed months of {selectedMonth.split(' ')[1]}.
  </p>
+ {isDirectorOrOwner && (
+ <p className="font-sans text-[10px] text-primary/70 mt-2 leading-relaxed italic">
+ Dati aggregati area disponibili nella prossima release.
+ </p>
+ )}
  </section>
 
  {/* Yearly Bar Chart Section */}
