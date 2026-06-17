@@ -1,0 +1,149 @@
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Search, X, Check, Users, ArrowRight } from 'lucide-react';
+import { COLLEAGUES, Colleague } from '../constants/colleagues';
+
+interface OnboardingProps {
+  onComplete: (selectedTeammates: Colleague[]) => void;
+  onSkip: () => void;
+}
+
+export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
+  const [step, setStep] = useState<1 | 2>(1);
+  const [selectedColleagues, setSelectedColleagues] = useState<colleague[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredColleagues = COLLEAGUES.filter(c => 
+    `${c.name} ${c.surname}`.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const toggleColleague = (colleague: Colleague) => {
+    setSelectedColleagues(prev => {
+      const isSelected = prev.find(c => c.initials === colleague.initials && c.name === colleague.name);
+      if (isSelected) {
+        return prev.filter(c => !(c.initials === colleague.initials && c.name === colleague.name));
+      }
+      if (prev.length >= 5) return prev;
+      
+      // Clear search query when a teammate is selected (added)
+      setSearchQuery('');
+      return [...prev, colleague];
+    });
+  };
+
+  const isSelected = (colleague: Colleague) => 
+    selectedColleagues.some(c => c.initials === colleague.initials && c.name === colleague.name);
+
+  return (
+    <div classname="fixed inset-0 z-[500] bg-surface flex flex-col font-sans overflow-hidden">
+      <animatepresence mode="wait">
+        {step === 1 ? (
+          <motion.div key="step1" initial="{{" opacity:="" 0,="" y:="" 20="" }}="" animate="{{" opacity:="" 1,="" y:="" 0="" }}="" exit="{{" opacity:="" 0,="" scale:="" 0.95="" }}="" classname="flex-grow flex flex-col items-center justify-center p-8 max-w-lg mx-auto text-center">
+            <div classname="w-20 h-20 bg-primary/10 rounded-[32px] flex items-center justify-center mb-10">
+              <users classname="w-10 h-10 text-primary" strokewidth="{2.5}"/>
+            </div>
+            
+            <h1 classname="text-3xl font-extrabold text-on-surface mb-6 leading-tight">
+              Who do you currently work with most?
+            </h1>
+            
+            <p classname="text-on-surface-variant text-lg font-medium leading-relaxed mb-12">
+              Pick up to 5 project teammates and the app will help you plan office days where you overlap. Make collaboration count!
+            </p>
+
+            <div classname="w-full space-y-4">
+              <button onclick="{()" ==""> setStep(2)}
+                className="w-full bg-primary text-white font-bold py-5 rounded-[24px] shadow-lg shadow-primary/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2 group"
+              >
+                <span>Choose my project teammates</span>
+                <arrowright classname="w-5 h-5 group-hover:translate-x-1 transition-transform"/>
+              </button>
+              
+              <button onclick="{onSkip}" classname="w-full py-4 text-on-surface-variant font-bold hover:bg-surface-container rounded-[24px] transition-colors">
+                Skip (for now)
+              </button>
+            </div>
+
+            <p classname="mt-8 text-on-surface-variant/50 text-sm font-medium">
+              You can edit your project teammates preferences later in "Profile"
+            </p>
+          </motion.div>
+        ) : (
+          <motion.div key="step2" initial="{{" opacity:="" 0,="" x:="" 20="" }}="" animate="{{" opacity:="" 1,="" x:="" 0="" }}="" exit="{{" opacity:="" 0,="" x:="" -20="" }}="" classname="flex-grow flex flex-col h-full overflow-hidden">
+            <header classname="px-6 pt-12 pb-6 flex flex-col gap-6">
+              <div classname="flex items-center justify-between">
+                <h1 classname="text-2xl font-extrabold text-on-surface">Choose your project teammates</h1>
+                <div classname="px-3 py-1 bg-surface-container rounded-full text-xs font-bold text-on-surface-variant">
+                  {selectedColleagues.length}/5 selected
+                </div>
+              </div>
+
+              <div classname="relative">
+                <search classname="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant/40"/>
+                <input type="text" placeholder="Search by name..." classname="w-full bg-surface-container-low rounded-2xl py-4 pl-12 pr-4 text-on-surface font-bold placeholder:text-on-surface-variant/30 outline-none focus:ring-2 focus:ring-primary/20 transition-all border border-outline-variant/10" value="{searchQuery}" onchange="{(e)" ==""> setSearchQuery(e.target.value)}
+                />
+              </div>
+            </header>
+
+            <main classname="flex-grow overflow-y-auto px-6 pb-40 space-y-2">
+              {filteredColleagues.map((colleague) => {
+                const active = isSelected(colleague);
+                return (
+                  <button key="{`${colleague.name}-${colleague.surname}`}" onclick="{()" ==""> toggleColleague(colleague)}
+                    className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all border ${
+                      active 
+                        ? 'bg-primary/5 border-primary shadow-sm' 
+                        : 'bg-surface-container-lowest border-outline-variant/10 hover:border-outline-variant/30'
+                    } active:scale-[0.98]`}
+                  >
+                    <div classname="flex items-center gap-4">
+                      <div classname="{`w-12" h-12="" rounded-full="" flex="" items-center="" justify-center="" text-sm="" font-bold="" text-white="" shadow-sm="" ring-2="" ring-white="" 10="" ${colleague.color}`}="">
+                        {colleague.initials}
+                      </div>
+                      <span classname="font-bold text-on-surface">{colleague.name} {colleague.surname}</span>
+                    </div>
+                    {active ? (
+                      <div classname="w-6 h-6 bg-primary rounded-full flex items-center justify-center shadow-lg shadow-primary/20">
+                        <check classname="w-4 h-4 text-white" strokewidth="{3}"/>
+                      </div>
+                    ) : (
+                      <div classname="w-6 h-6 rounded-full border-2 border-outline-variant/20"/>
+                    )}
+                  </button>
+                );
+              })}
+            </main>
+
+            {/* Selection Tray */}
+            <div classname="fixed bottom-0 left-0 right-0 p-6 bg-surface-container-lowest/80 backdrop-blur-xl border-t border-outline-variant/10 flex flex-col gap-6 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
+              <div classname="flex items-center justify-center gap-3">
+                {[...Array(5)].map((_, i) => {
+                  const colleague = selectedColleagues[i];
+                  return (
+                    <motion.div layout="" key="{colleague" ?="" `${colleague.name}-${colleague.surname}`="" :="" `empty-${i}`}="" onclick="{colleague" ?="" ()=""> toggleColleague(colleague) : undefined}
+                      className={`w-12 h-12 rounded-full border-2 border-dashed flex items-center justify-center transition-all ${
+                        colleague 
+                          ? `border-transparent ring-2 ring-primary/20 cursor-pointer ${colleague.color}` 
+                          : 'border-outline-variant/30 bg-surface-container/30'
+                      }`}
+                    >
+                      {colleague ? (
+                        <span classname="text-xs font-bold text-white">{colleague.initials}</span>
+                      ) : null}
+                    </motion.div>
+                  );
+                })}
+              </div>
+
+              <button disabled="{selectedColleagues.length" =="=" 0}="" onclick="{()" ==""> onComplete(selectedColleagues)}
+                className="w-full bg-primary text-white font-bold py-5 rounded-[24px] shadow-lg shadow-primary/20 disabled:opacity-30 disabled:pointer-events-none transition-all active:scale-[0.98]"
+              >
+                Start planning
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}

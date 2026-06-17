@@ -1,0 +1,15 @@
+ttached are the pdf of the document in pdf format and the source code (taken from Google AI Studio)
+Consider that we added a very important part (at the beginning) about the technical specifications (provided by Natalia) that we would need in order to integrate the app with our current technical infrastructure. That is an important addendum that you should consider when making the assessment and the quote. I am also copying them here:
+
+Repository structure. The project shall use a monorepo setup with distinct /frontend and /backend folders, maintaining a clean separation of concerns.
+
+
+Technology stack. The frontend should be built with React and TypeScript, bundled using Vite. The backend should run on Node.js with Express.js. 
+
+
+Database: MongoDB Atlas cluster (managed cloud hosting).
+
+
+Real-time architecture. Features requiring live updates — desk availability counts, waiting list promotions, and Working Status changes — should be handled through a combination of WebSockets and MongoDB Change Streams. 
+
+Authentication. User authentication is handled exclusively via Google Sign-In (OAuth 2.0). The backend manages secure token refresh and session lifecycle without storing traditional credentials.

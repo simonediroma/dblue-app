@@ -1,0 +1,1985 @@
+import React from 'react';
+import { Alert } from './Alert';
+import { motion, AnimatePresence } from 'motion/react';
+import { DayPresence, WorkStatus, OffTimeType } from '../types';
+import { COLLEAGUES, Colleague } from '../constants/colleagues';
+import { 
+  getFictionalDayName, 
+  getFictionalIsWeekend, 
+  getFictionalDayIndex,
+  toAppDateStr,
+  formatAppDate, 
+  parseAppDate,
+  months
+} from '../utils/dateUtils';
+import { 
+  Building2, 
+  Home, 
+  Plane, 
+  Palmtree, 
+  Thermometer, 
+  ChevronLeft, 
+  ChevronRight, 
+  X, 
+  Edit2,
+  Clock,
+  Check,
+  Monitor,
+  Headset,
+  Sunrise,
+  Sunset,
+  ChevronDown,
+  Search,
+  AlertCircle,
+  Star,
+  Beaker,
+  Trash2,
+  ArrowRight,
+  Heart as Crib,
+  AlertTriangle
+} from 'lucide-react';
+
+const ROOMS_CONFIG = [
+  { id: 'blue', name: 'Blue Room', color: 'bg-blue-500', baseCapacity: 8 },
+  { id: 'red', name: 'Red Room', color: 'bg-red-500', baseCapacity: 8 },
+  { id: 'green', name: 'Green Room', color: 'bg-green-500', baseCapacity: 8 },
+  { id: 'innovation', name: 'Lab', color: 'bg-gradient-to-r from-red-500 via-blue-500 to-green-500', baseCapacity: 6 },
+  { id: 'management', name: 'Management Room', color: 'bg-amber-500', baseCapacity: 4 },
+  { id: 'admin', name: 'Admin', color: 'bg-indigo-500', baseCapacity: 4 },
+];
+
+const getRoomCapacityForDate = (date: string, roomName: string) => {
+  const hash = date.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const roomHash = roomName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const room = ROOMS_CONFIG.find(r => r.name === roomName);
+  const total = room?.baseCapacity || 8;
+  
+  // Specific mock for "Blue Room full" on some Wednesdays or specific dates to match user request
+  if (date === '2026-10-23') {
+    const total = ROOMS_CONFIG.find(r => r.name === roomName)?.baseCapacity || 8;
+    return { booked: total, total };
+  }
+  if (date === '2026-10-28' && roomName === 'Blue Room') return { booked: 8, total: 8 };
+  if (date === '2026-10-14' && roomName === 'Blue Room') return { booked: 8, total: 8 };
+  if (date === '2026-10-21' && roomName === 'Green Room') return { booked: 8, total: 8 };
+
+  const booked = (hash + roomHash) % (total + 1);
+  return { booked, total };
+};
+
+interface DailyDetailProps {
+  day: DayPresence;
+  allDays: DayPresence[];
+  initialStep?: FlowStep;
+  isMandatory?: boolean;
+  onClose: () => void;
+  onCancel: () => void;
+  onCheckIn: () => void;
+  onUpdateStatus: (dateOrDates: string | string[], status: WorkStatus, isUsingDesk?: boolean, isRetrofit?: boolean, room?: string) => void;
+  onUpdateOffTime: (date: string, offTime: { type: OffTimeType, hours?: number } | undefined) => void;
+  onNavigate: (direction: 'next' | 'prev') => void;
+  onUpdateBulkStatus?: (updates: Array<{date: string, status: WorkStatus, isUsingDesk: boolean, room: string}>) => void;
+  onUpdateLabBooking: (date: string, isBooked: boolean) => void;
+  projectTeammates?: Colleague[];
+  onOpenProfile?: () => void;
+}
+
+type FlowStep = 'VIEW' | 'PLANNING' | 'WORKSPACE' | 'EXTEND' | 'HOURS_OFF' | 'ALL_COLLEAGUES';
+
+export default function DailyDetail({ 
+  day, 
+  allDays,
+  initialStep = 'VIEW',
+  isMandatory = false,
+  onClose, 
+  onCancel,
+  onCheckIn, 
+  onUpdateStatus, 
+  onUpdateOffTime, 
+  onNavigate, 
+  onUpdateBulkStatus,
+  onUpdateLabBooking,
+  projectTeammates = [],
+  onOpenProfile
+}: DailyDetailProps) {
+  const [step, setStep] = React.useState<flowstep>(initialStep);
+  const [extendedDates, setExtendedDates] = React.useState<string[]>([]);
+  const [extendedOfficeConfigs, setExtendedOfficeConfigs] = React.useState<record<string, {="" room:="" string,="" isusingdesk:="" boolean="" }="">>({});
+  const [isSpecialLeaveOpen, setIsSpecialLeaveOpen] = React.useState(false);
+  const [isSpecialCalendarOpen, setIsSpecialCalendarOpen] = React.useState(false);
+  const [extendedSickType, setExtendedSickType] = React.useState<'MATERNITY' | 'LONG_TERM' | null>(null);
+  const [sickRange, setSickRange] = React.useState<{ start: string | null, end: string | null }>({ start: day.date, end: null });
+  const [retrofitConfirmation, setRetrofitConfirmation] = React.useState<workstatus |="" null="">(null);
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [selectedBookingDate, setSelectedBookingDate] = React.useState<string>(day.date);
+  const [showUnbookingModal, setShowUnbookingModal] = React.useState(false);
+  const [showLabConfirmModal, setShowLabConfirmModal] = React.useState(false);
+  const [unbookingWarningDays, setUnbookingWarningDays] = React.useState<string[]>([]);
+  const [pendingStatusUpdate, setPendingStatusUpdate] = React.useState<workstatus |="" null="">(null);
+
+  const today = new Date('2026-10-09');
+  const isOffice = day.status === WorkStatus.IN_OFFICE;
+  const displayMonth = months[parseAppDate(day.date).getMonth()];
+  const dayNumDisplay = day.date.split('-')[2];
+
+  interface ColleagueData extends Partial<colleague> {
+    status?: WorkStatus;
+    role: string;
+    hasOffTime?: boolean;
+    offTimeType?: OffTimeType;
+    remind?: boolean;
+    isConfirmed?: boolean;
+    isMe?: boolean;
+    isGoldStar?: boolean;
+    showQuestionMark?: boolean;
+    workspaceIcon?: 'desk' | 'headset';
+  }
+
+  // Memoize colleague generation to avoid re-renders
+  const allColleagues = React.useMemo(() => {
+    const isFutureDay = day.date > '2026-10-09';
+    const data: ColleagueData[] = [
+      ...(day.status !== WorkStatus.IN_OFFICE && day.status !== WorkStatus.PENDING && day.status !== WorkStatus.OFFICE_NO_DESK ? [{
+        name: "Roberto",
+        surname: "Venditti",
+        initials: "RV",
+        color: "bg-primary",
+        status: day.status,
+        role: (day.status === WorkStatus.LEAVE || day.status === WorkStatus.MISSION || day.status === WorkStatus.SICK) 
+          ? (day.status === WorkStatus.LEAVE ? 'On Leave (Vacation)' : day.status === WorkStatus.MISSION ? 'On a Mission' : 'On a sick leave') 
+          : (day.isCheckedIn && !isFutureDay ? 'Remote' : (isFutureDay ? 'Remote' : 'Remote | Not checked-in yet')),
+        isConfirmed: day.isCheckedIn && !isFutureDay,
+        isMe: true
+      } as ColleagueData] : [])
+    ];
+    
+    COLLEAGUES.forEach((colleague, i) => {
+      if (colleague.name === "Roberto" && colleague.surname === "Venditti") return;
+
+      let status: WorkStatus | undefined;
+      let role = "";
+      let hasOffTime = false;
+      let offTimeType: OffTimeType | undefined;
+      let isConfirmed = !isFutureDay;
+      let remind = false;
+      let showQuestionMark = false;
+      
+      const seed = day.date.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) + i;
+      const rand = (n: number) => (Math.abs(seed * n) % 100);
+      
+      if (isFutureDay) {
+        if (rand(12) < 25) { 
+          status = undefined;
+          showQuestionMark = true;
+          isConfirmed = false;
+        } else if (rand(13) < 70) {
+          status = WorkStatus.REMOTE;
+          isConfirmed = false;
+          role = "Remote";
+          if (rand(14) < 15) {
+            hasOffTime = true;
+            offTimeType = rand(15) < 50 ? OffTimeType.MORNING : OffTimeType.AFTERNOON;
+          }
+        } else if (rand(16) < 85) {
+          status = WorkStatus.LEAVE;
+          role = "On Leave (Vacation)";
+        } else {
+          status = WorkStatus.MISSION;
+          role = "On a Mission";
+        }
+      } else {
+        if (rand(17) < 5) {
+          status = undefined;
+          role = "Remind them to update their status!";
+          remind = true;
+          isConfirmed = false;
+        } else if (rand(18) < 70) {
+          status = WorkStatus.REMOTE;
+          if (rand(19) < 40) {
+            isConfirmed = false;
+            role = "Remote | Not checked-in yet";
+          } else {
+            role = "Remote";
+          }
+          if (rand(20) < 10) {
+            hasOffTime = true;
+            offTimeType = rand(21) < 50 ? OffTimeType.MORNING : OffTimeType.AFTERNOON;
+          }
+        } else if (rand(22) < 90) {
+          status = WorkStatus.LEAVE;
+          role = "On Leave (Vacation)";
+        } else {
+          status = WorkStatus.MISSION;
+          role = "On a Mission";
+        }
+      }
+
+      data.push({
+        ...colleague,
+        status,
+        role,
+        hasOffTime,
+        offTimeType,
+        isConfirmed,
+        remind,
+        showQuestionMark,
+        isGoldStar: i % 15 === 0
+      });
+    });
+
+    // Sort: Group by status, then "Me" first, then by confirmation, then name
+    return data.sort((a, b) => {
+      const getOrder = (c: ColleagueData) => {
+        if (c.showQuestionMark || c.remind) return 7;
+        if (c.status === WorkStatus.REMOTE) return c.isConfirmed ? 1 : 2;
+        if (c.status === WorkStatus.LEAVE) return 3;
+        if (c.status === WorkStatus.MISSION) return 4;
+        if (c.status === WorkStatus.SICK) return 5;
+        return 6;
+      };
+      
+      const orderA = getOrder(a);
+      const orderB = getOrder(b);
+      
+      if (orderA !== orderB) return orderA - orderB;
+      if (a.isMe) return -1;
+      if (b.isMe) return 1;
+      
+      return a.name.localeCompare(b.name);
+    });
+  }, [day.status, day.isCheckedIn, day.date]);
+
+  const inOfficeColleagues = React.useMemo(() => {
+    if (day.isClosed || day.isOfficeClosed) return [];
+    
+    const data: ColleagueData[] = [];
+    const isFutureDay = day.date > '2026-10-09';
+    const rooms = ["Blue Room", "Red Room", "Green Room", "Lab", "Management Room", "Admin", "No Desk"];
+    const count = day.bookedCount || 20;
+
+    if (day.status === WorkStatus.IN_OFFICE || day.status === WorkStatus.OFFICE_NO_DESK) {
+       const isUserConfirmed = isFutureDay ? false : day.isCheckedIn;
+       const roomLabel = day.room || "In Office";
+       data.push({
+        name: "Roberto",
+        surname: "Venditti",
+        initials: "RV",
+        color: "bg-primary",
+        status: WorkStatus.IN_OFFICE,
+        role: (isUserConfirmed || isFutureDay) ? roomLabel : `${roomLabel} | Not checked-in yet`,
+        workspaceIcon: day.isUsingDesk ? "desk" : "headset",
+        isConfirmed: isUserConfirmed,
+        isMe: true
+      });
+    }
+
+    let inOfficeCount = 0;
+    COLLEAGUES.forEach((colleague, i) => {
+      if (inOfficeCount >= count - (data.find(d => d.isMe) ? 1 : 0)) return;
+      if (colleague.name === "Roberto" && colleague.surname === "Venditti") return;
+
+      const seed = day.date.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) + i;
+      const rand = (n: number) => (Math.abs(seed * n) % 100);
+
+      if (rand(101) < 40) { 
+        const room = rooms[rand(102) % rooms.length];
+        const isConfirmed = !isFutureDay && rand(103) > 20;
+        data.push({
+          ...colleague,
+          status: WorkStatus.IN_OFFICE,
+          role: (isConfirmed || isFutureDay) ? room : `${room} | Not checked-in yet`,
+          workspaceIcon: room === 'No Desk' ? 'headset' : 'desk',
+          isConfirmed,
+        });
+        inOfficeCount++;
+      }
+    });
+
+    return data.sort((a, b) => {
+      if (a.isMe) return -1;
+      if (b.isMe) return 1;
+      if (a.isConfirmed !== b.isConfirmed) return a.isConfirmed ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+  }, [day.date, day.status, day.room, day.isCheckedIn, day.bookedCount, day.isClosed, day.isOfficeClosed, day.isUsingDesk]);
+
+  const goldStarProjectTeammates = React.useMemo(() => {
+    if (projectTeammates.length > 0) {
+      const teammateNames = new Set(projectTeammates.map(c => c.name));
+      const fromOffice = inOfficeColleagues.filter(c => teammateNames.has(c.name) && !c.isMe);
+      const fromAll = allColleagues.filter(c => teammateNames.has(c.name) && !c.isMe);
+      
+      const seen = new Set();
+      return [...fromOffice, ...fromAll].filter(c => {
+        if (seen.has(c.name)) return false;
+        seen.add(c.name);
+        return true;
+      });
+    }
+    // If skipped onboarding, we don't show any project teammates by default as per request
+    return [];
+  }, [inOfficeColleagues, allColleagues, projectTeammates]);
+
+  const goldStarNames = React.useMemo(() => 
+    new Set(goldStarProjectTeammates.map(c => c.name)), 
+    [goldStarProjectTeammates]
+  );
+
+  const isPending = day.status === WorkStatus.PENDING;
+  const statusConfig = {
+    [WorkStatus.IN_OFFICE]: { label: 'In Office', icon: Building2, color: 'bg-primary/10 text-primary', deskIcon: 'desk', emoji: '🏢' },
+    [WorkStatus.REMOTE]: { label: 'Remote', icon: Home, color: 'bg-green-500/10 text-green-500', deskIcon: 'home', emoji: '🏠' },
+    [WorkStatus.MISSION]: { label: 'On a mission', icon: Plane, color: 'bg-orange-500/10 text-orange-500', emoji: '✈️' },
+    [WorkStatus.LEAVE]: { label: 'On Leave (Vacation)', icon: Palmtree, color: 'bg-fuchsia-500/10 text-fuchsia-500', emoji: '🏖️' },
+    [WorkStatus.SICK]: { label: 'On a sick leave', icon: Thermometer, color: 'bg-red-500/10 text-red-500', emoji: '🤒' },
+    [WorkStatus.PARENTAL_LEAVE]: { label: 'Parental Leave', icon: Crib, color: 'bg-indigo-500/10 text-indigo-500', emoji: '👶' },
+    [WorkStatus.WAITING_LIST]: { label: 'Waiting List', icon: null, color: 'bg-amber-500/10 text-amber-500', emoji: '⏳' },
+    [WorkStatus.OFFICE_NO_DESK]: { label: 'Office (No Desk)', icon: Headset, color: 'bg-primary/10 text-primary', emoji: '🏢' },
+  };
+  const config = !isPending ? statusConfig[day.status] : null;
+
+  const IS_CLOSED_DAYS = ['2026-11-01']; // Add closed days here
+
+  const handleStatusSelect = (status: WorkStatus) => {
+    // Check for last-minute change on the current day
+    const isCurrentDay = day.date === '2026-10-09';
+    const isUnbookingToday = isCurrentDay && day.status === WorkStatus.IN_OFFICE && status !== WorkStatus.IN_OFFICE;
+
+    if (isUnbookingToday && !showUnbookingModal) {
+      setUnbookingWarningDays([day.date]);
+      setPendingStatusUpdate(status);
+      setShowUnbookingModal(true);
+      return;
+    }
+
+    if (day.isPast) {
+      setRetrofitConfirmation(status);
+    } else if (status === WorkStatus.IN_OFFICE) {
+      setStep('WORKSPACE');
+    } else if (status === WorkStatus.OFFICE_NO_DESK) {
+      onUpdateStatus(day.date, WorkStatus.IN_OFFICE, false, false, 'No Desk');
+      setStep('VIEW');
+    } else {
+      onUpdateStatus(day.date, status);
+      setStep('VIEW');
+    }
+  };
+
+  const handleRoomSelect = (roomName: string, isUsingDesk: boolean = true) => {
+    onUpdateStatus(day.date, WorkStatus.IN_OFFICE, isUsingDesk, false, roomName);
+    onClose();
+  };
+
+  const handleConfirmRetrofit = () => {
+    if (retrofitConfirmation) {
+      onUpdateStatus(day.date, retrofitConfirmation, undefined, true);
+      setRetrofitConfirmation(null);
+    }
+  };
+
+  const handleClose = () => {
+    if (step === 'VIEW') {
+      onClose();
+    } else {
+      onCancel();
+    }
+  };
+
+  const handleBack = () => {
+    executeBack();
+  };
+
+  const executeBack = () => {
+    switch (step) {
+      case 'PLANNING':
+        setStep('VIEW');
+        break;
+      case 'WORKSPACE':
+        setStep('PLANNING');
+        break;
+      case 'EXTEND':
+      case 'ALL_COLLEAGUES':
+        setStep('VIEW');
+        break;
+      case 'HOURS_OFF':
+        setStep('PLANNING');
+        break;
+      case 'VIEW':
+        onClose();
+        break;
+      default:
+        onCancel();
+    }
+  };
+
+  const ModalHeader = ({ title }: { title?: string }) => {
+    return (
+      <header classname="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-6 py-4 bg-surface shadow-sm border-b border-outline-variant/10 font-sans">
+        <div classname="flex items-center gap-1 min-w-[80px]">
+          {!isMandatory && (
+            <button onclick="{handleBack}" classname="flex items-center gap-1 px-3 py-2 -ml-2 rounded-xl text-on-surface hover:bg-surface-container transition-all active:scale-95 group font-bold text-sm">
+              <chevronleft classname="w-4 h-4 text-on-surface-variant"/>
+              <span classname="text-on-surface-variant">Back</span>
+            </button>
+          )}
+        </div>
+
+        {title && (
+          <h1 classname="font-headline font-bold text-lg text-on-surface absolute left-1/2 -translate-x-1/2 truncate max-w-[40%]">
+            {title}
+          </h1>
+        )}
+
+        <div classname="flex items-center justify-end min-w-[80px]">
+          {step !== 'VIEW' && step !== 'ALL_COLLEAGUES' && (
+            <button onclick="{handleClose}" classname="px-3 py-2 -mr-2 rounded-xl text-red-500 hover:bg-red-500/10 transition-all active:scale-95 font-bold text-sm">
+              Cancel
+            </button>
+          )}
+        </div>
+      </header>
+    );
+  };
+
+
+
+  if (step === 'PLANNING') {
+    return (
+      <div classname="fixed inset-0 bg-surface z-[110] flex flex-col overflow-y-auto pb-10 font-sans">
+        <modalheader title="{day.isPast" ?="" "retrofit"="" :="" "planning"}=""/>
+
+        <main classname="pt-24 px-6 max-w-xl mx-auto w-full">
+          <div classname="flex items-center justify-between mb-8">
+            <button onclick="{()" ==""> onNavigate('prev')}
+               className="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container-lowest border border-outline-variant/20 shadow-sm hover:bg-surface-container-low transition-colors"
+            >
+              <chevronleft classname="w-5 h-5 text-on-surface"/>
+            </button>
+            <div classname="font-headline font-bold text-lg text-on-surface">
+              {day.dayName}, {dayNumDisplay} {displayMonth}
+            </div>
+            <button onclick="{()" ==""> onNavigate('next')}
+               className="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container-lowest border border-outline-variant/20 shadow-sm hover:bg-surface-container-low transition-colors text-on-surface hover:bg-surface-container-low transition-colors"
+            >
+              <chevronleft classname="w-5 h-5 rotate-180"/>
+            </button>
+          </div>
+
+          <h2 classname="text-on-surface-variant text-base font-medium mb-6 px-2">
+            {day.isPast ? "Retrofit Work Status for the day" : "Let your team know about your Work Status for the day"}
+          </h2>
+
+      <div classname="space-y-3">
+            {!day.isPast && !day.isClosed && (
+              <>
+                {day.isOfficeClosed ? (
+                  <div classname="bg-orange-500/10 border border-orange-500/20 rounded-[24px] p-6 mb-4 flex gap-4 items-start">
+                    <div classname="bg-orange-500/20 p-3 rounded-full shrink-0">
+                      <alertcircle classname="w-6 h-6 text-orange-600"/>
+                    </div>
+                    <div classname="flex-grow pt-1">
+                      <p classname="text-sm font-bold text-orange-700 leading-tight">
+                        The office is closed and it is not possible to plan an In Office presence
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {(day.bookedCount ?? 0) >= (day.totalCapacity ?? 23) ? (
+                      <div classname="flex flex-col gap-4 mb-4">
+                        {/* Waiting List Card */}
+                        <button onclick="{()" ==""> handleStatusSelect(WorkStatus.WAITING_LIST)}
+                          className={ `w-full bg-surface-container-lowest border border-outline-variant/10 rounded-[28px] p-6 text-left shadow-sm hover:shadow-md transition-all active:scale-[0.98] group ${day.status === WorkStatus.WAITING_LIST ? 'ring-2 ring-primary/40' : ''}` }
+                        >
+                          <div classname="flex gap-4 items-center">
+                            <div classname="w-14 h-14 bg-amber-100 rounded-[22px] flex items-center justify-center shrink-0 text-3xl">
+                              ⌛
+                            </div>
+                            <div classname="flex flex-col flex-grow">
+                              <h3 classname="text-xl font-bold text-on-surface font-headline tracking-tight">Waiting List</h3>
+                            </div>
+                          </div>
+                        </button>
+
+                        {/* No Desk Card */}
+                        <button onclick="{()" ==""> handleStatusSelect(WorkStatus.OFFICE_NO_DESK)}
+                          className={ `w-full bg-surface-container-lowest border border-outline-variant/10 rounded-[28px] p-6 text-left shadow-sm hover:shadow-md transition-all active:scale-[0.98] group ${day.status === WorkStatus.OFFICE_NO_DESK ? 'ring-2 ring-primary/40' : ''}` }
+                        >
+                          <div classname="flex gap-4 items-center">
+                            <div classname="w-14 h-14 bg-blue-100 rounded-[22px] flex items-center justify-center shrink-0">
+                              <headset classname="w-8 h-8 text-blue-600"/>
+                            </div>
+                            <div classname="flex flex-col flex-grow">
+                              <h3 classname="text-xl font-bold text-on-surface font-headline tracking-tight">In Office / Not using a desk</h3>
+                            </div>
+                          </div>
+                        </button>
+                      </div>
+                    ) : (
+                      <statusoption emoji="🏢" label="In Office" color="bg-blue-100 text-blue-600" onclick="{()" ==""> handleStatusSelect(WorkStatus.IN_OFFICE)}
+                        showChevron={!day.isPast}
+                        isActive={day.status === WorkStatus.IN_OFFICE}
+                      />
+                    )}
+                  </>
+                )}
+              </>
+            )}
+            
+            {!day.isPast && (
+              <statusoption emoji="🏠" label="Remote Working" color="bg-green-100 text-green-600" onclick="{()" ==""> handleStatusSelect(WorkStatus.REMOTE)}
+                isActive={day.status === WorkStatus.REMOTE}
+              />
+            )}
+
+            <statusoption emoji="✈️" label="On a mission" color="bg-orange-100 text-orange-600" onclick="{()" ==""> handleStatusSelect(WorkStatus.MISSION)}
+              isActive={day.status === WorkStatus.MISSION}
+            />
+            <statusoption emoji="🏖️" label="On Leave (Vacation)" color="bg-fuchsia-100 text-fuchsia-600" onclick="{()" ==""> handleStatusSelect(WorkStatus.LEAVE)}
+              isActive={day.status === WorkStatus.LEAVE}
+            />
+            <statusoption emoji="🤒" label="On a sick leave" color="bg-red-100 text-red-600" onclick="{()" ==""> handleStatusSelect(WorkStatus.SICK)}
+              isActive={day.status === WorkStatus.SICK}
+            />
+          </div>
+
+           <div classname="mt-12 pt-8 border-t border-outline-variant/20">
+             <h2 classname="text-on-surface-variant text-base font-medium mb-4 px-2">
+               {day.isPast ? "Retrofit hours off" : "Or take hours off"}
+             </h2>
+             <button onclick="{()" ==""> setStep('HOURS_OFF')}
+               className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-[24px] p-5 flex items-center gap-4 shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
+             >
+               <div classname="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center shrink-0">
+                 <span classname="text-2xl font-bold text-amber-500">⏱️</span>
+               </div>
+               <span classname="font-headline font-bold text-lg text-on-surface flex-grow text-left">
+                 {day.isPast ? "Retrofit hours off" : "Take hours off"}
+               </span>
+               <chevronleft classname="w-5 h-5 rotate-180 text-on-surface-variant/70"/>
+             </button>
+           </div>
+        </main>
+
+        <animatepresence>
+          {retrofitConfirmation && (
+            <>
+              <motion.div initial="{{" opacity:="" 0="" }}="" animate="{{" opacity:="" 1="" }}="" exit="{{" opacity:="" 0="" }}="" onclick="{()" ==""> setRetrofitConfirmation(null)}
+                className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[200]"
+              />
+              <motion.div initial="{{" opacity:="" 0,="" scale:="" 0.9,="" y:="" 20="" }}="" animate="{{" opacity:="" 1,="" scale:="" 1,="" y:="" 0="" }}="" exit="{{" opacity:="" 0,="" scale:="" 0.9,="" y:="" 20="" }}="" classname="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-48px)] max-w-sm bg-surface-container-lowest rounded-[32px] p-8 z-[201] shadow-2xl overflow-hidden">
+                <div classname="w-16 h-16 bg-amber-500/10 rounded-2xl flex items-center justify-center mb-6 mx-auto">
+                  <clock classname="w-8 h-8 text-amber-600"/>
+                </div>
+                
+                <h3 classname="font-headline text-xl font-bold text-on-surface text-center mb-3">Retrofitting status</h3>
+                <p classname="font-sans text-sm text-on-surface-variant text-center mb-8 px-2 leading-relaxed">
+                  Are you sure you want to retrofit this working status?
+                  <span classname="block mt-4 py-3 px-4 bg-surface-container rounded-xl border border-outline-variant/10 text-on-surface/80">
+                    <span classname="font-bold text-primary">{statusConfig[retrofitConfirmation]?.label}</span> 
+                    <span classname="mx-2 opacity-40">→</span> 
+                    <span classname="font-bold opacity-60">{config?.label || 'Pending'}</span>
+                  </span>
+                </p>
+
+                <div classname="flex flex-col gap-3">
+                  <button onclick="{handleConfirmRetrofit}" classname="w-full bg-primary text-white font-bold py-4 rounded-2xl shadow-lg active:scale-[0.98] transition-all">
+                    Confirm
+                  </button>
+                  <button onclick="{()" ==""> setRetrofitConfirmation(null)}
+                    className="w-full bg-surface-container-low text-on-surface-variant font-bold py-4 rounded-2xl active:scale-[0.98] transition-all"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+
+        <animatepresence>
+          {showUnbookingModal && (
+            <>
+              <motion.div initial="{{" opacity:="" 0="" }}="" animate="{{" opacity:="" 1="" }}="" exit="{{" opacity:="" 0="" }}="" onclick="{()" ==""> setShowUnbookingModal(false)}
+                className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[200]"
+              />
+              <motion.div initial="{{" opacity:="" 0,="" scale:="" 0.9,="" y:="" 20="" }}="" animate="{{" opacity:="" 1,="" scale:="" 1,="" y:="" 0="" }}="" exit="{{" opacity:="" 0,="" scale:="" 0.9,="" y:="" 20="" }}="" classname="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-48px)] max-w-sm bg-surface-container-lowest rounded-[32px] p-8 z-[201] shadow-2xl overflow-hidden">
+                <div classname="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center mb-6 mx-auto">
+                  <alerttriangle classname="w-8 h-8 text-red-600"/>
+                </div>
+                
+                <h3 classname="font-headline text-xl font-bold text-on-surface text-center mb-3">Last-minute change</h3>
+                <p classname="font-sans text-sm text-on-surface-variant text-center mb-8 px-2 leading-relaxed">
+                  If you change the status for <span classname="font-bold text-on-surface">today</span> you will do a last-minute unbooking.
+                  <br/><br/>
+                  Are you sure you want to proceed?
+                </p>
+
+                <div classname="flex flex-col gap-3">
+                  <button onclick="{()" ==""> {
+                      setShowUnbookingModal(false);
+                      if (pendingStatusUpdate) {
+                         onUpdateStatus(day.date, pendingStatusUpdate);
+                         setPendingStatusUpdate(null);
+                         setStep('VIEW');
+                      }
+                    }}
+                    className="w-full bg-primary text-white font-bold py-4 rounded-2xl shadow-lg active:scale-[0.98] transition-all"
+                  >
+                    Confirm & Proceed
+                  </button>
+                  <button onclick="{()" ==""> {
+                      setShowUnbookingModal(false);
+                      setPendingStatusUpdate(null);
+                    }}
+                    className="w-full bg-surface-container-low text-on-surface-variant font-bold py-4 rounded-2xl active:scale-[0.98] transition-all"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  }
+
+  if (step === 'HOURS_OFF') {
+    return (
+      <div classname="fixed inset-0 bg-surface z-[125] flex flex-col overflow-y-auto pb-10 font-sans">
+        <modalheader title="Time Off"/>
+
+        <main classname="pt-24 px-6 max-w-xl mx-auto w-full">
+           <div classname="mb-10 text-center">
+             <div classname="w-20 h-20 bg-amber-500/10 rounded-[32px] flex items-center justify-center mx-auto mb-4 shadow-sm text-3xl">
+                ⏱️
+             </div>
+             <h2 classname="font-headline text-2xl font-bold text-on-surface">Select how much time</h2>
+             <p classname="text-on-surface-variant text-sm mt-1">For {day.dayName}, {dayNumDisplay} {displayMonth}</p>
+           </div>
+
+           <div classname="space-y-4">
+              <button onclick="{()" ==""> onUpdateOffTime(day.date, { type: OffTimeType.MORNING })}
+                className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-[28px] p-6 text-left shadow-sm hover:shadow-md hover:border-primary/30 transition-all group active:scale-[0.98] flex items-center gap-5"
+              >
+                <div classname="w-14 h-14 rounded-full bg-orange-500/10 flex items-center justify-center shrink-0">
+                   <sunrise classname="w-7 h-7 text-orange-500"/>
+                </div>
+                <div classname="flex-grow">
+                  <h3 classname="text-xl font-bold text-on-surface font-headline tracking-tight">Whole Morning</h3>
+                  <p classname="text-sm text-on-surface-variant/60 font-medium">From 9:00 to 12:30</p>
+                </div>
+              </button>
+
+              <button onclick="{()" ==""> onUpdateOffTime(day.date, { type: OffTimeType.AFTERNOON })}
+                className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-[28px] p-6 text-left shadow-sm hover:shadow-md hover:border-primary/30 transition-all group active:scale-[0.98] flex items-center gap-5"
+              >
+                <div classname="w-14 h-14 rounded-full bg-indigo-500/10 flex items-center justify-center shrink-0">
+                   <sunset classname="w-7 h-7 text-indigo-500"/>
+                </div>
+                <div classname="flex-grow">
+                  <h3 classname="text-xl font-bold text-on-surface font-headline tracking-tight">Whole Afternoon</h3>
+                  <p classname="text-sm text-on-surface-variant/60 font-medium">From 14:00 to 18:00</p>
+                </div>
+              </button>
+
+              <div classname="pt-6 mt-6 border-t border-outline-variant/10">
+                <h3 classname="text-on-surface-variant text-sm font-bold uppercase tracking-widest mb-4 pl-2 opacity-60 font-sans">Manual Input</h3>
+                
+                <div classname="relative group">
+                  <select onchange="{(e)" ==""> {
+                      const val = parseInt(e.target.value);
+                      if (val > 0) {
+                        onUpdateOffTime(day.date, { type: OffTimeType.CUSTOM, hours: val });
+                      }
+                    }}
+                    value={day.offTime?.type === OffTimeType.CUSTOM ? day.offTime.hours : "0"}
+                    className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-[24px] p-6 appearance-none font-headline font-bold text-lg text-on-surface focus:border-primary outline-none shadow-sm transition-all pr-12"
+                  >
+                    <option value="0">Select hours...</option>
+                    {[1, 2, 3, 4, 5, 6].map(h => (
+                      <option key="{h}" value="{h}">{h} {h === 1 ? 'hour' : 'hours'}</option>
+                    ))}
+                    <option value="7">7 hours (Whole day)</option>
+                  </select>
+                  <chevrondown classname="w-6 h-6 absolute right-6 top-1/2 -translate-y-1/2 text-on-surface-variant/40 pointer-events-none transition-transform group-focus-within:rotate-180"/>
+                </div>
+              </div>
+
+              {day.offTime && (
+                <button onclick="{()" ==""> onUpdateOffTime(day.date, undefined)}
+                  className="w-full mt-8 text-red-500 font-bold py-4 hover:bg-red-50 rounded-2xl transition-colors"
+                >
+                  Remove time off
+                </button>
+              )}
+           </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (step === 'WORKSPACE') {
+    const formattedDate = formatAppDate(day.date, 'long').toUpperCase();
+
+    const rooms = [
+      { id: 'blue', name: 'Blue Room', color: 'bg-blue-500', capacity: '6/8' },
+      { id: 'red', name: 'Red Room', color: 'bg-red-500', capacity: '3/8' },
+      { id: 'green', name: 'Green Room', color: 'bg-green-500', capacity: '7/8' },
+      { id: 'innovation', name: 'Lab', color: 'bg-gradient-to-r from-[#ff0000] via-[#0000ff] to-[#00ff00]', capacity: '3/6' },
+      { id: 'management', name: 'Management Room', color: 'bg-amber-500', capacity: '0/4' },
+      { id: 'admin', name: 'Admin', color: 'bg-indigo-500', capacity: '0/4' },
+    ];
+
+    return (
+      <div classname="fixed inset-0 bg-surface z-[120] flex flex-col overflow-y-auto font-sans">
+        <modalheader title="Workspace Use"/>
+
+        <div classname="{`pt-24" max-w-xl="" mx-auto="" w-full="" text-center="" px-6="" pb-20`}="">
+          <div classname="font-headline text-on-surface-variant font-bold text-sm tracking-widest mb-6 opacity-80 uppercase">{formattedDate}</div>
+          <h1 classname="font-headline font-extrabold text-4xl text-on-surface mb-2 tracking-tight">Plan Workspace Use</h1>
+          <p classname="text-on-surface-variant text-base mb-12">What do you plan to do at the office?</p>
+
+          <section classname="mb-10">
+            <h3 classname="font-headline font-bold text-lg text-on-surface/70 mb-4 tracking-tight">I plan to use a desk in...</h3>
+            <div classname="flex flex-col gap-3">
+              {rooms.map(room => {
+                const isLab = room.id === 'innovation';
+                const hasActivityPlanned = isLab && day.isLabBooked;
+                const isCurrentRoom = isLab && day.room === 'Lab';
+                
+                if (isLab && hasActivityPlanned && !isCurrentRoom) {
+                  return (
+                    <div key="{room.id}" classname="w-full bg-surface-container-low/50 rounded-2xl p-5 border border-outline-variant/10 text-left opacity-60">
+                      <div classname="flex items-center gap-4">
+                        <div classname="{`w-6" h-6="" rounded-full="" flex-shrink-0="" shadow-sm="" ${room.color}`}=""/>
+                        <div classname="flex flex-col">
+                          <span classname="font-headline font-bold text-base text-on-surface">
+                            {room.name}
+                          </span>
+                          <span classname="text-xs font-bold text-red-500 mt-1 uppercase tracking-wider">
+                            Activity planned for day, lab unavailable
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+                
+                const isSelectedRoom = room.name === day.room;
+                
+                return (
+                  <button key="{room.id}" onclick="{()" ==""> handleRoomSelect(room.name, true)}
+                    className={`w-full bg-surface-container-lowest rounded-2xl p-5 flex items-center justify-between transition-all duration-200 border ${
+                      isCurrentRoom && hasActivityPlanned 
+                        ? 'border-orange-500 ring-1 ring-orange-500/20 shadow-orange-500/10' 
+                        : isSelectedRoom 
+                          ? 'border-green-500 ring-2 ring-green-500/20 shadow-green-200/50' 
+                          : 'border-outline-variant/10'
+                    } hover:border-primary/40 hover:shadow-lg active:scale-[0.98] group shadow-sm text-left`}
+                  >
+                    <div classname="flex items-center gap-4">
+                      <div classname="{`w-6" h-6="" rounded-full="" flex-shrink-0="" shadow-sm="" ${room.color}`}=""/>
+                      <div classname="flex flex-col">
+                        <div classname="flex items-center gap-2">
+                          <span classname="font-headline font-bold text-lg text-on-surface group-hover:text-primary transition-colors">
+                            {room.name}
+                          </span>
+                          {isSelectedRoom && (
+                            <span classname="text-[10px] font-bold bg-green-500/10 text-green-600 px-2 py-0.5 rounded-full uppercase tracking-wider">Planned</span>
+                          )}
+                        </div>
+                        {isCurrentRoom && hasActivityPlanned && (
+                          <div classname="flex items-center gap-1.5 mt-0.5">
+                            <div classname="w-4 h-4 rounded-full bg-orange-600 flex items-center justify-center text-[10px] text-white font-bold leading-none">!</div>
+                            <span classname="text-xs font-bold text-orange-600 uppercase tracking-tight">
+                              Conflict with scheduled activities
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <span classname="text-sm font-sans font-semibold text-on-surface-variant/60">{room.capacity}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <div classname="h-[1px] w-full bg-outline-variant/20 mb-10"/>
+
+          <button onclick="{()" ==""> handleRoomSelect('No Desk', false)}
+            className="w-full bg-surface-container-lowest rounded-2xl p-6 flex items-center gap-4 transition-all duration-200 border border-outline-variant/20 hover:border-primary/40 hover:shadow-lg active:scale-[0.98] shadow-sm group"
+          >
+            <div classname="bg-primary/5 p-3 rounded-full group-hover:bg-primary/10 transition-colors">
+               <headset classname="w-6 h-6 text-primary"/>
+            </div>
+            <span classname="font-headline font-bold text-xl text-on-surface">Not Using a Desk</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === 'EXTEND') {
+    const isOffice = day.status === WorkStatus.IN_OFFICE;
+    const isFutureDay = day.date > '2026-10-09';
+    const isSpecialLeaveEligible = (day.status === WorkStatus.SICK || day.status === WorkStatus.LEAVE) && isFutureDay;
+    const STACK_END_DATE = '2026-11-09';
+    const startExtensionDate = parseAppDate(day.date);
+    let rangeDays = (isSpecialLeaveEligible && extendedSickType) ? 180 : 14; 
+    
+    // Helper to check if office is completely full for a given date
+    const isOfficeFullForDate = (date: string) => {
+      const totalCap = ROOMS_CONFIG.reduce((acc, r) => acc + r.baseCapacity, 0);
+      const totalBooked = ROOMS_CONFIG.reduce((acc, r) => {
+        const cap = getRoomCapacityForDate(date, r.name);
+        return acc + cap.booked;
+      }, 0);
+      return totalBooked >= totalCap;
+    };
+
+    // Generate selectable business days
+    const selectableDates: Array<{
+      dateStr: string, 
+      dayNum: number, 
+      isWeekend: boolean, 
+      isClosed: boolean, 
+      dayLabel: string, 
+      dateLabel: string, 
+      monthLabel: string, 
+      isFull: boolean, 
+      isAlreadyExtended: boolean,
+      currentStatus?: WorkStatus,
+      currentIsUsingDesk?: boolean
+    }> = [];
+    for (let i = 1; i <= rangeDays; i++) {
+        const d = new Date(startExtensionDate);
+        d.setDate(startExtensionDate.getDate() + i);
+        const dateStr = toAppDateStr(d);
+        
+        // Standard extension guardrail (not applying to special leave)
+        if (!extendedSickType && dateStr > STACK_END_DATE) {
+          break;
+        }
+
+        const isWeekend = getFictionalIsWeekend(d);
+        const dayPresence = allDays.find(ad => ad.date === dateStr);
+
+        selectableDates.push({
+            dateStr,
+            dayNum: d.getDate(),
+            isWeekend,
+            isClosed: IS_CLOSED_DAYS.includes(dateStr),
+            dayLabel: getFictionalDayName(d, 'short'),
+            dateLabel: `${months[d.getMonth()].slice(0, 3)} ${d.getDate()}`,
+            monthLabel: `${months[d.getMonth()]} ${d.getFullYear()}`,
+            isFull: isOfficeFullForDate(dateStr),
+            isAlreadyExtended: dayPresence?.isExtended || false,
+            currentStatus: dayPresence?.status,
+            currentIsUsingDesk: dayPresence?.isUsingDesk
+        });
+    }
+
+    const isAtEndOfWeek = !extendedSickType && selectableDates.length === 0;
+
+    const toggleDate = (dateStr: string) => {
+      if (isSpecialLeaveEligible && extendedSickType) {
+        // Range selection for extended special leave
+        // Start date is fixed to day.date
+        const start = day.date;
+        const end = dateStr;
+        
+        if (new Date(end) <= new Date(start)) {
+          // If user picks a date before or same as start, we ignore or reset end if it was there
+          setSickRange({ start, end: null });
+          setExtendedDates([]);
+          return;
+        }
+
+        setSickRange({ start, end });
+        
+        // Fill dates in between
+        const range: string[] = [];
+        const curr = new Date(start);
+        const d2 = new Date(end);
+        
+        // Skip the first day (day.date) as we are extending FROM it
+        curr.setDate(curr.getDate() + 1);
+        
+        while (curr <= d2) {
+          const ds = toAppDateStr(curr);
+          const isWeekend = getFictionalIsWeekend(curr);
+          if (!isWeekend) {
+            range.push(ds);
+          }
+          curr.setDate(curr.getDate() + 1);
+        }
+        setExtendedDates(range);
+        return;
+      }
+
+      setExtendedDates(prev => {
+        if (prev.includes(dateStr)) {
+          const newDates = prev.filter(x => x !== dateStr);
+          if (isOffice) {
+            setExtendedOfficeConfigs(prevConfigs => {
+              const { [dateStr]: _, ...rest } = prevConfigs;
+              return rest;
+            });
+          }
+          return newDates;
+        } else {
+          if (isOffice) {
+            setExtendedOfficeConfigs(prevConfigs => ({
+              ...prevConfigs,
+              [dateStr]: { room: day.room || 'Blue Room', isUsingDesk: day.isUsingDesk }
+            }));
+          }
+          return [...prev, dateStr];
+        }
+      });
+    };
+
+    const updateRoomConfig = (date: string, room: string, isUsingDesk: boolean) => {
+      setExtendedOfficeConfigs(prev => ({
+        ...prev,
+        [date]: { room, isUsingDesk }
+      }));
+    };
+
+    const handleApply = () => {
+      // Check for last minute unbookings
+      // If we are extending a NON-OFFICE status to a day that is currently OFFICE
+      // AND it's a "last minute" (tomorrow, Oct 10th)
+      const lastMinuteUnbookings = extendedDates.filter(dateStr => {
+        const targetDay = allDays.find(ad => ad.date === dateStr);
+        const isTargetOffice = targetDay?.status === WorkStatus.IN_OFFICE;
+        const willBeOffice = isOffice; // isOffice is true if current day.status is IN_OFFICE
+        
+        const isChangingFromOffice = isTargetOffice && !willBeOffice;
+        const isTomorrow = dateStr === '2026-10-10'; // Hardcoded "last minute window" for this prototype
+        
+        return isChangingFromOffice && isTomorrow;
+      });
+
+      if (lastMinuteUnbookings.length > 0 && !showUnbookingModal) {
+        setUnbookingWarningDays(lastMinuteUnbookings);
+        setShowUnbookingModal(true);
+        return;
+      }
+
+      if (isOffice) {
+        const updates = extendedDates.map(date => {
+          const config = extendedOfficeConfigs[date] || { room: day.room || '', isUsingDesk: day.isUsingDesk };
+          const cap = getRoomCapacityForDate(date, config.room);
+          const isFull = config.isUsingDesk && cap.booked >= cap.total;
+          
+          return {
+            date,
+            status: isFull ? WorkStatus.WAITING_LIST : WorkStatus.IN_OFFICE,
+            ...config
+          };
+        });
+        if (updates.length > 0) {
+          if (onUpdateBulkStatus) {
+            onUpdateBulkStatus(updates);
+          } else {
+            updates.forEach(u => onUpdateStatus(u.date, u.status, u.isUsingDesk, false, u.room));
+          }
+        }
+        onClose();
+      } else {
+        const isParental = extendedSickType === 'MATERNITY';
+        const finalStatus = isParental ? WorkStatus.PARENTAL_LEAVE : day.status;
+
+        if (onUpdateBulkStatus) {
+          onUpdateBulkStatus(extendedDates.map(date => ({
+            date,
+            status: finalStatus,
+            isUsingDesk: false,
+            room: ''
+          })));
+        } else {
+          onUpdateStatus(extendedDates, finalStatus);
+        }
+        onClose();
+      }
+    };
+
+    const auxLabel = day.isUsingDesk ? `Using a desk in ${day.room}` : 'Not using a desk';
+    const hasConflicts = false; // We don't block anymore as we redirect to waiting list
+    
+    return (
+      <div classname="fixed inset-0 bg-surface z-[130] flex flex-col font-sans overflow-y-auto pb-40">
+        <modalheader title="Extend status"/>
+
+        <main classname="pt-24 px-6 max-w-xl mx-auto w-full pb-10">
+          {/* Status Context Header */}
+          <div classname="mb-8 text-center bg-surface-container-lowest rounded-3xl p-6 border border-outline-variant/5 shadow-sm">
+            <p classname="text-[11px] font-bold text-on-surface-variant/40 uppercase tracking-[0.2em] mb-2">Extended from</p>
+            <div classname="font-headline font-bold text-xl text-on-surface mb-4">
+              {day.dayName}, {dayNumDisplay} {displayMonth}
+            </div>
+            <div classname="inline-flex items-center gap-3 px-5 py-3 bg-primary/5 rounded-2xl border border-primary/10">
+              <div classname="w-8 h-8 rounded-xl bg-surface-container-lowest shadow-sm border border-primary/5 flex items-center justify-center">
+                {config?.icon ? (
+                  <config.icon classname="w-4 h-4 text-primary"/>
+                ) : (
+                  <span classname="text-lg">{config?.emoji}</span>
+                )}
+              </div>
+              <span classname="text-sm font-bold text-on-surface">
+                {config?.label} {isOffice && <> <span classname="mx-1 text-primary/40 font-normal">|</span> <span classname="text-primary">{auxLabel}</span></>}
+              </span>
+            </div>
+
+            {/* Special leave controls */}
+            {isSpecialLeaveEligible ? (
+              <div classname="mt-8 pt-6 border-t border-outline-variant/10">
+                <button onclick="{()" ==""> setIsSpecialLeaveOpen(!isSpecialLeaveOpen)}
+                  className="w-full flex items-center justify-between py-2 text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-widest hover:text-on-surface transition-colors"
+                >
+                  <span>I need a special extended leave</span>
+                  <chevrondown classname="{`w-3" h-3="" transition-transform="" duration-300="" ${isspecialleaveopen="" ?="" 'rotate-180'="" :="" ''}`}=""/>
+                </button>
+                
+                <animatepresence>
+                  {isSpecialLeaveOpen && (
+                    <motion.div initial="{{" height:="" 0,="" opacity:="" 0,="" margintop:="" 0="" }}="" animate="{{" height:="" 'auto',="" opacity:="" 1,="" margintop:="" 12="" }}="" exit="{{" height:="" 0,="" opacity:="" 0,="" margintop:="" 0="" }}="" classname="overflow-hidden flex flex-col gap-4">
+                      <div classname="grid grid-cols-2 gap-3">
+                        <button onclick="{()" ==""> {
+                            const newVal = extendedSickType === 'MATERNITY' ? null : 'MATERNITY';
+                            setExtendedSickType(newVal);
+                            if (!newVal) {
+                              setExtendedDates([]);
+                              setSickRange({ start: day.date, end: null });
+                              setIsSpecialCalendarOpen(false);
+                            }
+                          }}
+                          className={`flex items-center justify-center p-4 rounded-2xl border transition-all text-center h-14 ${extendedSickType === 'MATERNITY' ? 'bg-primary/5 border-primary shadow-sm' : 'bg-surface-container-low border-outline-variant/10 hover:border-primary/20'}`}
+                        >
+                          <span classname="{`text-[10px]" font-bold="" leading-tight="" ${extendedsicktype="==" 'maternity'="" ?="" 'text-primary'="" :="" 'text-on-surface'}`}="">Parental Leave</span>
+                        </button>
+                        <button onclick="{()" ==""> {
+                            const newVal = extendedSickType === 'LONG_TERM' ? null : 'LONG_TERM';
+                            setExtendedSickType(newVal);
+                            if (!newVal) {
+                              setExtendedDates([]);
+                              setSickRange({ start: day.date, end: null });
+                              setIsSpecialCalendarOpen(false);
+                            }
+                          }}
+                          className={`flex items-center justify-center p-4 rounded-2xl border transition-all text-center h-14 ${extendedSickType === 'LONG_TERM' ? 'bg-primary/5 border-primary shadow-sm' : 'bg-surface-container-low border-outline-variant/10 hover:border-primary/20'}`}
+                        >
+                          <span classname="{`text-[10px]" font-bold="" leading-tight="" ${extendedsicktype="==" 'long_term'="" ?="" 'text-primary'="" :="" 'text-on-surface'}`}="">I need more than 2 weeks</span>
+                        </button>
+                      </div>
+
+                      {extendedSickType && (
+                        <div classname="flex flex-col gap-4">
+                          <div classname="flex flex-col sm:flex-row items-center gap-3 w-full">
+                            {/* Start Field (Read-only) */}
+                            <div classname="w-full bg-surface-container-low rounded-2xl p-4 border border-outline-variant/10 opacity-60">
+                              <label classname="block text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-widest mb-1">Start of extended leave</label>
+                              <div classname="text-sm font-bold text-on-surface">
+                                {formatAppDate(day.date, 'long')}
+                              </div>
+                            </div>
+                            
+                            <arrowright classname="w-5 h-5 text-on-surface-variant/30 hidden sm:block shrink-0"/>
+                            <chevrondown classname="w-5 h-5 text-on-surface-variant/30 block sm:hidden shrink-0"/>
+
+                            {/* End Field (Tappable) */}
+                            <button onclick="{()" ==""> setIsSpecialCalendarOpen(!isSpecialCalendarOpen)}
+                              className={`w-full text-left rounded-2xl p-4 border transition-all ${isSpecialCalendarOpen ? 'bg-primary/5 border-primary/40' : 'bg-surface-container-low border-outline-variant/10'}`}
+                            >
+                              <label classname="block text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-widest mb-1">End of extended leave</label>
+                              <div classname="{`text-sm" font-bold="" ${sickrange.end="" ?="" 'text-primary'="" :="" 'text-on-surface-variant="" 30'}`}="">
+                                {sickRange.end ? formatAppDate(sickRange.end, 'long') : 'Select end date...'}
+                              </div>
+                            </button>
+                          </div>
+
+                          {/* Collapsible Calendar for Special Leave */}
+                          <animatepresence>
+                            {isSpecialCalendarOpen && (
+                              <motion.div initial="{{" height:="" 0,="" opacity:="" 0="" }}="" animate="{{" height:="" 'auto',="" opacity:="" 1="" }}="" exit="{{" height:="" 0,="" opacity:="" 0="" }}="" classname="overflow-hidden">
+                                <div classname="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/10 mt-2">
+                                  <div classname="flex justify-between items-center mb-4 px-1">
+                                    <span classname="font-headline font-bold text-sm text-on-surface">Select end date (Upcoming 6 months)</span>
+                                  </div>
+                                  <div classname="max-h-[300px] overflow-y-auto px-1 pr-2 space-y-6">
+                                    {Object.entries(selectableDates.reduce((acc, curr) => {
+                                      const month = curr.monthLabel;
+                                      if (!acc[month]) acc[month] = [];
+                                      acc[month].push(curr);
+                                      return acc;
+                                    }, {} as Record<string, typeof="" selectabledates="">)).map(([month, dates]) => (
+                                      <div key="{month}" classname="space-y-3">
+                                        <h4 classname="text-[10px] font-bold text-on-surface-variant/40 uppercase tracking-widest border-b border-outline-variant/5 pb-1">{month}</h4>
+                                        <div classname="grid grid-cols-7 gap-1.5">
+                                          {dates.map((item) => {
+                                            const isSelected = item.dateStr === sickRange.end;
+                                            const isOriginal = item.dateStr === day.date;
+                                            const isBeforeStart = new Date(item.dateStr) < new Date(day.date);
+                                            const isInRange = sickRange.start && sickRange.end && 
+                                              new Date(item.dateStr) > new Date(sickRange.start) && 
+                                              new Date(item.dateStr) < new Date(sickRange.end);
+                                            
+                                            const currentConfig = item.currentStatus ? statusConfig[item.currentStatus] : null;
+
+                                            return (
+                                              <button key="{item.dateStr}" disabled="{item.isWeekend" ||="" item.isclosed="" ||="" isbeforestart="" ||="" isoriginal}="" onclick="{()" ==""> {
+                                                  toggleDate(item.dateStr);
+                                                  // Optional: auto-close calendar after selecting end date
+                                                  // setIsSpecialCalendarOpen(false);
+                                                }}
+                                                className={`
+                                                  aspect-square rounded-lg flex items-center justify-center text-[11px] font-bold transition-all relative
+                                                  ${isOriginal ? 'bg-primary/10 text-primary cursor-default' : ''}
+                                                  ${(!item.isWeekend && !item.isClosed && !isBeforeStart) ? 
+                                                    ((isSelected || isInRange) ? 'bg-primary text-white shadow-sm' : 'bg-surface-container-low text-on-surface hover:bg-surface-container') 
+                                                    : 'text-on-surface-variant/10 cursor-not-allowed opacity-30 shadow-none'}
+                                                `}
+                                              >
+                                                {item.dayNum}
+                                                {currentConfig && !isOriginal && (
+                                                  <div classname="absolute top-0.5 right-0.5 flex items-center justify-center">
+                                                    {currentConfig.icon ? (
+                                                      <currentconfig.icon classname="{`w-1.5" h-1.5="" sm:w-2="" sm:h-2="" ${isselected="" ||="" isinrange="" ?="" 'text-white'="" :="" currentconfig.color.split('="" ')[1]}`}=""/>
+                                                    ) : (
+                                                      <span classname="text-[6px] sm:text-[8px]">{currentConfig.emoji}</span>
+                                                    )}
+                                                  </div>
+                                                )}
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            ) : (
+              <div classname="h-4"/>
+            )}
+          </div>
+
+          {/* Standard Extension Calendar (Show only if special leave is NOT open/configured) */}
+          <div classname="{`transition-all" duration-500="" overflow-hidden="" ${extendedsicktype="" ?="" 'max-h-0="" opacity-0="" pointer-events-none'="" :="" 'max-h-[1000px]="" opacity-100'}`}="">
+            <div classname="bg-surface-container-lowest rounded-[28px] p-6 shadow-sm border border-outline-variant/10 mb-8">
+              <div classname="flex flex-col mb-6 px-1">
+                <span classname="font-headline font-bold text-lg text-on-surface">
+                  Select individual days
+                </span>
+                <span classname="text-[10px] font-bold text-on-surface-variant/40 uppercase tracking-widest mt-1">
+                  Available Days within the planning window
+                </span>
+              </div>
+
+              {isAtEndOfWeek ? (
+                <div classname="bg-surface-container-low/50 rounded-2xl p-8 border border-dashed border-outline-variant/20 flex flex-col items-center justify-center text-center">
+                  <div classname="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center mb-4 text-on-surface-variant/30">
+                    <alerttriangle classname="w-6 h-6"/>
+                  </div>
+                  <p classname="text-sm font-medium text-on-surface-variant max-w-[240px] leading-relaxed">
+                    You cannot extend further because you are at the end of the planning window
+                  </p>
+                </div>
+              ) : (
+                <div classname="{`space-y-8" max-h-[400px]="" overflow-y-auto="" px-1="" scrollbar-hide="" py-2`}="">
+                  {/* Standard calendar content... */}
+                  {Object.entries(selectableDates.slice(0, 14).reduce((acc, curr) => {
+                  const month = curr.monthLabel;
+                  if (!acc[month]) acc[month] = [];
+                  acc[month].push(curr);
+                  return acc;
+                }, {} as Record<string, typeof="" selectabledates="">)).map(([month, dates]) => (
+                  <div key="{month}" classname="space-y-4">
+                    <h4 classname="text-[11px] font-bold text-on-surface-variant/40 uppercase tracking-widest border-b border-outline-variant/10 pb-2">{month}</h4>
+                    <div classname="grid grid-cols-7 gap-3">
+                      {dates.map((item) => {
+                        const isSelected = extendedDates.includes(item.dateStr);
+                        const isOriginal = item.dateStr === day.date;
+                        const currentConfig = item.currentStatus ? statusConfig[item.currentStatus] : null;
+                        
+                        return (
+                          <div key="{item.dateStr}" classname="flex flex-col items-center gap-1.5">
+                            <span classname="text-[9px] font-bold text-on-surface-variant/30 uppercase tracking-wider">{item.dayLabel}</span>
+                            <button disabled="{item.isWeekend" ||="" item.isclosed="" ||="" isoriginal}="" onclick="{()" ==""> toggleDate(item.dateStr)}
+                              className={`
+                                w-full aspect-square rounded-xl flex items-center justify-center text-sm font-bold transition-all relative
+                                ${isOriginal ? 'bg-primary/5 text-primary border border-primary/20 cursor-default' : ''}
+                                ${(!item.isWeekend && !item.isClosed) ? 
+                                  ((isSelected) ? (isOffice && item.isFull ? 'bg-red-500 text-white shadow-md scale-105' : 'bg-primary text-white shadow-md scale-105') : 'bg-surface-container-low text-on-surface hover:bg-surface-container') 
+                                  : 'text-on-surface-variant/20 cursor-not-allowed opacity-40 shadow-none'}
+                                ${isOffice && item.isFull && !isSelected && !isOriginal ? 'ring-2 ring-red-500/30' : ''}
+                              `}
+                            >
+                              {item.dayNum}
+                              {currentConfig && !isOriginal && (
+                                <div classname="{`absolute" -top-1="" -right-1="" w-4="" h-4="" sm:w-6="" sm:h-6="" bg-surface-container-lowest="" rounded-full="" flex="" items-center="" justify-center="" shadow-sm="" border="" border-outline-variant="" 10="" z-10`}="">
+                                  {currentConfig.icon ? (
+                                    <currentconfig.icon classname="{`w-2" h-2="" sm:w-3.5="" sm:h-3.5="" ${currentconfig.color.split('="" ')[1]}`}=""/>
+                                  ) : (
+                                    <span classname="text-[10px] sm:text-xs leading-none">{currentConfig.emoji}</span>
+                                  )}
+                                </div>
+                              )}
+                              {isSelected && (
+                                 <div classname="{`absolute" -bottom-1="" -right-1="" w-2.5="" h-2.5="" ${isoffice="" &&="" item.isfull="" ?="" 'bg-red-100'="" :="" 'bg-primary="" 10'}="" rounded-full="" flex="" items-center="" justify-center="" shadow-sm="" z-20`}="">
+                                    {isOffice && item.isFull ? (
+                                      <alertcircle classname="w-2 h-2 text-red-500"/>
+                                    ) : (
+                                      <check classname="w-2 h-2 text-primary"/>
+                                    )}
+                                 </div>
+                              )}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            </div>
+          </div>
+        {/* Room Assignment List */}
+          {isOffice && extendedDates.length > 0 && (
+            <div classname="space-y-6">
+              <h3 classname="font-sans text-[11px] font-bold text-on-surface-variant/50 uppercase tracking-[0.15em] pl-1 mb-2">Room Assignment FOR NEW DAYS</h3>
+              
+              {extendedDates.sort().map((dateStr) => {
+                const d = new Date(dateStr);
+                const dayLabel = getFictionalDayName(d, 'short');
+                const dateLabel = `${months[d.getMonth()].slice(0, 3)} ${d.getDate()}`;
+                const currentConfig = extendedOfficeConfigs[dateStr] || { room: day.room || '', isUsingDesk: day.isUsingDesk };
+                const currentRoomCap = getRoomCapacityForDate(dateStr, currentConfig.room);
+                const isRoomFull = currentConfig.isUsingDesk && currentRoomCap.booked >= currentRoomCap.total;
+                
+                // Deterministic project teammates logic for mock
+                const tHash = dateStr.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+                const projectTeammatesCount = (tHash % 6) + 1;
+
+                return (
+                  <div key="{dateStr}" classname="{`bg-surface-container-lowest" rounded-[24px]="" p-5="" shadow-sm="" border="" ${isroomfull="" ?="" 'border-red-500="" 20="" bg-red-50="" 10'="" :="" 'border-outline-variant="" 10'}="" hover:border-outline-variant="" 30="" transition-all="" flex="" flex-col="" sm:flex-row="" gap-6`}="">
+                    {/* Date Column */}
+                    <div classname="flex flex-row sm:flex-col items-center sm:items-start justify-between sm:justify-center gap-1 sm:w-24 shrink-0 sm:border-r border-outline-variant/10 sm:pr-4">
+                      <div classname="flex flex-col">
+                        <span classname="font-headline font-bold text-base text-on-surface leading-tight">{dayLabel}</span>
+                        <span classname="font-sans text-[11px] font-bold text-on-surface-variant/40 uppercase tracking-wide">{dateLabel}</span>
+                      </div>
+                      
+                      <div classname="flex items-center gap-1.5 mt-2 bg-surface-container-low px-2 py-1 rounded-lg">
+                        <span classname="text-[10px] font-bold text-on-surface/60">{projectTeammatesCount} project teammates</span>
+                        <div classname="flex -space-x-1.5">
+                           {[...Array(Math.min(projectTeammatesCount, 3))].map((_, i) => (
+                             <div key="{i}" classname="w-3.5 h-3.5 rounded-full bg-primary/20 border border-white"/>
+                           ))}
+                        </div>
+                      </div>
+
+                      {isRoomFull && (
+                        <div classname="mt-2 flex flex-col gap-1">
+                          <div classname="flex items-center gap-1.5 text-red-500 bg-red-50 px-2 py-1.5 rounded-lg border border-red-100">
+                            <alertcircle classname="w-3 h-3"/>
+                            <span classname="text-[9px] font-bold uppercase shrink-0">Office Full</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Rooms Grid Column */}
+                    <div classname="flex-grow">
+                      {isOfficeFullForDate(dateStr) ? (
+                        <div classname="flex flex-col gap-2">
+                           <button onclick="{()" ==""> updateRoomConfig(dateStr, currentConfig.room || 'Blue Room', true)}
+                             className={`flex items-center justify-center gap-3 p-4 rounded-2xl border transition-all ${currentConfig.isUsingDesk ? 'bg-amber-500/10 border-amber-500 text-amber-700 shadow-sm ring-1 ring-amber-500/20' : 'bg-surface-container-lowest border-outline-variant/30 text-on-surface/60 hover:bg-surface-container'}`}
+                           >
+                             <div classname="bg-amber-500/20 p-2 rounded-lg">
+                               <clock classname="w-5 h-5 text-amber-600"/>
+                             </div>
+                             <span classname="font-headline font-bold text-sm">Join Waiting List</span>
+                           </button>
+                           <button onclick="{()" ==""> updateRoomConfig(dateStr, 'No Desk', false)}
+                             className={`flex items-center justify-center gap-3 p-4 rounded-2xl border transition-all ${!currentConfig.isUsingDesk ? 'bg-primary/10 border-primary text-primary shadow-sm ring-1 ring-primary/20' : 'bg-surface-container-lowest border-outline-variant/30 text-on-surface/60 hover:bg-surface-container'}`}
+                           >
+                             <div classname="bg-primary/20 p-2 rounded-lg">
+                               <headset classname="w-5 h-5 text-primary"/>
+                             </div>
+                             <span classname="font-headline font-bold text-sm">Not using a desk</span>
+                           </button>
+                        </div>
+                      ) : (
+                        <div classname="grid grid-cols-2 lg:grid-cols-3 gap-2">
+                           {ROOMS_CONFIG.map(room => {
+                              const cap = getRoomCapacityForDate(dateStr, room.name);
+                              const isFull = cap.booked >= cap.total;
+                              const isActive = currentConfig.room === room.name && currentConfig.isUsingDesk;
+    
+                              return (
+                                <button key="{room.id}" onclick="{()" ==""> updateRoomConfig(dateStr, room.name, true)}
+                                  disabled={isFull && !isActive}
+                                  className={`
+                                    flex flex-col gap-0.5 px-2.5 py-2.5 rounded-xl border text-left transition-all
+                                    ${isActive ? 'bg-primary/5 border-primary shadow-sm' : isFull ? 'bg-surface-container-low/40 border-outline-variant/5 opacity-30 cursor-not-allowed' : 'bg-surface-container-lowest border-outline-variant/30 hover:border-primary/40'}
+                                  `}
+                                >
+                                   <div classname="flex items-center gap-1.5 overflow-hidden">
+                                      <div classname="{`w-2" h-2="" rounded-full="" ${room.color}="" shrink-0`}=""/>
+                                      <span classname="{`text-[10px]" font-bold="" truncate="" ${isactive="" ?="" 'text-on-surface'="" :="" 'text-on-surface="" 80'}`}="">
+                                        {room.name === 'Lab' ? 'Lab' : room.name === 'Management Room' ? 'Management' : room.name}
+                                      </span>
+                                   </div>
+                                   <span classname="{`text-[9px]" font-bold="" ml-3.5="" ${isactive="" ?="" 'text-primary'="" :="" 'text-on-surface-variant="" 40'}`}="">{cap.booked}/{cap.total}</span>
+                                </button>
+                              );
+                           })}
+                           <button onclick="{()" ==""> updateRoomConfig(dateStr, 'No Desk', false)}
+                              className={`
+                                flex items-center justify-center gap-2 px-2.5 py-2.5 rounded-xl border transition-all text-center
+                                ${!currentConfig.isUsingDesk ? 'bg-primary/5 border-primary text-primary shadow-sm' : 'bg-surface-container-lowest border-outline-variant/30 text-on-surface/60 hover:border-primary/40'}
+                              `}
+                           >
+                              <span classname="text-[10px] font-bold leading-tight">(Not using a desk)</span>
+                           </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </main>
+
+        <footer classname="fixed bottom-0 left-0 w-full p-6 bg-surface-container-highest border-t border-outline-variant/10 z-[140] flex flex-col gap-3">
+           <p classname="text-[10px] text-on-surface-variant/60 text-center font-bold uppercase tracking-wider">
+             Extensions will overwrite existing working statuses (if any)
+           </p>
+           <button onclick="{handleApply}" disabled="{extendedDates.length" =="=" 0}="" classname="w-full bg-primary text-white font-headline font-extrabold py-5 rounded-[24px] shadow-lg shadow-primary/20 disabled:opacity-30 disabled:shadow-none transition-all active:scale-[0.98] text-center">
+             {extendedDates.length > 0 
+               ? `Extend status to ${extendedDates.length} other day${extendedDates.length === 1 ? '' : 's'}` 
+               : 'Select dates to extend'}
+           </button>
+        </footer>
+
+        <animatepresence>
+          {showUnbookingModal && (
+            <>
+              <motion.div initial="{{" opacity:="" 0="" }}="" animate="{{" opacity:="" 1="" }}="" exit="{{" opacity:="" 0="" }}="" onclick="{()" ==""> setShowUnbookingModal(false)}
+                className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[200]"
+              />
+              <motion.div initial="{{" opacity:="" 0,="" scale:="" 0.9,="" y:="" 20="" }}="" animate="{{" opacity:="" 1,="" scale:="" 1,="" y:="" 0="" }}="" exit="{{" opacity:="" 0,="" scale:="" 0.9,="" y:="" 20="" }}="" classname="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-48px)] max-w-sm bg-surface-container-lowest rounded-[32px] p-8 z-[201] shadow-2xl overflow-hidden">
+                <div classname="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center mb-6 mx-auto">
+                  <alerttriangle classname="w-8 h-8 text-red-600"/>
+                </div>
+                
+                <h3 classname="font-headline text-xl font-bold text-on-surface text-center mb-3">Last-minute change</h3>
+                <p classname="font-sans text-sm text-on-surface-variant text-center mb-8 px-2 leading-relaxed">
+                  If you change the status for <span classname="font-bold text-on-surface">{day.date === '2026-10-09' && unbookingWarningDays.includes(day.date) ? 'today' : unbookingWarningDays.map(d => formatAppDate(d, 'short')).join(', ')}</span> you will do a last-minute unbooking.
+                  <br/><br/>
+                  Are you sure you want to proceed?
+                </p>
+
+                <div classname="flex flex-col gap-3">
+                  <button onclick="{()" ==""> {
+                      setShowUnbookingModal(false);
+                      if (pendingStatusUpdate && step === 'PLANNING') {
+                         onUpdateStatus(day.date, pendingStatusUpdate);
+                         setPendingStatusUpdate(null);
+                         setStep('VIEW');
+                      } else {
+                         handleApply();
+                      }
+                    }}
+                    className="w-full bg-primary text-white font-bold py-4 rounded-2xl shadow-lg active:scale-[0.98] transition-all"
+                  >
+                    Confirm & Proceed
+                  </button>
+                  <button onclick="{()" ==""> setShowUnbookingModal(false)}
+                    className="w-full bg-surface-container-low text-on-surface-variant font-bold py-4 rounded-2xl active:scale-[0.98] transition-all"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  }
+
+  const isCurrentDay = day.date === '2026-10-09';
+
+  if (step === 'ALL_COLLEAGUES') {
+    const otherColleaguesFiltered = allColleagues;
+    const dayDisplay = day.date.split('-')[2];
+    const monthDisplay = months[parseAppDate(day.date).getMonth()];
+    
+    return (
+      <div classname="fixed inset-0 bg-surface z-[130] flex flex-col font-sans overflow-hidden">
+        <modalheader title="{`All" colleagues'="" plans="" for="" ${daydisplay}="" ${monthdisplay}`}=""/>
+
+        <main classname="pt-24 px-6 max-w-xl mx-auto w-full pb-10 overflow-y-auto h-full">
+          <div classname="space-y-3">
+             <h3 classname="font-sans text-[11px] font-bold text-on-surface-variant uppercase tracking-widest pl-1">Other colleagues ({otherColleaguesFiltered.length})</h3>
+             <div classname="bg-surface-container-lowest rounded-[24px] overflow-hidden shadow-sm border border-outline-variant/10 mb-10">
+                {otherColleaguesFiltered.map((c, idx) => (
+                  <colleagueitem key="{idx}" name="{c.name}" role="{c.role}" status="{c.status}" initials="{c.initials}" color="{c.color}" hasofftime="{c.hasOffTime}" offtimetype="{c.offTimeType}" dimrole="{c.remind}" isconfirmed="{c.isConfirmed}" isme="{c.isMe}" isgoldstar="{c.isGoldStar}" showquestionmark="{c.showQuestionMark}"/>
+                ))}
+             </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+  return (
+    <div classname="fixed inset-0 bg-surface z-[100] flex flex-col overflow-y-auto pb-10 font-sans">
+      <modalheader title=""/>
+
+      <header classname="pt-24 pb-6 px-6 relative">
+        <div classname="flex flex-col items-center justify-center gap-1">
+          {isCurrentDay && (
+            <span classname="font-sans text-[11px] font-bold text-on-surface-variant/40 tracking-[0.2em] uppercase">Today</span>
+          )}
+          <div classname="flex items-center justify-center gap-6">
+            {!isMandatory && (
+              <button onclick="{()" ==""> onNavigate('prev')}
+                className="p-1 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant"
+              >
+                <chevronleft classname="w-6 h-6 text-on-surface/40 hover:text-on-surface transition-colors"/>
+              </button>
+            )}
+            <h1 classname="font-headline text-3xl font-bold tracking-tight text-on-surface">
+              {day.dayName}, {day.date.split('-')[2]}{day.date.split('-')[2] === '01' ? 'st' : day.date.split('-')[2] === '02' ? 'nd' : day.date.split('-')[2] === '03' ? 'rd' : 'th'}{' '}
+              {months[parseAppDate(day.date).getMonth()]}
+            </h1>
+            {!isMandatory && (
+              <button onclick="{()" ==""> onNavigate('next')}
+                className="p-1 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant"
+              >
+                <chevronleft classname="w-6 h-6 rotate-180 text-on-surface/40 hover:text-on-surface transition-colors"/>
+              </button>
+            )}
+          </div>
+        </div>
+      </header>
+
+      <div classname="px-6 py-4 max-w-xl mx-auto w-full space-y-8">
+        {day.isPast && isPending && (
+          <alert icon="{AlertCircle}" title="You didn&#39;t confirm your presence on this day" description="It&#39;s possible to retrofit your status for this past day." classname="rounded-[28px] border-orange-500/20 bg-orange-500/5 shadow-none"/>
+        )}
+        <section>
+          <div classname="flex justify-between items-center mb-4 pl-1">
+            <h2 classname="font-sans text-sm font-bold text-on-surface-variant uppercase tracking-wider">Your status</h2>
+            {day.offTime && (
+              <div classname="flex items-center gap-1.5 bg-amber-500/10 text-amber-500 px-3 py-1 rounded-full border border-amber-500/10">
+                <clock classname="w-3 h-3"/>
+                <span classname="text-[10px] font-bold uppercase tracking-wider">
+                  {day.offTime.type === OffTimeType.MORNING ? 'Morning off' : 
+                   day.offTime.type === OffTimeType.AFTERNOON ? 'Afternoon off' : 
+                   `${day.offTime.hours}h off`}
+                </span>
+              </div>
+            )}
+          </div>
+          <div classname="bg-surface-container-lowest border border-outline-variant/30 rounded-[28px] p-6 shadow-sm">
+            {isPending ? (
+              <div classname="flex flex-col sm:flex-row items-center justify-between gap-6 py-2">
+                <div classname="flex items-center gap-5 w-full sm:w-auto">
+                   <div classname="w-14 h-14 rounded-full bg-surface-container flex items-center justify-center shrink-0 text-3xl">
+                     {"\u2753"}
+                   </div>
+                   <h3 classname="font-headline text-xl font-bold text-on-surface leading-tight">
+                     {day.isPast ? "Status not set" : "You haven't planned for this day yet"}
+                   </h3>
+                </div>
+                <button onclick="{()" ==""> setStep('PLANNING')}
+                  className="w-full sm:w-auto bg-primary hover:opacity-90 text-white px-8 py-3.5 rounded-full font-bold text-sm transition-all shadow-md active:scale-95 shrink-0"
+                >
+                  {day.isPast ? "Retrofit status" : "Define working status"}
+                </button>
+              </div>
+            ) : (
+              <div>
+                <div classname="flex items-center justify-between mb-8">
+                  <div classname="flex items-center gap-5">
+                    <div classname="{`w-8" h-8="" sm:w-14="" sm:h-14="" rounded-[18px]="" ${config?.color}="" flex="" items-center="" justify-center="" shrink-0="" shadow-sm`}="">
+                      {config?.icon ? (
+                        <config.icon classname="w-5 h-5 sm:w-7 sm:h-7 fill-current"/>
+                      ) : (
+                        <span classname="text-xl sm:text-3xl">{config?.emoji}</span>
+                      )}
+                    </div>
+                    <div>
+                      <p classname="font-headline text-xl font-extrabold text-on-surface tracking-tight">{config?.label}</p>
+                      <div classname="flex items-center gap-1.5 mt-0.5 text-on-surface-variant/70">
+                         {day.status === WorkStatus.IN_OFFICE || day.status === WorkStatus.OFFICE_NO_DESK ? (
+                           <>
+                             <div classname="p-0.5 rounded-md bg-on-surface-variant/5">
+                               {day.status === WorkStatus.OFFICE_NO_DESK 
+                                 ? <headset classname="w-3.5 h-3.5"/> 
+                                 : (day.isUsingDesk 
+                                     ? <monitor classname="w-3.5 h-3.5"/> 
+                                     : <headset classname="w-3.5 h-3.5"/>
+                                   )
+                               }
+                             </div>
+                             <p classname="font-sans text-xs font-semibold text-on-surface-variant/60">
+                               {day.status === WorkStatus.OFFICE_NO_DESK 
+                                 ? 'Not using a desk' 
+                                 : (day.isUsingDesk === undefined 
+                                     ? 'No workspace defined yet' 
+                                     : (day.isUsingDesk 
+                                         ? `${day.isCheckedIn ? 'Using a desk' : 'Planning to use a desk'} ${day.room ? `in ${day.room}` : ''}` 
+                                         : 'Not using a desk'))}
+                             </p>
+                           </>
+                         ) : (
+                           <p classname="font-sans text-xs font-semibold">
+                             {day.status === WorkStatus.REMOTE ? 'Working from home' : ''}
+                           </p>
+                         )}
+                      </div>
+                    </div>
+                  </div>
+                  {day.isPast ? (
+                    <button onclick="{()" ==""> setStep('PLANNING')}
+                      className="px-4 py-2.5 bg-primary rounded-xl font-bold text-xs text-white shadow-sm hover:bg-primary/90 transition-all active:scale-95 shrink-0"
+                    >
+                      Retrofit Working Status
+                    </button>
+                  ) : !day.isCheckedIn && !isMandatory && (
+                    <button onclick="{()" ==""> setStep('PLANNING')}
+                      className="p-2 text-primary hover:bg-primary/5 rounded-full transition-colors shrink-0"
+                    >
+                      <edit2 classname="w-5 h-5 shadow-sm"/>
+                    </button>
+                  )}
+                </div>
+
+                <div classname="flex flex-col gap-4">
+                  {isCurrentDay && !day.isCheckedIn && (
+                    <button onclick="{onCheckIn}" classname="w-full bg-primary text-white py-4 rounded-2xl font-bold text-base shadow-md hover:shadow-lg active:scale-[0.98] transition-all">
+                      Say Good Morning
+                    </button>
+                  )}
+                  
+                  {(isCurrentDay || day.isPast) && (day.isCheckedIn || day.status === WorkStatus.REMOTE) && (
+                    <div classname="flex flex-col gap-2">
+                      <div classname="w-full bg-green-500/10 text-green-500 py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 border border-green-500/10">
+                        <div classname="bg-green-600 text-white p-0.5 rounded-full">
+                          <check classname="w-3 h-3"/>
+                        </div>
+                        {day.status === WorkStatus.REMOTE && !day.isCheckedIn ? 'Confirmed status' : 'Confirmed'}
+                      </div>
+                      {day.room && day.isCheckedIn && (
+                        <div classname="text-center font-sans text-xs font-bold text-on-surface-variant/50">
+                          Checked in @ {day.room}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {!isCurrentDay && !day.isPast && (day.status === WorkStatus.IN_OFFICE || day.status === WorkStatus.REMOTE || day.status === WorkStatus.WAITING_LIST) && (
+                    <div classname="w-full flex items-center justify-center gap-2 py-2 text-on-surface-variant/50 font-medium text-xs mb-2 text-center">
+                      <span classname="text-xl opacity-80 shrink-0">{"\u2600\uFE0F"}</span>
+                      {day.status === WorkStatus.WAITING_LIST 
+                        ? "You will be notified when a place is freed on the list. When that happens, book a place"
+                        : "Remember to say good morning on the day!"
+                      }
+                    </div>
+                  )}
+
+                  {!day.isPast && !day.isCheckedIn && day.status !== WorkStatus.WAITING_LIST && (
+                    <button onclick="{()" ==""> setStep('EXTEND')}
+                      className="w-full bg-surface-container-low/40 border border-outline-variant/10 rounded-2xl py-3.5 flex items-center justify-center gap-2 text-on-surface font-bold text-[13px] hover:bg-surface-container transition-colors shadow-sm"
+                    >
+                      Extend to other days
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {(!day.isPast || day.date === '2026-10-06') && (
+          <section>
+            <div classname="mb-4 px-1">
+              <h2 classname="font-sans text-sm font-bold text-on-surface-variant uppercase tracking-wider">Activities</h2>
+            </div>
+            <div classname="bg-surface-container-lowest border border-outline-variant/30 rounded-[28px] overflow-hidden shadow-sm divide-y divide-outline-variant/5">
+              {day.isOfficeClosed ? (
+                <div classname="p-8 text-center bg-surface-container-low/20">
+                  <p classname="text-on-surface-variant font-medium text-sm">No activities planned because office is closed</p>
+                </div>
+              ) : (
+                <div classname="flex items-center justify-between group">
+                  <div classname="{`flex-grow" p-6="" flex="" items-center="" justify-between="" transition-colors="" group="" text-left="" ${day.date="==" '2026-10-06'="" ?="" 'bg-primary="" 5'="" :="" (day.islabbooked="" &&="" day.labbookername="==" 'roberto'="" ?="" 'bg-surface-container-low="" 20'="" :="" 'hover:bg-surface-container="" cursor-pointer')}`}="" onclick="{()" ==""> {
+                      if (day.date === '2026-10-06' || (day.isLabBooked && day.labBookerName === 'Roberto')) return;
+                      setShowLabConfirmModal(true);
+                    }}
+                  >
+                    <div classname="flex items-center gap-4">
+                      <div classname="w-6 h-6 sm:w-12 sm:h-12 rounded-full bg-primary/5 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                        <beaker classname="w-4 h-4 sm:w-6 sm:h-6 text-primary"/>
+                      </div>
+                      <div classname="flex flex-col items-start translate-y-[-1px]">
+                        <span classname="font-headline font-bold text-lg text-on-surface">
+                          {day.date === '2026-10-06' 
+                            ? 'Lab is occupied'
+                            : day.isLabBooked && day.labBookerName === 'Roberto' 
+                              ? 'There is a Lab activity booked for the Day' 
+                              : 'Book Lab'}
+                        </span>
+                        <span classname="text-xs text-on-surface-variant/70 font-medium font-sans">
+                          {day.date === '2026-10-06'
+                            ? 'Lab is occupied'
+                            : day.isLabBooked && day.labBookerName === 'Roberto' 
+                              ? 'Lab' 
+                              : 'Book the lab'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  {!day.isPast && day.isLabBooked && day.labBookerName === 'Roberto' && (
+                    <button onclick="{(e)" ==""> {
+                        e.stopPropagation();
+                        onUpdateLabBooking(day.date, false);
+                      }}
+                      className="p-6 text-red-500 hover:bg-red-500/5 transition-colors"
+                      title="Remove booking"
+                    >
+                      <trash2 classname="w-5 h-5"/>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        <section classname="space-y-6">
+          <div classname="flex flex-col gap-4">
+            <h2 classname="font-headline text-lg font-bold text-on-surface">Your colleagues</h2>
+            
+            {/* Search Bar */}
+            <div classname="relative group">
+              <search classname="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40 group-focus-within:text-primary transition-colors"/>
+              <input type="text" placeholder="Search colleagues..." value="{searchQuery}" onchange="{(e)" ==""> setSearchQuery(e.target.value)}
+                className="w-full bg-surface-container-lowest border border-outline-variant/10 rounded-2xl py-3 pl-11 pr-4 font-sans text-sm focus:border-primary outline-none shadow-sm transition-all placeholder:text-on-surface-variant/30"
+              />
+              {searchQuery && (
+                <button onclick="{()" ==""> setSearchQuery('')}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 p-1 hover:bg-surface-container-low rounded-full transition-colors"
+                >
+                  <x classname="w-3 h-3 text-on-surface-variant/40"/>
+                </button>
+              )}
+            </div>
+          </div>
+          
+          {/* Project Teammates Section */}
+          {(() => {
+            if (projectTeammates.length === 0 && searchQuery === '') {
+              return (
+                <div classname="space-y-3">
+                  <div classname="flex items-center gap-2 pl-1">
+                    <star classname="w-4 h-4 text-amber-400 fill-amber-400"/>
+                    <h3 classname="font-sans text-[11px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Project Teammates</h3>
+                  </div>
+                  <button onclick="{onOpenProfile}" classname="w-full bg-surface-container-lowest border border-dashed border-outline-variant/30 rounded-[24px] p-8 text-center transition-all hover:bg-primary/5 hover:border-primary/30 group">
+                    <p classname="text-sm font-medium text-on-surface-variant/60 group-hover:text-primary transition-colors">
+                      You didn't select any teammates - <span classname="text-primary font-bold decoration-primary/30 decoration-2 underline-offset-4 group-hover:underline">click here to add them</span>
+                    </p>
+                  </button>
+                </div>
+              );
+            }
+
+            const filteredProjectTeammates = goldStarProjectTeammates.filter(c => 
+              searchQuery === '' || c.name.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+
+            if (filteredProjectTeammates.length === 0) return null;
+
+            return (
+              <div classname="space-y-3">
+                <div classname="flex items-center gap-2 pl-1">
+                  <star classname="w-4 h-4 text-amber-400 fill-amber-400"/>
+                  <h3 classname="font-sans text-[11px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Project Teammates</h3>
+                </div>
+                <div classname="bg-surface-container-lowest rounded-[24px] overflow-hidden shadow-sm border border-outline-variant/10">
+                  {filteredProjectTeammates.map((c, idx) => (
+                    <colleagueitem key="{`project-teammate-${idx}`}" name="{c.name}" role="{c.role}" status="{c.status}" initials="{c.initials}" color="{c.color}" isconfirmed="{c.isConfirmed}" isgoldstar="{true}" dimrole="{c.remind}" showquestionmark="{c.showQuestionMark}" @ts-ignore="" workspaceicon="{c.workspaceIcon}"/>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* In the office Section */}
+          {(() => {
+            const displayInOffice = inOfficeColleagues;
+            const filteredInOffice = displayInOffice.filter(c => searchQuery === '' || (c.name.toLowerCase().includes(searchQuery.toLowerCase()) && !goldStarNames.has(c.name)));
+            
+            if ((day.isClosed || day.isOfficeClosed) && searchQuery === '') {
+              return (
+                <div classname="space-y-3">
+                  <div classname="flex justify-between items-center px-1">
+                    <h3 classname="font-sans text-[11px] font-bold text-on-surface-variant/60 uppercase tracking-widest">In the office</h3>
+                  </div>
+                  <alert icon="{AlertCircle}" title="{day.isClosed" ?="" "office="" closed="" for="" the="" day"="" :="" "the="" office="" is="" closed"}="" description="{day.isClosed" ?="" "you="" cannot="" book="" a="" place="" for="" this="" date."="" :="" "no="" presence="" is="" allowed="" in="" the="" office="" today."}="" classname="p-8 justify-center text-center flex-col items-center shadow-lg rounded-[28px]"/>
+                </div>
+              );
+            }
+
+            if (filteredInOffice.length === 0 && searchQuery !== '') return null;
+            if (displayInOffice.length === 0 && searchQuery === '') return null;
+
+            return (
+              <div classname="space-y-3">
+                <div classname="flex justify-between items-center px-1">
+                  <h3 classname="font-sans text-[11px] font-bold text-on-surface-variant/60 uppercase tracking-widest">In the office</h3>
+                  <span classname="font-sans text-[11px] font-bold text-on-surface-variant/40">
+                    {day.bookedCount || 20}/{day.totalCapacity || 23}
+                    {(day.bookedCount ?? 0) >= (day.totalCapacity ?? 23) && (
+                      <span classname="ml-1">| 7 in waiting list</span>
+                    )}
+                  </span>
+                </div>
+                <div classname="bg-surface-container-lowest rounded-[24px] overflow-hidden shadow-sm border border-outline-variant/10">
+                  {filteredInOffice.map((c, idx) => (
+                    <colleagueitem key="{idx}" name="{c.name}" role="{c.role}" status="{WorkStatus.IN_OFFICE}" initials="{c.initials}" color="{c.color}" isconfirmed="{c.isConfirmed}" isme="{c.isMe}" isgoldstar="{c.isGoldStar}" @ts-ignore="" workspaceicon="{c.workspaceIcon}"/>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Other colleagues Section */}
+          {(() => {
+            const displayOthers = allColleagues;
+            const filteredOthers = displayOthers.filter(c => searchQuery === '' || (c.name.toLowerCase().includes(searchQuery.toLowerCase()) && !goldStarNames.has(c.name)));
+            
+            if (filteredOthers.length === 0 && searchQuery !== '') return null;
+            if (displayOthers.length === 0 && searchQuery === '') return null;
+
+            return (
+              <div classname="space-y-3">
+                <div classname="flex justify-between items-center px-1">
+                  <h3 classname="font-sans text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Other colleagues</h3>
+                  <button onclick="{()" ==""> setStep('ALL_COLLEAGUES')}
+                    className="text-[11px] font-bold text-primary hover:underline transition-all"
+                  >
+                    See all
+                  </button>
+                </div>
+                
+                <div classname="bg-surface-container-lowest p-4 rounded-[24px] shadow-sm border border-outline-variant/10">
+                  <div classname="grid grid-cols-5 lg:grid-cols-10 gap-3">
+                    {(searchQuery === '' 
+                      ? filteredOthers.slice(0, 10) 
+                      : filteredOthers
+                    ).map((c, i) => {
+                      const status = c.status || WorkStatus.OFFICE_NO_DESK;
+                      return (
+                        <div key="{i}" classname="relative flex justify-center aspect-square">
+                          <div classname="w-6 h-6 sm:w-11 sm:h-11 relative shrink-0">
+                            <div classname="{`w-full" h-full="" rounded-full="" border-2="" border-surface-container-lowest="" shadow-sm="" flex="" items-center="" justify-center="" text-[10px]="" sm:text-xs="" font-bold="" text-white="" ${c.color}`}="">
+                              {c.initials}
+                            </div>
+                            {(c.status || c.showQuestionMark || c.remind) && (
+                              <div classname="{`absolute" -bottom-0.5="" -right-0.5="" w-3="" h-3="" sm:w-5="" sm:h-5="" rounded-full="" flex="" items-center="" justify-center="" border="" border-surface-container-lowest="" shadow-sm="" z-10="" ${="" status="==" workstatus.remote="" ?="" 'bg-green-500="" text-white'="" :="" status="==" workstatus.leave="" ?="" 'bg-fuchsia-500="" text-white'="" :="" status="==" workstatus.sick="" ?="" 'bg-red-500="" text-white'="" :="" status="==" workstatus.parental_leave="" ?="" 'bg-indigo-500="" text-white'="" :="" status="==" workstatus.mission="" ?="" 'bg-orange-500="" text-white'="" :="" 'bg-surface-container="" text-on-surface-variant="" 40'="" }`}="">
+                                {status === WorkStatus.REMOTE && <home classname="{`w-1.5" sm:w-2.5="" h-1.5="" sm:h-2.5`}=""/>}
+                                {status === WorkStatus.LEAVE && <palmtree classname="w-1.5 sm:w-2.5 h-1.5 sm:h-2.5"/>}
+                                {status === WorkStatus.SICK && <thermometer classname="w-1.5 sm:w-2.5 h-1.5 sm:h-2.5"/>}
+                                {status === WorkStatus.PARENTAL_LEAVE && <crib classname="w-1.5 sm:w-2.5 h-1.5 sm:h-2.5"/>}
+                                {status === WorkStatus.MISSION && <plane classname="w-1.5 sm:w-2.5 h-1.5 sm:h-2.5"/>}
+                                {(c.showQuestionMark || (c.remind && !c.status)) && <span classname="text-[8px] sm:text-[10px] font-bold">?</span>}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </section>
+        <animatepresence>
+          {showLabConfirmModal && (
+            <>
+              <motion.div initial="{{" opacity:="" 0="" }}="" animate="{{" opacity:="" 1="" }}="" exit="{{" opacity:="" 0="" }}="" onclick="{()" ==""> setShowLabConfirmModal(false)}
+                className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[200]"
+              />
+              <motion.div initial="{{" opacity:="" 0,="" scale:="" 0.9,="" y:="" 20="" }}="" animate="{{" opacity:="" 1,="" scale:="" 1,="" y:="" 0="" }}="" exit="{{" opacity:="" 0,="" scale:="" 0.9,="" y:="" 20="" }}="" classname="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-48px)] max-w-sm bg-surface-container-lowest rounded-[32px] p-8 z-[201] shadow-2xl overflow-hidden">
+                <div classname="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 mx-auto">
+                  <beaker classname="w-8 h-8 text-primary"/>
+                </div>
+                
+                <h3 classname="font-headline text-xl font-bold text-on-surface text-center mb-3">Book Innovation Lab</h3>
+                <div classname="bg-amber-500/5 border border-amber-500/10 rounded-2xl p-4 mb-8">
+                  <p classname="font-sans text-sm text-amber-700 leading-relaxed text-center">
+                    There are people that plan to use the Lab on this day.
+                  </p>
+                  <p classname="font-sans text-[13px] text-amber-700/80 mt-2 text-center leading-relaxed">
+                    These people are: <span classname="font-bold text-amber-800">Marco Rossi, Sofia Bianchi, Elena Verdi, Francesco Russo, Giulia Ferrari</span>. 
+                  </p>
+                  <p classname="font-sans text-[12px] text-amber-700/60 mt-3 text-center italic">
+                    If you book the lab when there are people that plan to go there, coordinate with them outside the app.
+                  </p>
+                </div>
+
+                <div classname="flex flex-col gap-3">
+                  <button onclick="{()" ==""> {
+                      onUpdateLabBooking(day.date, true);
+                      setShowLabConfirmModal(false);
+                    }}
+                    className="w-full bg-primary text-white font-bold py-4 rounded-2xl shadow-lg active:scale-[0.98] transition-all"
+                  >
+                    Confirm Lab Booking
+                  </button>
+                  <button onclick="{()" ==""> setShowLabConfirmModal(false)}
+                    className="w-full bg-surface-container-low text-on-surface-variant font-bold py-4 rounded-2xl active:scale-[0.98] transition-all"
+                  >
+                    Never mind
+                  </button>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
+function StatusOption({ 
+  emoji, 
+  label, 
+  color, 
+  onClick, 
+  showChevron, 
+  isActive
+}: { 
+  emoji: string, 
+  label: string, 
+  color: string, 
+  onClick: () => void, 
+  showChevron?: boolean,
+  isActive?: boolean
+}) {
+  return (
+    <button onclick="{onClick}" classname="{`w-full" bg-surface-container-lowest="" border="" ${isactive="" ?="" 'border-primary="" ring-2="" ring-primary="" 20="" bg-primary="" 5'="" :="" 'border-outline-variant="" 20'}="" rounded-[20px]="" p-4="" flex="" items-center="" gap-4="" shadow-sm="" hover:shadow-md="" hover:border-primary="" 30="" transition-all="" group="" active:scale-[0.98]="" relative="" overflow-hidden`}="">
+      {isActive && (
+        <div classname="absolute top-2 right-2">
+           <div classname="bg-primary text-white p-0.5 rounded-full">
+              <check classname="w-3 h-3"/>
+           </div>
+        </div>
+      )}
+      <div classname="{`w-12" h-12="" rounded-full="" ${color}="" flex="" items-center="" justify-center="" shrink-0="" text-2xl`}="">
+        {emoji}
+      </div>
+      <div classname="flex flex-col flex-grow text-left">
+        <span classname="font-headline font-bold text-lg text-on-surface leading-tight">{label}</span>
+      </div>
+      {showChevron && <chevronleft classname="w-5 h-5 rotate-180 text-on-surface-variant/40"/>}
+    </button>
+  );
+}
+
+function ColleagueItem({ name, role, status, initials, color, workspaceIcon, hasOffTime, offTimeType, isMe, dimRole, isGoldStar, isConfirmed = true, showQuestionMark }: { name: string, role: string, status?: WorkStatus, initials?: string, color?: string, workspaceIcon?: 'desk' | 'headset', hasOffTime?: boolean, offTimeType?: OffTimeType, isMe?: boolean, dimRole?: boolean, isGoldStar?: boolean, isConfirmed?: boolean, showQuestionMark?: boolean, key?: React.Key }) {
+  const Icon = status ? (
+    status === WorkStatus.REMOTE ? Home : 
+    status === WorkStatus.LEAVE ? Palmtree : 
+    status === WorkStatus.SICK ? Thermometer : 
+    status === WorkStatus.PARENTAL_LEAVE ? Crib :
+    status === WorkStatus.MISSION ? Plane :
+    Building2
+  ) : null;
+  const colorClass = 
+    status === WorkStatus.REMOTE ? 'bg-green-500/10 text-green-500' : 
+    status === WorkStatus.LEAVE ? 'bg-fuchsia-500/10 text-fuchsia-500' : 
+    status === WorkStatus.SICK ? 'bg-red-500/10 text-red-500' : 
+    status === WorkStatus.PARENTAL_LEAVE ? 'bg-indigo-500/10 text-indigo-500' :
+    status === WorkStatus.MISSION ? 'bg-orange-500/10 text-orange-500' :
+    'bg-primary/10 text-primary';
+
+  const WorkspaceIconComp = workspaceIcon === 'desk' ? Monitor : Headset;
+
+  return (
+    <div classname="{`flex" items-center="" justify-between="" p-3="" sm:p-4="" hover:bg-surface-container="" transition-colors="" border-b="" border-outline-variant="" 5="" last:border-b-0`}="">
+      <div classname="flex items-center gap-2 sm:gap-3">
+        <div classname="{`w-8" h-8="" sm:w-10="" sm:h-10="" rounded-full="" flex="" items-center="" justify-center="" text-[10px]="" sm:text-xs="" font-bold="" text-white="" border="" border-outline-variant="" 10="" shadow-sm="" ${color="" ||="" 'bg-surface-container-low'}`}="">
+          {initials || name.substring(0, 2).toUpperCase()}
+        </div>
+        <div>
+          <div classname="flex items-center gap-1.5">
+            <p classname="text-sm font-bold text-on-surface">{name}</p>
+            {isGoldStar && !isMe && (
+              <star classname="w-3 h-3 text-amber-400 fill-amber-400 shrink-0"/>
+            )}
+          </div>
+          <p classname="{`text-[11px]" font-medium="" ${dimrole="" ?="" 'text-red-600="" dark:text-red-400="" font-bold'="" :="" 'text-on-surface-variant="" 60'}`}="">{role}</p>
+        </div>
+      </div>
+      <div classname="flex items-center gap-1.5 sm:gap-2">
+        {hasOffTime && (
+          <div classname="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface border border-outline-variant/10">
+            {offTimeType === OffTimeType.MORNING ? <sunrise classname="w-3.5 h-3.5 sm:w-4 sm:h-4"/> : 
+             offTimeType === OffTimeType.AFTERNOON ? <sunset classname="w-3.5 h-3.5 sm:w-4 sm:h-4"/> : 
+             <clock classname="w-3.5 h-3.5 sm:w-4 sm:h-4"/>}
+          </div>
+        )}
+        {status && Icon && (
+          <div classname="flex items-center gap-1.5 sm:gap-2">
+            <div classname="{`w-6" h-6="" sm:w-8="" sm:h-8="" rounded-full="" flex="" items-center="" justify-center="" ${colorclass}`}="">
+              <div classname="flex items-center justify-center">
+                <icon classname="{`w-3.5" h-3.5="" sm:w-4="" sm:h-4="" fill-current`}=""/>
+              </div>
+            </div>
+            {status === WorkStatus.IN_OFFICE && workspaceIcon && (
+              <workspaceiconcomp classname="w-3.5 h-3.5 sm:w-4 sm:h-4 text-on-surface-variant"/>
+            )}
+          </div>
+        )}
+        {showQuestionMark && (
+          <div classname="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant/40 border border-outline-variant/10 font-bold text-xs">
+            ?
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ColleagueTag({ name, initials, color }: { name: string, initials?: string, color?: string }) {
+  return (
+    <div classname="flex items-center gap-2">
+      <div classname="{`w-8" h-8="" rounded-full="" flex="" items-center="" justify-center="" text-xs="" font-bold="" text-white="" ${color="" ||="" 'bg-primary'}`}="">
+        {initials || name.charAt(0)}
+      </div>
+      <span classname="text-sm font-bold text-on-surface">{name}</span>
+    </div>
+  )
+}
