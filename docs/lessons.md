@@ -26,15 +26,15 @@ Client verso API esterne (DB, cloud) vanno istanziati una volta sola e riusati. 
 Una query per elemento in un loop è sempre un bug di performance. Usare `find({ _id: { $in: ids } })` per batch lookup.
 
 **Change Streams richiedono replica set**
-MongoDB Change Streams non funzionano su istanze standalone. In locale usare Docker con replica set oppure usare MongoDB Atlas (anche M0 supporta Change Streams).
+MongoDB Change Streams non funzionano su istanze standalone. Il plugin MongoDB di Railway non ha il replica set abilitato — usare MongoDB Atlas (anche M0 free supporta Change Streams). Copiare la connection string Atlas come variabile `MONGODB_URL` nel servizio backend Railway.
 
 **Indici su colonne filtrate frequentemente**
-Qualsiasi campo usato in query `find()` con filtri su `userId`, `date`, `sedeId` va indicizzato. Definire gli indici nello schema Mongoose, non aggiungerli manualmente.
+Qualsiasi campo usato in query `find()` va indicizzato. Definire gli indici nello schema Mongoose, non aggiungerli manualmente.
 
 ```typescript
 // Corretto: indice definito nello schema
-presenceSchema.index({ date: 1, sedeId: 1 });
-presenceSchema.index({ userId: 1, date: 1 }, { unique: true });
+workingStatusSchema.index({ date: 1, status: 1 });
+workingStatusSchema.index({ userId: 1, date: 1 }, { unique: true });
 ```
 
 **Transazioni solo quando necessario**
@@ -47,8 +47,8 @@ Le transazioni Mongoose richiedono replica set e hanno overhead. Usarle solo per
 **Validare il dominio email nel callback**
 Google OAuth non filtra per dominio — va fatto manualmente nel callback di Passport.js:
 ```typescript
-if (!profile.emails?.[0]?.value?.endsWith('@facile.it')) {
-  return done(null, false, { message: 'Accesso riservato a @facile.it' });
+if (!profile.emails?.[0]?.value?.endsWith('@dblue.it')) {
+  return done(null, false, { message: 'Accesso riservato a @dblue.it' });
 }
 ```
 
@@ -66,7 +66,7 @@ Il JWT di sessione (access token) deve avere scadenza breve (es. 1h). Gestire il
 Il client WebSocket deve implementare riconnessione automatica con exponential backoff. Non assumere che la connessione resti aperta.
 
 **Non mandare broadcast globali**
-Propagare gli eventi solo alle room interessate, non a tutti i client connessi. Ogni change event MongoDB deve essere filtrato per `date` + `sedeId` prima del push.
+Propagare gli eventi solo alle room interessate, non a tutti i client connessi. La room key è la data (`YYYY-MM-DD`). Il payload include già la disponibilità per stanza (`rooms[]`) e il totale aggregato (`totalBooked`, `totalCapacity`): non servono subscription separate per stanza.
 
 **Heartbeat per rilevare connessioni zombie**
 Implementare ping/pong ogni 30s. Se il client non risponde entro 60s, chiudere la connessione e pulire la room.

@@ -49,25 +49,31 @@ MongoDB Change Streams alimentano il server WebSocket: ogni modifica al DB viene
 ```
 presence-app/
 ├── frontend/
-│   └── src/
-│       ├── components/     ← componenti UI
-│       ├── pages/          ← pagine/route
-│       ├── hooks/          ← custom hooks (usePresence, useWebSocket, ecc.)
-│       ├── services/       ← chiamate API centralizzate
-│       ├── types/          ← TypeScript interfaces
-│       ├── utils/          ← helpers puri
-│       └── context/        ← React context (AuthContext, ecc.)
+│   ├── src/
+│   │   ├── components/     ← componenti UI
+│   │   ├── pages/          ← pagine/route
+│   │   ├── hooks/          ← custom hooks (usePresence, useWebSocket, ecc.)
+│   │   ├── services/       ← chiamate API centralizzate (api.ts)
+│   │   ├── types/          ← TypeScript interfaces
+│   │   ├── utils/          ← helpers puri
+│   │   └── context/        ← React context (AuthContext, ecc.)
+│   ├── Dockerfile
+│   └── railway.toml
 ├── backend/
-│   └── src/
-│       ├── routes/         ← route Express (auth.ts, presence.ts, ecc.)
-│       ├── models/         ← Mongoose schema/models
-│       ├── middleware/      ← auth guard, error handler, ecc.
-│       ├── services/       ← business logic
-│       └── config/         ← db.ts, passport.ts, websocket.ts
-├── docs/                   ← questo file + lessons.md
+│   ├── src/
+│   │   ├── routes/         ← route Express (auth.ts, presence.ts, ecc.)
+│   │   ├── models/         ← Mongoose schema/models
+│   │   ├── middleware/     ← requireAuth, requireRole
+│   │   ├── services/       ← business logic
+│   │   ├── config/         ← passport.ts, jwt.ts
+│   │   └── types/          ← express.d.ts e altri type augment
+│   ├── Dockerfile
+│   └── railway.toml
+├── presence---office-planner/  ← prototipo AI Studio — SOLA LETTURA
+├── prompts/                    ← prompt Claude Code (M0→M6, UI-1→UI-4)
+├── docs/                       ← architecture.md, lessons.md
 ├── CLAUDE.md
-├── CLAUDE_MEMORY.md        ← gitignored
-├── docker-compose.yml      ← MongoDB locale per sviluppo
+├── CLAUDE_MEMORY.md            ← gitignored
 └── .env.example
 ```
 
@@ -89,14 +95,24 @@ presence-app/
 
 | Variabile | Backend/Frontend | Descrizione |
 |-----------|-----------------|-------------|
-| `MONGODB_URI` | Backend | Connection string MongoDB |
+| `MONGODB_URL` | Backend | Connection string MongoDB — Railway la genera automaticamente dal plugin con questo nome esatto |
 | `JWT_SECRET` | Backend | Firma token sessione (min 32 chars) |
-| `GOOGLE_CLIENT_ID` | Entrambi | OAuth 2.0 client ID |
+| `GOOGLE_CLIENT_ID` | Backend | OAuth 2.0 client ID |
 | `GOOGLE_CLIENT_SECRET` | Backend only | OAuth 2.0 secret (mai sul frontend) |
 | `APP_URL` | Backend | URL pubblico del frontend (CORS) |
-| `PORT` | Backend | Default 4000 |
+| `BACKEND_URL` | Backend | URL pubblico del backend (callback OAuth) |
+| `PORT` | Backend | Default 4000 — Railway lo sovrascrive automaticamente |
 | `NODE_ENV` | Backend | `development` / `production` |
-| `VITE_API_URL` | Frontend (build) | URL del backend |
+| `DEV_LOGIN_USER` | Backend | Email utente dev (solo NODE_ENV=development) |
+| `DEV_LOGIN_PASS` | Backend | Password utente dev (solo NODE_ENV=development) |
+| `DEV_LOGIN_ROLE` | Backend | Ruolo utente dev, default `director` |
+| `SMTP_HOST` | Backend | Server SMTP per email — opzionale, senza di esso le email vengono simulate |
+| `SMTP_PORT` | Backend | Default 587 |
+| `SMTP_USER` | Backend | Utente SMTP |
+| `SMTP_PASS` | Backend | Password SMTP |
+| `SMTP_FROM` | Backend | Mittente email, default = SMTP_USER |
+| `VITE_API_URL` | Frontend (build) | URL pubblico del backend |
+| `VITE_DEV_LOGIN_ENABLED` | Frontend (build) | `true` solo in staging, mai in prod |
 
 ---
 
@@ -106,30 +122,47 @@ presence-app/
 1. Frontend → GET /auth/google           (redirect a Google)
 2. Google   → GET /auth/google/callback  (con code)
 3. Backend  → scambia code con token Google
-4. Backend  → verifica email (@facile.it only)
+4. Backend  → verifica email (@dblue.it only)
 5. Backend  → crea/aggiorna User su MongoDB
 6. Backend  → genera JWT, setta cookie httpOnly
 7. Frontend → autenticato, riceve profilo utente
 ```
 
-**Restrizione dominio:** solo email `@facile.it` ammesse (da verificare nel callback OAuth).
+**Restrizione dominio:** solo email `@dblue.it` ammesse (da verificare nel callback OAuth).
 
 ---
 
 ## WebSocket — Pattern
 
 - Il server WS è integrato nell'app Express (non separato).
-- I client si iscrivono a "room" identificate da `${data}_${sedeId}` (es. `2026-06-16_MILAN`).
-- MongoDB Change Streams ascoltano la collection `presences`.
-- Ogni change event viene propagato solo ai client nella room corrispondente.
+- I client si iscrivono a "room" identificate dalla data (`YYYY-MM-DD`).
+- MongoDB Change Streams ascoltano la collection `workingstatuses`.
+- Ogni change event calcola la disponibilità **per stanza** e l'aggregato totale
+  per la data modificata, e lo propaga solo ai client iscritti a quella data.
 
 ```typescript
-// Subscription message dal client
-{ type: "subscribe", room: "2026-06-16_MILAN" }
+// Subscription message dal client (invariato — ci si iscrive alla data)
+{ type: "subscribe", date: "2026-06-16" }
 
-// Event push dal server
-{ type: "presence_update", room: "2026-06-16_MILAN", data: { ... } }
+// Event push dal server — payload per stanza + aggregato
+{
+  type: "presence_update",
+  data: {
+    date: "2026-06-16",
+    rooms: [
+      { name: "open_space", booked: 12, capacity: 30 },
+      { name: "lab_dev",    booked: 5,  capacity: 8  }
+    ],
+    extras: 2,           // in_office/office_no_desk senza room assegnata
+    totalBooked: 19,     // sum(rooms.booked) + extras
+    totalCapacity: 38    // sum(rooms.capacity)
+  }
+}
 ```
+
+La vista complessiva usa `totalBooked`/`totalCapacity`.
+La vista per stanza usa l'array `rooms`.
+Il totale è sempre `sum(rooms.booked) + extras` — non viene calcolato sul frontend.
 
 ---
 
@@ -144,19 +177,14 @@ Lo stack del prototipo (frontend-only, Gemini API) è completamente diverso dal 
 ## Comandi Utili
 
 ```bash
-# Sviluppo locale
-docker compose up -d               # avvia MongoDB su :27017
-cd backend && npm run dev          # backend su :4000
-cd frontend && npm run dev         # frontend su :3000
-
-# Verifica
-curl http://localhost:4000/health  # health check backend
-
-# Build produzione
+# Build (verifica locale TypeScript)
 cd backend && npm run build        # compila TypeScript → dist/
 cd frontend && npm run build       # genera dist/ per Nginx
 
-# Deploy Railway (manuale)
-railway up --service presence-backend
-railway up --service presence-frontend
+# Lint (usato come verifica in ogni macro)
+cd backend && npm run lint         # tsc --noEmit
+cd frontend && npm run lint        # tsc --noEmit
 ```
+
+**Deploy:** Railway fa il deploy automaticamente ad ogni `git push`.
+Non serve Railway CLI né Docker in locale — tutto gira su Railway.
