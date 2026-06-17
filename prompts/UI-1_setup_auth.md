@@ -147,7 +147,7 @@ Pagina semplice con:
 - Logo / titolo "Presence App"
 - Pulsante "Accedi con Google" → href={`${VITE_API_URL}/auth/google`}
 - Messaggio di errore se query param ?error=unauthorized è presente
-  ('Accesso riservato agli utenti @deepblue.it')
+  ('Accesso riservato agli utenti @dblue.it')
 - Stile coerente con il design del prototipo (bg-surface, colori brand)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -227,7 +227,7 @@ VERIFICA FINALE UI-1
 1. `npm run lint` → zero errori TypeScript
 2. `npm run dev` → Vite avvia senza errori
 3. Aprire http://localhost:3000 → redirect a /login
-4. [se VITE_DEV_LOGIN_ENABLED=true] inserire dev@deepblue.it / changeme →
+4. [se VITE_DEV_LOGIN_ENABLED=true] inserire dev@dblue.it / changeme →
    login funziona, l'app si carica con il profilo dev
 5. Cliccare "Accedi con Google" → redirect a Google OAuth (se configurato)
 6. Dopo il login → redirect a / con l'app caricata

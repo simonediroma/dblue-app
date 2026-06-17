@@ -12,7 +12,7 @@ Poi esegui il piano seguente in ordine. Per ogni step verifica il criterio indic
 OBIETTIVO MACRO 1
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Implementare l'intero layer di autenticazione e i modelli MongoDB core.
-Al termine di questa macro un utente @deepblue.it può fare login con Google,
+Al termine di questa macro un utente @dblue.it può fare login con Google,
 il suo profilo viene salvato su MongoDB, e il backend espone le API auth base.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -121,8 +121,8 @@ Configura passport con GoogleStrategy (passport-google-oauth20):
 
 Nel callback della strategy:
 1. Estrai email dal profilo Google
-2. Verifica che l'email termini con '@deepblue.it'
-   → se no: chiama done(null, false, { message: 'Accesso riservato a @deepblue.it' })
+2. Verifica che l'email termini con '@dblue.it'
+   → se no: chiama done(null, false, { message: 'Accesso riservato a @dblue.it' })
 3. Cerca utente in MongoDB per googleId
 4. Se non esiste: crea nuovo User con i dati del profilo Google
 5. Se esiste: aggiorna name e avatar con i dati freschi di Google (potrebbero cambiare)
@@ -220,7 +220,7 @@ Logica:
 
 Aggiungi le variabili in .env.example (con commento che indica dev-only):
   # Dev login alternativo (solo NODE_ENV=development)
-  DEV_LOGIN_USER=dev@deepblue.it
+  DEV_LOGIN_USER=dev@dblue.it
   DEV_LOGIN_PASS=changeme
   DEV_LOGIN_NAME=Dev User
   DEV_LOGIN_ROLE=director
@@ -297,7 +297,7 @@ Esegui in ordine:
 6. curl http://localhost:4000/rooms   → 401 (non autenticato, corretto)
 7. curl -X POST http://localhost:4000/auth/dev-login \
      -H "Content-Type: application/json" \
-     -d '{"username":"dev@deepblue.it","password":"changeme"}' \
+     -d '{"username":"dev@dblue.it","password":"changeme"}' \
    → 200 { "ok": true } + cookie 'token' settato
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

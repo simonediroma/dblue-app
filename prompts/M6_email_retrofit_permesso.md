@@ -183,7 +183,7 @@ VERIFICA FINALE MACRO 6
 
 2. Email simulata in dev (SMTP_HOST non configurato):
    POST /presence con status 'sick' per oggi
-   → Log in console: "[Email] (simulato) A: dev@deepblue.it | Oggetto: Malattia..."
+   → Log in console: "[Email] (simulato) A: dev@dblue.it | Oggetto: Malattia..."
 
 3. Promozione waiting list con email simulata:
    → Prenota due utenti IN_OFFICE con capacità 1

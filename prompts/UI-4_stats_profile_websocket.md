@@ -120,11 +120,30 @@ STEP 4 — Hook useWebSocket
 File: frontend/src/hooks/useWebSocket.ts
 
 Hook che mantiene una connessione WebSocket con il backend e riceve gli
-aggiornamenti live della disponibilità degli uffici.
+aggiornamenti live della disponibilità degli uffici, per stanza e in aggregato.
+
+Aggiungi le interfacce in frontend/src/types/presence.ts (o nel file dei tipi
+già esistente — non creare un nuovo file se esiste già):
+
+```typescript
+export interface RoomOccupancy {
+  name: string;
+  booked: number;
+  capacity: number;
+}
+
+export interface PresenceUpdate {
+  date: string;
+  rooms: RoomOccupancy[];
+  extras: number;       // persone in_office senza stanza assegnata
+  totalBooked: number;  // sum(rooms.booked) + extras
+  totalCapacity: number;
+}
+```
 
 ```typescript
 export function useWebSocket(
-  onPresenceUpdate: (update: { date: string; bookedCount: number; totalCapacity: number }) => void
+  onPresenceUpdate: (update: PresenceUpdate) => void
 ) {
   useEffect(() => {
     const WS_URL = (import.meta.env.VITE_API_URL || 'http://localhost:4000')
@@ -137,7 +156,6 @@ export function useWebSocket(
       ws = new WebSocket(WS_URL);
 
       ws.onopen = () => {
-        // Iscriviti agli aggiornamenti del mese corrente
         const today = new Date().toISOString().slice(0, 10);
         ws.send(JSON.stringify({ type: 'subscribe', date: today }));
       };
@@ -145,12 +163,11 @@ export function useWebSocket(
       ws.onmessage = (event) => {
         const msg = JSON.parse(event.data);
         if (msg.type === 'presence_update') {
-          onPresenceUpdate(msg.data);
+          onPresenceUpdate(msg.data as PresenceUpdate);
         }
       };
 
       ws.onclose = () => {
-        // Riconnessione con backoff: 2s → 4s → 8s (max)
         reconnectTimeout = setTimeout(connect, Math.min(delay * 2, 8000));
       };
 
@@ -175,17 +192,29 @@ In App.tsx:
 
 ```typescript
 useWebSocket((update) => {
-  // Aggiorna il bookedCount e totalCapacity del giorno ricevuto
+  // Aggiorna il giorno ricevuto con i dati per stanza e il totale aggregato.
+  // La vista complessiva usa totalBooked/totalCapacity.
+  // La vista per stanza usa update.rooms (es. per un breakdown tooltip/modale).
   setDays(prev => prev.map(d =>
     d.date === update.date
-      ? { ...d, bookedCount: update.bookedCount, totalCapacity: update.totalCapacity }
+      ? {
+          ...d,
+          bookedCount: update.totalBooked,
+          totalCapacity: update.totalCapacity,
+          rooms: update.rooms,     // per la vista per stanza
+          extras: update.extras,
+        }
       : d
   ));
 });
 ```
 
-Questo è tutto — non modificare altro. La progress bar e l'indicatore
-numerici nelle card si aggiornano automaticamente perché derivano da `days`.
+Assicurati che il tipo `Day` (o come si chiama nel codebase) includa i campi:
+  `rooms?: RoomOccupancy[]` e `extras?: number`
+
+Non aggiungere UI per la vista per stanza in questa macro — i dati ci sono,
+la UI verrà in una iterazione successiva. La card usa `bookedCount`/`totalCapacity`
+come prima.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 STEP 6 — Pulizia finale

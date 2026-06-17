@@ -57,7 +57,7 @@ PORT=4000
 NODE_ENV=development
 
 # Dev login alternativo (solo NODE_ENV=development)
-DEV_LOGIN_USER=dev@deepblue.it
+DEV_LOGIN_USER=dev@dblue.it
 DEV_LOGIN_PASS=changeme
 DEV_LOGIN_NAME=Dev User
 DEV_LOGIN_ROLE=director

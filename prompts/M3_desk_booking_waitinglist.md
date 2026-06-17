@@ -54,6 +54,39 @@ promoteFromWaitingList(date: string): Promise<void>
   → Logga: "WaitingList: utente <userId> promosso per data <date>"
   → L'invio email di notifica arriverà in M6 — per ora solo il log.
 
+---
+
+getPresenceBreakdown(date: string): Promise<PresenceBreakdown>
+  → Calcola la disponibilità per stanza da usare nel broadcast WebSocket (M4).
+  → Interfaccia da definire nello stesso file:
+
+```typescript
+export interface RoomOccupancy {
+  name: string;
+  booked: number;
+  capacity: number;
+}
+
+export interface PresenceBreakdown {
+  date: string;
+  rooms: RoomOccupancy[];
+  extras: number;      // in_office/office_no_desk senza room assegnata (campo room null/vuoto)
+  totalBooked: number; // sum(rooms.booked) + extras
+  totalCapacity: number; // sum(rooms.capacity)
+}
+```
+
+  Implementazione:
+  1. Carica tutte le Room attive (isActive: true) dal DB.
+  2. Per ogni room: conta i WorkingStatus per quella data con
+     status in ['in_office', 'office_no_desk'] e campo room === room.name.
+  3. Extras: conta i WS con status in ['in_office', 'office_no_desk'] e
+     campo room null o vuoto string.
+  4. totalBooked = somma dei booked di tutte le rooms + extras.
+  5. totalCapacity = somma della capacity di tutte le rooms attive.
+  → Nota: non usare la cache di getTotalCapacity qui — la funzione serve
+    per broadcast real-time e deve essere sempre fresca.
+
 Verifica: npm run lint passa.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

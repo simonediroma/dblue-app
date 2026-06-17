@@ -132,7 +132,7 @@ File: backend/src/services/change-stream.service.ts
 
 ```typescript
 import WorkingStatusModel from '../models/working-status.model';
-import { getBookedCount, getTotalCapacity } from './capacity.service';
+import { getPresenceBreakdown } from './capacity.service';
 import { broadcastToDate } from './websocket.service';
 
 export async function startChangeStream(): Promise<void> {
@@ -149,12 +149,8 @@ export async function startChangeStream(): Promise<void> {
     const date = doc.date as string;
 
     try {
-      const [bookedCount, totalCapacity] = await Promise.all([
-        getBookedCount(date),
-        getTotalCapacity(date),
-      ]);
-
-      broadcastToDate(date, { date, bookedCount, totalCapacity });
+      const breakdown = await getPresenceBreakdown(date);
+      broadcastToDate(date, breakdown);
     } catch (err) {
       console.error('[ChangeStream] Errore broadcast:', err);
     }
@@ -211,7 +207,20 @@ VERIFICA FINALE MACRO 4
    wscat -c ws://localhost:4000/ws
    → Invia: {"type":"subscribe","date":"YYYY-MM-DD"}
    → Poi in un altro terminale aggiorna uno status con curl
-   → wscat deve ricevere: {"type":"presence_update","data":{"date":"...","bookedCount":1,"totalCapacity":60}}
+   → wscat deve ricevere un payload tipo:
+     {
+       "type": "presence_update",
+       "data": {
+         "date": "2026-06-16",
+         "rooms": [
+           { "name": "open_space", "booked": 1, "capacity": 30 },
+           { "name": "lab_dev",    "booked": 0, "capacity": 8 }
+         ],
+         "extras": 0,
+         "totalBooked": 1,
+         "totalCapacity": 38
+       }
+     }
 
 4. Verifica heartbeat: tieni la connessione aperta 31+ secondi
    → Non deve essere terminata
