@@ -174,6 +174,41 @@ Lo stack del prototipo (frontend-only, Gemini API) è completamente diverso dal 
 
 ---
 
+## Endpoint API — Stato Finale (M1–M6)
+
+| Metodo | Path | Auth | Ruoli |
+|--------|------|------|-------|
+| GET | /health | No | — |
+| GET | /auth/google | No | — |
+| GET | /auth/google/callback | No | — |
+| POST | /auth/dev-login | No (solo dev) | — |
+| GET | /auth/me | JWT | tutti |
+| POST | /auth/logout | JWT | tutti |
+| GET | /users/me | JWT | tutti |
+| PATCH | /users/me | JWT | tutti |
+| PATCH | /users/me/teammates | JWT | tutti |
+| GET | /rooms | JWT | tutti |
+| POST | /rooms | JWT | owner |
+| PATCH | /rooms/:id | JWT | owner |
+| DELETE | /rooms/:id | JWT | owner |
+| GET | /presence?month=YYYY-MM | JWT | tutti |
+| POST | /presence | JWT | tutti |
+| POST | /presence/bulk | JWT | tutti |
+| GET | /presence/:date/offtime | JWT | tutti |
+| PATCH | /presence/:date/offtime | JWT | tutti |
+| DELETE | /presence/:date/offtime | JWT | tutti |
+| POST | /presence/:date/checkin | JWT | tutti |
+| POST | /presence/:date/retrofit | JWT | tutti |
+| GET | /stats/me?month=YYYY-MM | JWT | tutti |
+| GET | /stats/area?month=YYYY-MM | JWT | director, owner |
+| GET | /stats/annual?year=YYYY | JWT | director, owner |
+| GET | /stats/presence-days/:userId | JWT | director, owner |
+| POST | /admin/retrofit/:userId/:date | JWT | director, owner |
+| GET | /admin/users | JWT | director, owner |
+| PATCH | /admin/users/:userId/role | JWT | owner |
+
+---
+
 ## Comandi Utili
 
 ```bash

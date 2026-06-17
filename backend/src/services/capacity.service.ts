@@ -1,5 +1,7 @@
 import { WorkingStatus, IWorkingStatus, WorkingStatusValue } from '../models/working-status.model';
 import { Room } from '../models/room.model';
+import { User } from '../models/user.model';
+import { sendWaitingListPromotion } from './email.service';
 
 export interface RoomOccupancy {
   name: string;
@@ -54,6 +56,13 @@ export async function promoteFromWaitingList(date: string): Promise<void> {
   const first = waitingList[0];
   await WorkingStatus.findByIdAndUpdate(first._id, { $set: { status: 'in_office' } });
   console.log(`WaitingList: utente ${first.userId} promosso per data ${date}`);
+
+  const user = await User.findById(first.userId).lean();
+  if (user?.email) {
+    sendWaitingListPromotion(user.email, date).catch((err) =>
+      console.error('sendWaitingListPromotion error:', err)
+    );
+  }
 }
 
 export async function getPresenceBreakdown(date: string): Promise<PresenceBreakdown> {
