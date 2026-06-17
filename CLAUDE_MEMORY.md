@@ -2,18 +2,18 @@
 > Gitignored. Aggiornato da Claude a fine sessione.
 
 **Ultima sessione:** 2026-06-17
-**Branch corrente:** `claude/zealous-turing-id3yqf`
-**PR in corso:** M4 WebSocket + Change Streams (`claude/zealous-turing-id3yqf`)
+**Branch corrente:** `claude/ecstatic-curie-og52av`
+**PR in corso:** M5 Stats API + RBAC (`claude/ecstatic-curie-og52av`)
 
 ---
 
 ## Prossima sessione — inizia da qui
 
-M4 completata e pushata sul branch `claude/zealous-turing-id3yqf`.
-**Partire da M5**: aprire PR per M4 se non già fatto, poi procedere.
+M5 completata e pushata sul branch `claude/ecstatic-curie-og52av`.
+**Partire da M6**: aprire PR per M5 se non già fatto, poi procedere.
 
-1. Aprire PR per M4 dal branch `claude/zealous-turing-id3yqf` → `main`
-2. Eseguire M5 → `prompts/M5_stats_presencedays_rbac.md`
+1. Aprire PR per M5 dal branch `claude/ecstatic-curie-og52av` → `main`
+2. Eseguire M6 → `prompts/M6_email_retrofit_permesso.md`
 
 ---
 
@@ -58,8 +58,9 @@ M4 completata e pushata sul branch `claude/zealous-turing-id3yqf`.
   WS server con room pattern date→Set, Change Stream su WorkingStatus, heartbeat, replica set, docker-compose con rs0
   Branch: `claude/zealous-turing-id3yqf` — build TypeScript zero errori
 
-- [ ] **M5** — Stats API + Presence Days + RBAC → `prompts/M5_stats_presencedays_rbac.md`
+- [x] **M5** — Stats API + Presence Days + RBAC → `prompts/M5_stats_presencedays_rbac.md`
   stats.service mensili/annuali/area, requireRole middleware centralizzato, RBAC colleghi
+  Branch: `claude/ecstatic-curie-og52av` — build TypeScript zero errori
 
 - [ ] **M6** — Email + Retrofit + Permesso ore → `prompts/M6_email_retrofit_permesso.md`
   Nodemailer con guard dev, email promozione e malattia, /admin/retrofit, /admin/users, CRUD offTime
@@ -138,3 +139,4 @@ M4 completata e pushata sul branch `claude/zealous-turing-id3yqf`.
 | #4 | `claude/zen-edison-riyzlr` | M1 — Auth, User model, Room model, JWT, dev-login, route /auth /users /rooms |
 | #6 | `claude/keen-babbage-wgq96x` | M3 — Desk booking, waiting list FIFO, check-in |
 | #7 | `claude/zealous-turing-id3yqf` | M4 — WebSocket, Change Streams, replica set |
+| PR-8 | `claude/ecstatic-curie-og52av` | M5 — Stats API, RBAC middleware, requireRole centralizzato |
