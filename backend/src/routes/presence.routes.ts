@@ -75,6 +75,21 @@ router.post('/bulk', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
+// GET /presence/:date/offtime
+router.get('/:date/offtime', async (req: Request, res: Response): Promise<void> => {
+  const { date } = req.params;
+  try {
+    const ws = await WorkingStatus.findOne({ userId: userId(req), date }).lean();
+    if (!ws) {
+      res.status(404).json({ error: 'Nessun working status trovato per questa data' });
+      return;
+    }
+    res.json({ date, offTime: ws.offTime ?? null });
+  } catch (err) {
+    handleError(res, err);
+  }
+});
+
 // PATCH /presence/:date/offtime
 router.patch('/:date/offtime', async (req: Request, res: Response): Promise<void> => {
   const { date } = req.params;
@@ -130,6 +145,17 @@ router.post('/:date/checkin', async (req: Request, res: Response): Promise<void>
       { new: true }
     );
     res.json(updated);
+  } catch (err) {
+    handleError(res, err);
+  }
+});
+
+// DELETE /presence/:date/offtime
+router.delete('/:date/offtime', async (req: Request, res: Response): Promise<void> => {
+  const { date } = req.params;
+  try {
+    const result = await updateOffTime(userId(req), date, null);
+    res.json(result);
   } catch (err) {
     handleError(res, err);
   }

@@ -90,9 +90,13 @@ Non usare `cors()` senza opzioni in produzione. Specificare sempre `origin`, `cr
 
 ## Specifiche del Progetto
 
-> Aggiungere qui le lezioni emerse durante lo sviluppo di Presence App.
+**Email fire-and-forget: non bloccare il response loop con sendMail**
+Le email transazionali (promozione waiting list, conferma malattia) non devono mai bloccare la response al client. Usare il pattern fire-and-forget: chiamare la funzione email senza `await` e agganciare un `.catch(console.error)`. Così un timeout SMTP non degrada l'esperienza utente.
+```typescript
+sendWaitingListPromotion(email, date).catch((err) =>
+  console.error('sendWaitingListPromotion error:', err)
+);
+```
 
-<!-- Esempio:
-**Titolo lezione**
-Descrizione del problema incontrato e della soluzione adottata. Includere il file/modulo coinvolto.
--->
+**SMTP simulato in dev: pattern emailEnabled guard**
+Creare una variabile `const emailEnabled = !!process.env.SMTP_HOST` all'avvio del modulo email. Se non configurata, loggare l'email in console invece di inviarla. Questo elimina la necessità di un server SMTP in locale e rende i test più semplici. Le variabili SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`) sono opzionali in dev — documentarle in `.env.example` con i valori vuoti.

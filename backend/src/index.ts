@@ -11,6 +11,7 @@ import userRoutes from './routes/users.routes';
 import roomRoutes from './routes/rooms.routes';
 import presenceRoutes from './routes/presence.routes';
 import statsRoutes from './routes/stats.routes';
+import adminRoutes from './routes/admin.routes';
 import { startScheduler } from './services/scheduler';
 import { initWebSocket } from './services/websocket.service';
 import { startChangeStream } from './services/change-stream.service';
@@ -31,6 +32,7 @@ app.use('/users', userRoutes);
 app.use('/rooms', roomRoutes);
 app.use('/presence', presenceRoutes);
 app.use('/stats', statsRoutes);
+app.use('/admin', adminRoutes);
 
 async function bootstrap() {
   const uri = process.env.MONGODB_URI;

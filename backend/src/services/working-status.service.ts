@@ -3,6 +3,7 @@ import { WorkingStatus, IWorkingStatus, WorkingStatusValue } from '../models/wor
 import { User } from '../models/user.model';
 import { Room } from '../models/room.model';
 import { isCapacityAvailable, promoteFromWaitingList } from './capacity.service';
+import { sendSickLeaveConfirmation } from './email.service';
 
 // Returns true if date is today or tomorrow
 export function isLastMinute(date: string): boolean {
@@ -152,6 +153,20 @@ export async function upsertStatus(
     promoteFromWaitingList(date).catch((err) =>
       console.error('promoteFromWaitingList error:', err)
     );
+  }
+
+  // Fire-and-forget sick leave confirmation email (only for today)
+  if (payload.status === 'sick' && date === getTodayStr()) {
+    User.findById(userId)
+      .lean()
+      .then((user) => {
+        if (user?.email) {
+          sendSickLeaveConfirmation(user.email, date).catch((err) =>
+            console.error('sendSickLeaveConfirmation error:', err)
+          );
+        }
+      })
+      .catch((err) => console.error('sick email lookup error:', err));
   }
 
   return result!;
