@@ -140,4 +140,4 @@ M6 completata e pushata sul branch `claude/dreamy-cori-gvl174`. Backend FEATURE-
 | #4 | `claude/zen-edison-riyzlr` | M1 — Auth, User model, Room model, JWT, dev-login, route /auth /users /rooms |
 | #6 | `claude/keen-babbage-wgq96x` | M3 — Desk booking, waiting list FIFO, check-in |
 | #7 | `claude/zealous-turing-id3yqf` | M4 — WebSocket, Change Streams, replica set |
-| PR-8 | `claude/ecstatic-curie-og52av` | M5 — Stats API, RBAC middleware, requireRole centralizzato |
+| #8 | `claude/ecstatic-curie-og52av` | M5 — Stats API, RBAC middleware, requireRole centralizzato |
