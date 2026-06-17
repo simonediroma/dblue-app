@@ -22,8 +22,9 @@ import { useAuth } from './context/AuthContext';
 import type { User } from './types/api';
 import { usePresence } from './hooks/usePresence';
 import { useColleagues, mapUserToColleague } from './hooks/useColleagues';
-import { getPresence, checkIn, getRooms, getUsers, updateTeammates, completeOnboarding } from './services/api';
+import { getPresence, checkIn, getRooms, getUsers, updateTeammates, completeOnboarding, updatePreferences } from './services/api';
 import type { Room } from './services/api';
+import { useWebSocket } from './hooks/useWebSocket';
 
 const TODAY = getTodayStr();
 
@@ -308,6 +309,26 @@ export default function App() {
  return () => mediaQuery.removeEventListener('change', handleChange);
  }
  }, [themeMode]);
+
+ useEffect(() => {
+ if (user) {
+  setThemeMode(user.preferences.theme);
+  setIsSimplifiedView(user.preferences.accessibility.reducedMotion);
+ }
+ }, [user]);
+
+ const handleSetThemeMode = (mode: 'light' | 'dark' | 'system') => {
+ setThemeMode(mode);
+ updatePreferences({ theme: mode }).catch(() => {});
+ };
+
+ const handleToggleSimplifiedView = () => {
+ const newValue = !isSimplifiedView;
+ setIsSimplifiedView(newValue);
+ updatePreferences({ accessibility: { reducedMotion: newValue, textSize: user?.preferences.accessibility.textSize ?? 'default' } }).catch(() => {
+  setIsSimplifiedView(!newValue);
+ });
+ };
 
  const handleTabChange = (newTab: 'plan' | 'stats' | 'profile' | 'organisation') => {
  if (newTab === activeTab) return;
@@ -670,6 +691,20 @@ export default function App() {
  useEffect(() => {
  getRooms().then(setRooms).catch(() => {});
  }, []);
+
+ useWebSocket((update) => {
+ setDays(prev => prev.map(d =>
+  d.date === update.date
+   ? {
+    ...d,
+    bookedCount: update.totalBooked,
+    totalCapacity: update.totalCapacity,
+    rooms: update.rooms,
+    extras: update.extras,
+   }
+   : d
+ ));
+ });
 
  useEffect(() => {
  if (user && user.onboardingCompleted && user.teammates.length > 0) {
@@ -1118,7 +1153,7 @@ export default function App() {
  <Stats days={processedDays} currentMonth={activeMonth} projectTeammates={projectTeammates} onAddTeammates={() => setActiveTab('profile')}
  />
  ) : !showOnboarding ? (
- <Profile themeMode={themeMode} onSetThemeMode={setThemeMode} isSimplifiedView={isSimplifiedView} onToggleSimplifiedView={() => setIsSimplifiedView(!isSimplifiedView)}
+ <Profile themeMode={themeMode} onSetThemeMode={handleSetThemeMode} isSimplifiedView={isSimplifiedView} onToggleSimplifiedView={handleToggleSimplifiedView}
  projectTeammates={projectTeammates}
  onUpdateProjectTeammates={handleUpdateProjectTeammates}
  onLogout={logout}

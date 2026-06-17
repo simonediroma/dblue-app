@@ -27,6 +27,20 @@ export interface ColleagueAvatarInfo {
   color: string;
 }
 
+export interface RoomOccupancy {
+  name: string;
+  booked: number;
+  capacity: number;
+}
+
+export interface PresenceUpdate {
+  date: string;
+  rooms: RoomOccupancy[];
+  extras: number;
+  totalBooked: number;
+  totalCapacity: number;
+}
+
 export interface DayPresence {
   date: string; // ISO format YYYY-MM-DD
   dayName: string;
@@ -45,6 +59,8 @@ export interface DayPresence {
   isLabBooked?: boolean;
   labBookerName?: string;
   isExtended?: boolean;
+  rooms?: RoomOccupancy[];
+  extras?: number;
   offTime?: {
     type: OffTimeType;
     hours?: number;

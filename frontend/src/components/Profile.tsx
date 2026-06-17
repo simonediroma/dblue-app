@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import RoomConfigMock from './RoomConfigMock';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -32,6 +32,8 @@ import {
 } from 'lucide-react';
 
 import { COLLEAGUES, Colleague } from '../constants/colleagues';
+import { useAuth } from '../context/AuthContext';
+import { updatePreferences } from '../services/api';
 
 interface ProfileProps {
  themeMode: 'light' | 'dark' | 'system';
@@ -246,6 +248,7 @@ export default function Profile({
  onUpdateProjectTeammates,
  onLogout
 }: ProfileProps) {
+ const { user } = useAuth();
  const [activeView, setActiveView] = useState<'main' | 'groups' | 'accessibility' | 'room-config' | 'teammates'>('main');
  const [selectedTeammates, setSelectedTeammates] = useState<Colleague[]>(projectTeammates);
  const [teammateSearchQuery, setTeammateSearchQuery] = useState('');
@@ -267,7 +270,7 @@ export default function Profile({
  const [confirmation, setConfirmation] = useState<string | null>(null);
 
  const [notifications, setNotifications] = useState({
- officeAvailable: true,
+ officeAvailable: user?.preferences?.notifications?.waitingListPromotion ?? true,
  statusReminder11: true,
  statusReminder18: false,
  projectTeammateBooking: true,
@@ -275,8 +278,26 @@ export default function Profile({
  newActivity: true
  });
 
+ useEffect(() => {
+ if (user?.preferences?.notifications) {
+  setNotifications(prev => ({
+   ...prev,
+   officeAvailable: user.preferences.notifications.waitingListPromotion,
+  }));
+ }
+ }, [user]);
+
  const toggleNotification = (key: keyof typeof notifications) => {
- setNotifications(prev => ({ ...prev, [key]: !prev[key] }));
+ const newValue = !notifications[key];
+ setNotifications(prev => ({ ...prev, [key]: newValue }));
+ if (key === 'officeAvailable') {
+  updatePreferences({ notifications: {
+   waitingListPromotion: newValue,
+   sickLeaveReminder: user?.preferences?.notifications?.sickLeaveReminder ?? false,
+  } }).catch(() => {
+   setNotifications(prev => ({ ...prev, [key]: !newValue }));
+  });
+ }
  };
 
  const filteredColleagues = useMemo(() => {
