@@ -2,18 +2,18 @@
 > Gitignored. Aggiornato da Claude a fine sessione.
 
 **Ultima sessione:** 2026-06-17
-**Branch corrente:** `claude/ecstatic-curie-og52av`
-**PR in corso:** M5 Stats API + RBAC (`claude/ecstatic-curie-og52av`)
+**Branch corrente:** `claude/dreamy-cori-gvl174`
+**PR in corso:** M6 Email + Retrofit + Permesso ore (`claude/dreamy-cori-gvl174`)
 
 ---
 
 ## Prossima sessione — inizia da qui
 
-M5 completata e pushata sul branch `claude/ecstatic-curie-og52av`.
-**Partire da M6**: aprire PR per M5 se non già fatto, poi procedere.
+M6 completata e pushata sul branch `claude/dreamy-cori-gvl174`. Backend FEATURE-COMPLETE.
+**Partire da UI-1**: aprire PR per M6 se non già fatto, poi procedere col frontend.
 
-1. Aprire PR per M5 dal branch `claude/ecstatic-curie-og52av` → `main`
-2. Eseguire M6 → `prompts/M6_email_retrofit_permesso.md`
+1. Aprire PR per M6 dal branch `claude/dreamy-cori-gvl174` → `main`
+2. Eseguire UI-1 → `prompts/UI-1_setup_auth.md`
 
 ---
 
@@ -62,8 +62,9 @@ M5 completata e pushata sul branch `claude/ecstatic-curie-og52av`.
   stats.service mensili/annuali/area, requireRole middleware centralizzato, RBAC colleghi
   Branch: `claude/ecstatic-curie-og52av` — build TypeScript zero errori
 
-- [ ] **M6** — Email + Retrofit + Permesso ore → `prompts/M6_email_retrofit_permesso.md`
+- [x] **M6** — Email + Retrofit + Permesso ore → `prompts/M6_email_retrofit_permesso.md`
   Nodemailer con guard dev, email promozione e malattia, /admin/retrofit, /admin/users, CRUD offTime
+  Branch: `claude/dreamy-cori-gvl174` — build TypeScript zero errori
 
 ---
 
