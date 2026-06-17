@@ -2,8 +2,8 @@
 > Gitignored. Aggiornato da Claude a fine sessione.
 
 **Ultima sessione:** 2026-06-17
-**Branch corrente:** `claude/compassionate-cray-0fn6i5`
-**PR in corso:** UI-4 Stats + Profile + WebSocket (`claude/compassionate-cray-0fn6i5`)
+**Branch corrente:** `claude/intelligent-brown-7sbqvm`
+**PR in corso:** #14 — Fix teammates + deploy setup (`claude/intelligent-brown-7sbqvm`)
 
 ---
 
