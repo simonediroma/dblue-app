@@ -1,4 +1,5 @@
 import type { User } from '../types/api';
+import type { DayPresence } from '../types';
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
@@ -48,6 +49,40 @@ export function updatePreferences(prefs: Partial<User['preferences']>): Promise<
 
 export function completeOnboarding(): Promise<void> {
   return request<void>('/users/me/onboarding', { method: 'PATCH' });
+}
+
+export function getPresence(month: string): Promise<DayPresence[]> {
+  return request<DayPresence[]>(`/presence?month=${encodeURIComponent(month)}`);
+}
+
+export function upsertStatus(date: string, payload: {
+  status: string;
+  isUsingDesk?: boolean;
+  room?: string;
+}): Promise<DayPresence> {
+  return request<DayPresence>('/presence', {
+    method: 'POST',
+    body: JSON.stringify({ date, ...payload }),
+  });
+}
+
+export function bulkUpsertStatus(updates: Array<{
+  date: string;
+  status: string;
+  isUsingDesk?: boolean;
+  room?: string;
+}>): Promise<DayPresence[]> {
+  return request<DayPresence[]>('/presence/bulk', {
+    method: 'POST',
+    body: JSON.stringify({ updates }),
+  });
+}
+
+export function updateOffTime(date: string, offTime: { type: string; hours?: number } | null): Promise<DayPresence> {
+  return request<DayPresence>(`/presence/${date}/offtime`, {
+    method: 'PATCH',
+    body: JSON.stringify({ offTime }),
+  });
 }
 
 export { BASE_URL };

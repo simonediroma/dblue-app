@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, Check, Users, ArrowRight } from 'lucide-react';
-import { COLLEAGUES, Colleague } from '../constants/colleagues';
+import type { Colleague } from '../constants/colleagues';
+import { useColleagues } from '../hooks/useColleagues';
 
 interface OnboardingProps {
  onComplete: (selectedTeammates: Colleague[]) => void;
@@ -12,8 +13,9 @@ export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
  const [step, setStep] = useState<1 | 2>(1);
  const [selectedColleagues, setSelectedColleagues] = useState<Colleague[]>([]);
  const [searchQuery, setSearchQuery] = useState('');
+ const colleagues = useColleagues();
 
- const filteredColleagues = COLLEAGUES.filter(c => 
+ const filteredColleagues = colleagues.filter(c =>
  `${c.name} ${c.surname}`.toLowerCase().includes(searchQuery.toLowerCase())
  );
 
