@@ -1,4 +1,6 @@
 import type { User } from '../types/api';
+import type { DayPresence, WorkStatus } from '../types';
+import { getTodayStr, months } from '../utils/dateUtils';
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
@@ -51,3 +53,73 @@ export function completeOnboarding(): Promise<void> {
 }
 
 export { BASE_URL };
+
+// ─── Presence API ────────────────────────────────────────────────────────────
+
+interface RawPresenceDay {
+  date: string;
+  status: string;
+  isUsingDesk?: boolean;
+  room?: string;
+  isConfirmed?: boolean;
+  offTime?: { type: string; hours?: number };
+  bookedCount?: number;
+  totalCapacity?: number;
+  colleagueAvatars?: unknown[];
+}
+
+function normalizeDayFromApi(raw: RawPresenceDay): DayPresence {
+  const today = getTodayStr();
+  const d = new Date(raw.date + 'T12:00:00');
+  const dayName = months[d.getMonth()] !== undefined
+    ? ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getDay()]
+    : '';
+  return {
+    date: raw.date,
+    dayName,
+    status: raw.status.toUpperCase() as unknown as WorkStatus,
+    isPast: raw.date < today,
+    isCheckedIn: raw.isConfirmed ?? false,
+    isUsingDesk: raw.isUsingDesk,
+    room: raw.room,
+    offTime: raw.offTime as DayPresence['offTime'],
+    bookedCount: raw.bookedCount ?? 0,
+    totalCapacity: raw.totalCapacity ?? 23,
+    colleagueAvatars: [],
+    projectTeammatesCount: 0,
+  };
+}
+
+export function getPresence(month: string): Promise<DayPresence[]> {
+  return request<RawPresenceDay[]>(`/presence?month=${month}`)
+    .then(days => days.map(normalizeDayFromApi));
+}
+
+export function upsertStatus(
+  date: string,
+  payload: { status: string; isUsingDesk?: boolean; room?: string },
+): Promise<DayPresence> {
+  return request<RawPresenceDay>('/presence', {
+    method: 'POST',
+    body: JSON.stringify({ date, ...payload }),
+  }).then(normalizeDayFromApi);
+}
+
+export function bulkUpsertStatus(
+  updates: Array<{ date: string; status: string; isUsingDesk?: boolean; room?: string }>,
+): Promise<DayPresence[]> {
+  return request<{ succeeded: RawPresenceDay[] }>('/presence/bulk', {
+    method: 'POST',
+    body: JSON.stringify({ updates }),
+  }).then(res => res.succeeded.map(normalizeDayFromApi));
+}
+
+export function updateOffTime(
+  date: string,
+  offTime: { type: string; hours?: number } | null,
+): Promise<DayPresence> {
+  return request<RawPresenceDay>(`/presence/${date}/offtime`, {
+    method: 'PATCH',
+    body: JSON.stringify({ offTime }),
+  }).then(normalizeDayFromApi);
+}

@@ -14,14 +14,43 @@ import SplashScreen from './components/SplashScreen';
 import Organisation from './components/Organisation';
 import Onboarding from './components/Onboarding';
 import { WorkStatus, DayPresence, OffTimeType, UserRole, ColleagueAvatarInfo } from './types';
-import { COLLEAGUES, Colleague } from './constants/colleagues';
-import { getFictionalDayName, getFictionalIsWeekend, parseAppDate, getTodayStr } from './utils/dateUtils';
+import type { Colleague } from './constants/colleagues';
+import { getFictionalDayName, parseAppDate, getTodayStr, months } from './utils/dateUtils';
+import { getPresence } from './services/api';
+import { usePresence } from './hooks/usePresence';
+import { useColleagues } from './hooks/useColleagues';
 import { ChevronDown, Check, X, AlertTriangle, Building2, Home, Plane, Palmtree, Thermometer } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from './context/AuthContext';
 import type { User } from './types/api';
 
 const TODAY = getTodayStr();
+
+function monthStr(offset: number): string {
+ const d = new Date();
+ d.setMonth(d.getMonth() + offset);
+ return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function monthLabel(offset: number): string {
+ const d = new Date();
+ d.setMonth(d.getMonth() + offset);
+ return `${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function monthLabelToStr(label: string): string {
+ const parts = label.split(' ');
+ if (parts.length !== 2) return '';
+ const idx = months.indexOf(parts[0]);
+ if (idx === -1) return '';
+ return `${parts[1]}-${String(idx + 1).padStart(2, '0')}`;
+}
+
+const CUR_MONTH_STR = monthStr(0);
+const NEXT_MONTH_STR = monthStr(1);
+const CUR_MONTH_LABEL = monthLabel(0);
+const NEXT_MONTH_LABEL = monthLabel(1);
+const PREV_MONTH_LABEL = monthLabel(-1);
 
 const statusLabels: Record<string, string> = {
  [WorkStatus.IN_OFFICE]: 'In Office',
@@ -44,70 +73,6 @@ function isLastMinute(dateStr: string): boolean {
  return diffDays > 0 && diffDays <= LAST_MINUTE_THRESHOLD_DAYS;
 }
 
-const INITIAL_DAYS: DayPresence[] = [
- // Past Days
- { date: '2026-10-02', dayName: 'Monday', status: WorkStatus.IN_OFFICE, isPast: true, isCheckedIn: true, isUsingDesk: true, room: 'Blue Room', bookedCount: 20, totalCapacity: 23, projectTeammatesCount: 4, colleagueAvatars: [{ initials: 'AP', color: 'bg-blue-500' }, { initials: 'AT', color: 'bg-red-500' }, { initials: 'AG', color: 'bg-green-500' }, { initials: 'AS', color: 'bg-yellow-500' }] },
- { date: '2026-10-03', dayName: 'Tuesday', status: WorkStatus.PENDING, isPast: true, isCheckedIn: false, bookedCount: 15, totalCapacity: 23, projectTeammatesCount: 2, colleagueAvatars: [{ initials: 'AF', color: 'bg-purple-500' }, { initials: 'AV', color: 'bg-pink-500' }] },
- { date: '2026-10-04', dayName: 'Wednesday', status: WorkStatus.REMOTE, isPast: true, isCheckedIn: true, bookedCount: 10, totalCapacity: 23, projectTeammatesCount: 1, colleagueAvatars: [{ initials: 'AC', color: 'bg-indigo-500' }] },
- { date: '2026-10-05', dayName: 'Thursday', status: WorkStatus.LEAVE, isPast: true, isCheckedIn: false, bookedCount: 22, totalCapacity: 23, projectTeammatesCount: 5, colleagueAvatars: [{ initials: 'AD', color: 'bg-teal-500' }, { initials: 'AC', color: 'bg-orange-500' }, { initials: 'MG', color: 'bg-cyan-500' }, { initials: 'CF', color: 'bg-emerald-500' }, { initials: 'CA', color: 'bg-violet-500' }] },
- { date: '2026-10-06', dayName: 'Friday', status: WorkStatus.REMOTE, isPast: true, isCheckedIn: true, isLabBooked: true, labBookerName: 'Team Activity', bookedCount: 12, totalCapacity: 23, projectTeammatesCount: 2, colleagueAvatars: [{ initials: 'DT', color: 'bg-blue-600' }, { initials: 'DV', color: 'bg-red-600' }] },
- 
- // Current Week (9 is Today)
- {
- date: '2026-10-09',
- dayName: 'Monday',
- status: WorkStatus.IN_OFFICE,
- isHighlighted: true,
- isCheckedIn: false,
- isUsingDesk: true,
- room: 'Blue Room',
- bookedCount: 18,
- totalCapacity: 23,
- projectTeammatesCount: 5,
- colleagueAvatars: [
- { initials: 'ES', color: 'bg-blue-500' },
- { initials: 'EH', color: 'bg-red-500' },
- { initials: 'EV', color: 'bg-green-500' },
- { initials: 'FP', color: 'bg-yellow-500' },
- { initials: 'FM', color: 'bg-purple-500' },
- { initials: 'GS', color: 'bg-orange-500' },
- { initials: 'LN', color: 'bg-teal-500' },
- { initials: 'MC', color: 'bg-indigo-500' },
- { initials: 'PT', color: 'bg-pink-500' },
- { initials: 'RV', color: 'bg-cyan-500' },
- ]
- },
- { date: '2026-10-10', dayName: 'Tuesday', status: WorkStatus.REMOTE, bookedCount: 15, totalCapacity: 23, projectTeammatesCount: 3, colleagueAvatars: [{ initials: 'FB', color: 'bg-blue-500' }, { initials: 'EL', color: 'bg-red-500' }, { initials: 'AD', color: 'bg-green-500' }] },
- { date: '2026-10-11', dayName: 'Wednesday', status: WorkStatus.MISSION, bookedCount: 9, totalCapacity: 23, projectTeammatesCount: 2, colleagueAvatars: [{ initials: 'GS', color: 'bg-yellow-500' }, { initials: 'GF', color: 'bg-purple-500' }] },
- { date: '2026-10-12', dayName: 'Thursday', status: WorkStatus.IN_OFFICE, isUsingDesk: true, room: 'Red Room', bookedCount: 20, totalCapacity: 23, projectTeammatesCount: 5, colleagueAvatars: [{ initials: 'LP', color: 'bg-blue-500' }, { initials: 'VC', color: 'bg-red-500' }, { initials: 'LN', color: 'bg-green-500' }, { initials: 'LS', color: 'bg-yellow-500' }, { initials: 'MC', color: 'bg-purple-500' }] },
- { date: '2026-10-13', dayName: 'Friday', status: WorkStatus.LEAVE, bookedCount: 4, totalCapacity: 23, projectTeammatesCount: 0, colleagueAvatars: [{ initials: 'MM', color: 'bg-pink-500' }, { initials: 'ML', color: 'bg-indigo-500' }] },
-
- // Rest of October
- { date: '2026-10-16', dayName: 'Monday', status: WorkStatus.IN_OFFICE, isUsingDesk: true, room: 'Lab', bookedCount: 12, totalCapacity: 23, projectTeammatesCount: 3, colleagueAvatars: [{ initials: 'SC', color: 'bg-teal-500' }, { initials: 'MC', color: 'bg-orange-500' }, { initials: 'MT', color: 'bg-cyan-500' }] },
- { date: '2026-10-17', dayName: 'Tuesday', status: WorkStatus.IN_OFFICE, isUsingDesk: true, room: 'Lab', bookedCount: 19, totalCapacity: 23, projectTeammatesCount: 6, colleagueAvatars: [{ initials: 'MB', color: 'bg-emerald-500' }, { initials: 'MU', color: 'bg-violet-500' }, { initials: 'NC', color: 'bg-blue-500' }] },
- { date: '2026-10-18', dayName: 'Wednesday', status: WorkStatus.REMOTE, bookedCount: 22, totalCapacity: 23, projectTeammatesCount: 8, colleagueAvatars: [{ initials: 'NG', color: 'bg-red-500' }, { initials: 'PL', color: 'bg-green-500' }, { initials: 'PT', color: 'bg-yellow-500' }] },
- { date: '2026-10-19', dayName: 'Thursday', status: WorkStatus.PENDING, bookedCount: 12, totalCapacity: 23, projectTeammatesCount: 3, colleagueAvatars: [{ initials: 'PD', color: 'bg-purple-500' }, { initials: 'RH', color: 'bg-pink-500' }, { initials: 'RV', color: 'bg-indigo-500' }] },
- { date: '2026-10-20', dayName: 'Friday', status: WorkStatus.MISSION, bookedCount: 10, totalCapacity: 23, projectTeammatesCount: 2, colleagueAvatars: [{ initials: 'FL', color: 'bg-teal-500' }, { initials: 'KC', color: 'bg-orange-500' }] },
-
- { date: '2026-10-23', dayName: 'Monday', status: WorkStatus.PENDING, bookedCount: 23, totalCapacity: 23, projectTeammatesCount: 4, colleagueAvatars: [{ initials: 'AA', color: 'bg-cyan-500' }, { initials: 'ST', color: 'bg-emerald-500' }] },
- { date: '2026-10-24', dayName: 'Tuesday', status: WorkStatus.IN_OFFICE, isUsingDesk: true, room: 'Green Room', bookedCount: 18, totalCapacity: 23, projectTeammatesCount: 3, colleagueAvatars: [{ initials: 'SP', color: 'bg-violet-500' }, { initials: 'SB', color: 'bg-blue-500' }] },
- { date: '2026-10-25', dayName: 'Wednesday', status: WorkStatus.REMOTE, bookedCount: 11, totalCapacity: 23, projectTeammatesCount: 1, colleagueAvatars: [{ initials: 'HM', color: 'bg-red-500' }] },
- { date: '2026-10-26', dayName: 'Thursday', status: WorkStatus.IN_OFFICE, isUsingDesk: true, room: 'Blue Room', bookedCount: 20, totalCapacity: 23, projectTeammatesCount: 5, colleagueAvatars: [{ initials: 'TV', color: 'bg-green-500' }, { initials: 'VA', color: 'bg-yellow-500' }] },
- { date: '2026-10-27', dayName: 'Friday', status: WorkStatus.PENDING, bookedCount: 6, totalCapacity: 23, projectTeammatesCount: 0, colleagueAvatars: [{ initials: 'VF', color: 'bg-purple-500' }] },
-
- { date: '2026-10-30', dayName: 'Monday', status: WorkStatus.PENDING, bookedCount: 0, totalCapacity: 23, projectTeammatesCount: 2, colleagueAvatars: [{ initials: 'DZ', color: 'bg-pink-500' }, { initials: 'BS', color: 'bg-indigo-500' }], isOfficeClosed: true },
- { date: '2026-10-31', dayName: 'Tuesday', status: WorkStatus.MISSION, bookedCount: 8, totalCapacity: 23, projectTeammatesCount: 1, colleagueAvatars: [{ initials: 'VC', color: 'bg-teal-500' }] },
-
- // November
- { date: '2026-11-01', dayName: 'Wednesday', status: WorkStatus.PENDING, bookedCount: 0, totalCapacity: 23, projectTeammatesCount: 0, colleagueAvatars: [], isClosed: true },
- { date: '2026-11-02', dayName: 'Thursday', status: WorkStatus.IN_OFFICE, isUsingDesk: true, room: 'Red Room', bookedCount: 12, totalCapacity: 23, projectTeammatesCount: 3, colleagueAvatars: [{ initials: 'SF', color: 'bg-orange-500' }] },
- { date: '2026-11-03', dayName: 'Friday', status: WorkStatus.REMOTE, bookedCount: 15, totalCapacity: 23, projectTeammatesCount: 2, colleagueAvatars: [{ initials: 'SS', color: 'bg-cyan-500' }] },
- 
- { date: '2026-11-06', dayName: 'Monday', status: WorkStatus.IN_OFFICE, isUsingDesk: true, room: 'Blue Room', bookedCount: 18, totalCapacity: 23, projectTeammatesCount: 4, colleagueAvatars: [{ initials: 'TM', color: 'bg-emerald-500' }] },
- { date: '2026-11-07', dayName: 'Tuesday', status: WorkStatus.IN_OFFICE, isUsingDesk: true, room: 'Green Room', bookedCount: 21, totalCapacity: 23, projectTeammatesCount: 7, colleagueAvatars: [{ initials: 'SM', color: 'bg-violet-500' }] },
- { date: '2026-11-08', dayName: 'Wednesday', status: WorkStatus.REMOTE, bookedCount: 10, totalCapacity: 23, projectTeammatesCount: 1, colleagueAvatars: [{ initials: 'NK', color: 'bg-blue-500' }] },
- { date: '2026-11-09', dayName: 'Thursday', status: WorkStatus.PENDING, bookedCount: 14, totalCapacity: 23, projectTeammatesCount: 3, colleagueAvatars: [{ initials: 'MR', color: 'bg-red-500' }] },
-];
 
 function mapRole(apiRole: User['role']): UserRole {
  return apiRole === 'director' || apiRole === 'owner'
@@ -122,14 +87,15 @@ export default function App() {
  const [showSplash, setShowSplash] = useState(!user?.onboardingCompleted);
  const [showOnboarding, setShowOnboarding] = useState(false);
  const [projectTeammates, setProjectTeammates] = useState<Colleague[]>([]);
- const [days, setDays] = useState<DayPresence[]>(INITIAL_DAYS);
+ const { days, setDays, loading: daysLoading, updateStatus, bulkUpdateStatus, updateOffTime: persistOffTime } = usePresence([CUR_MONTH_STR, NEXT_MONTH_STR]);
+ const colleagues = useColleagues();
  const [selectedDay, setSelectedDay] = useState<DayPresence | null>(null);
  const [activeTab, setActiveTab] = useState<'plan' | 'stats' | 'profile' | 'organisation'>('plan');
  const [roomSelectionDate, setRoomSelectionDate] = useState<string | null>(null);
  const [isCurrentInView, setIsCurrentInView] = useState(true);
  const currentDayRef = useRef<HTMLDivElement>(null);
  const monthDividerRef = useRef<HTMLDivElement>(null);
- const [activeMonth, setActiveMonth] = useState('October 2026');
+ const [activeMonth, setActiveMonth] = useState(CUR_MONTH_LABEL);
  const [, setShowMonthBanner] = useState(false);
  const [fabCheckStatus, setFabCheckStatus] = useState<'idle' | 'checking' | 'done'>('idle');
  const [notification, setNotification] = useState<{message: string, date: string, isRetrofit?: boolean, showWorkspaceAction?: boolean, undoAction?: () => void, isCheckInNotification?: boolean} | null>(null);
@@ -143,38 +109,17 @@ export default function App() {
  const [originalDaysSnapshot, setOriginalDaysSnapshot] = useState<DayPresence[] | null>(null);
  const [lastMinuteWarning, setLastMinuteWarning] = useState<{ date: string, action: () => void } | null>(null);
 
- // Generate September 2026 data (Historical)
- const septemberDays: DayPresence[] = useMemo(() => Array.from({ length: 30 }, (_, i) => {
- const day = i + 1;
- const date = `2026-09-${day.toString().padStart(2, '0')}`;
- const statuses = [WorkStatus.IN_OFFICE, WorkStatus.REMOTE, WorkStatus.MISSION, WorkStatus.LEAVE];
- const status = statuses[Math.floor(Math.random() * statuses.length)];
- 
- return {
- date,
- dayName: getFictionalDayName(date, 'long'),
- status,
- isPast: true,
- isCheckedIn: status === WorkStatus.IN_OFFICE,
- bookedCount: Math.floor(Math.random() * 23),
- totalCapacity: 23,
- projectTeammatesCount: Math.floor(Math.random() * 10),
- colleagueAvatars: Array.from({ length: Math.floor(Math.random() * 5) + 1 }, (_, idx) => ({
- initials: COLLEAGUES[(i + idx) % COLLEAGUES.length].initials,
- color: COLLEAGUES[(i + idx) % COLLEAGUES.length].color
- })),
- isClosed: getFictionalIsWeekend(date)
+ const [historicalDays, setHistoricalDays] = useState<DayPresence[]>([]);
+ const loadHistoricalMonth = async (month: string) => {
+ const data = await getPresence(month);
+ setHistoricalDays(data);
  };
- }), []);
 
  const monthCounts = useMemo(() => {
- const monthPrefix = activeMonth === 'October 2026' ? '2026-10' : 
- activeMonth === 'November 2026' ? '2026-11' :
- activeMonth === 'September 2026' ? '2026-09' : '';
- 
+ const monthPrefix = monthLabelToStr(activeMonth);
  if (!monthPrefix) return { office: 0, remote: 0, leave: 0, mission: 0, sick: 0 };
 
- const relevantDays = isHistoricalView ? septemberDays : days.filter(d => d.date.startsWith(monthPrefix));
+ const relevantDays = isHistoricalView ? historicalDays : days.filter(d => d.date.startsWith(monthPrefix));
 
  return {
  office: relevantDays.filter(d => d.status === WorkStatus.IN_OFFICE || d.status === WorkStatus.OFFICE_NO_DESK).length,
@@ -183,7 +128,7 @@ export default function App() {
  mission: relevantDays.filter(d => d.status === WorkStatus.MISSION).length,
  sick: relevantDays.filter(d => d.status === WorkStatus.SICK).length,
  };
- }, [activeMonth, days, isHistoricalView, septemberDays]);
+ }, [activeMonth, days, isHistoricalView, historicalDays]);
 
  const handleOpenDay = (day: DayPresence, step: 'VIEW' | 'WORKSPACE' = 'VIEW', isMandatory = false) => {
  if (!originalDaysSnapshot) {
@@ -237,13 +182,9 @@ export default function App() {
 
  const handleMonthSelect = (month: string) => {
  setIsMonthDropdownOpen(false);
- if (month === 'September 2026') {
- setIsHistoricalView(true);
- setActiveMonth('September 2026');
- setIsCurrentInView(true); // Hide FAB in historical view
- } else if (month === 'November 2026') {
+ if (month === NEXT_MONTH_LABEL) {
  setIsHistoricalView(false);
- setActiveMonth('November 2026');
+ setActiveMonth(NEXT_MONTH_LABEL);
  setTimeout(() => {
  if (monthDividerRef.current) {
  const layoutHeaderHeight = window.innerWidth < 640 ? 52 : 56;
@@ -253,13 +194,16 @@ export default function App() {
  window.scrollTo({ top, behavior: 'smooth' });
  }
  }, 100);
- } else {
+ } else if (month === CUR_MONTH_LABEL) {
  setIsHistoricalView(false);
- setActiveMonth('October 2026');
- // Scroll to today is handled by the useEffect or caller if needed
- setTimeout(() => {
- scrollToToday('smooth');
- }, 100);
+ setActiveMonth(CUR_MONTH_LABEL);
+ setTimeout(() => { scrollToToday('smooth'); }, 100);
+ } else {
+ setIsHistoricalView(true);
+ setActiveMonth(month);
+ setIsCurrentInView(true);
+ const ms = monthLabelToStr(month);
+ if (ms) loadHistoricalMonth(ms);
  }
  };
 
@@ -282,10 +226,10 @@ export default function App() {
  if (entry.target === monthDividerRef.current) {
  const isBelowSticky = entry.boundingClientRect.top > 250;
  if (isBelowSticky) {
- setActiveMonth(prev => prev !== 'October 2026' ? 'October 2026' : prev);
+ setActiveMonth(prev => prev !== CUR_MONTH_LABEL ? CUR_MONTH_LABEL : prev);
  setShowMonthBanner(false);
  } else {
- setActiveMonth(prev => prev !== 'November 2026' ? 'November 2026' : prev);
+ setActiveMonth(prev => prev !== NEXT_MONTH_LABEL ? NEXT_MONTH_LABEL : prev);
  setShowMonthBanner(true);
  }
  }
@@ -503,7 +447,10 @@ export default function App() {
  // Keep them sorted by date
  return newDays.sort((a, b) => a.date.localeCompare(b.date));
  });
- 
+
+ // Persist to API (fire-and-forget)
+ targetDates.forEach(date => updateStatus(date, status, isUsingDesk, room));
+
  // Set notification
  const primaryDate = targetDates[0];
  const dateParts = primaryDate.split('-');
@@ -567,6 +514,9 @@ export default function App() {
  return newDays.sort((a, b) => a.date.localeCompare(b.date));
  });
 
+ // Persist to API (fire-and-forget)
+ bulkUpdateStatus(updates);
+
  setNotification({
  message: `Working Status "${statusLabels[updates[0].status]}" correctly extended for selected days`,
  date: updates[0].date,
@@ -600,6 +550,7 @@ export default function App() {
 
  const handleUpdateOffTime = (date: string, offTime: { type: OffTimeType, hours?: number } | undefined) => {
  setDays(prev => prev.map(d => d.date === date ? { ...d, offTime } : d));
+ persistOffTime(date, offTime);
  
  const day = days.find(d => d.date === date);
  const isPast = day?.isPast || false;
@@ -681,8 +632,8 @@ export default function App() {
 
  const currentDay = days.find(d => d.date === TODAY);
  const pastDays = days.filter(d => d.isPast);
- const futureDaysOctober = days.filter(d => !d.isPast && d.date !== TODAY && d.date.startsWith('2026-10-'));
- const futureDaysNovember = days.filter(d => d.date.startsWith('2026-11-') && d.date <= '2026-11-09');
+ const futureDaysCurrentMonth = days.filter(d => !d.isPast && d.date !== TODAY && d.date.startsWith(CUR_MONTH_STR));
+ const futureDaysNextMonth = days.filter(d => d.date.startsWith(NEXT_MONTH_STR) && d.date <= NEXT_MONTH_STR + '-09');
 
  useEffect(() => {
  if (!showOnboarding && activeTab === 'plan') {
@@ -720,9 +671,9 @@ export default function App() {
  const stickyHeaderHeight = stickyHeaderRef.current?.offsetHeight || (window.innerWidth < 640 ? 80 : 120);
  
  if (rect.top < layoutHeaderHeight + stickyHeaderHeight) {
- setActiveMonth('November 2026');
+ setActiveMonth(NEXT_MONTH_LABEL);
  } else {
- setActiveMonth('October 2026');
+ setActiveMonth(CUR_MONTH_LABEL);
  }
  }
  };
@@ -777,8 +728,8 @@ export default function App() {
  const otherOfficeAvatars: ColleagueAvatarInfo[] = [];
  const projectInitials = new Set(officeProjectTeammates.map(c => c.initials));
  
- COLLEAGUES.forEach((Colleague, i) => {
- if (Colleague.name === 'Roberto') return;
+ colleagues.forEach((Colleague, i) => {
+ if (`${Colleague.name} ${Colleague.surname}` === userName) return;
  if (projectInitials.has(Colleague.initials)) return;
  
  const seed = hash + i;
@@ -800,7 +751,7 @@ export default function App() {
  if (finalAvatars.length < 5) {
  const usedInitials = new Set(finalAvatars.map(a => a.initials));
  // Get all available colleagues except Roberto
- const availableCollagues = COLLEAGUES.filter(c => c.name !== 'Roberto' && !usedInitials.has(c.initials));
+ const availableCollagues = colleagues.filter(c => `${c.name} ${c.surname}` !== userName && !usedInitials.has(c.initials));
  
  // Deterministically pick fillers to reach 5
  const fillersNeeded = 5 - finalAvatars.length;
@@ -823,7 +774,7 @@ export default function App() {
  projectTeammatesCount: officeProjectTeammates.length
  };
  });
- }, [days, projectTeammates]);
+ }, [days, projectTeammates, colleagues, userName]);
 
  const handleDayClick = (day: DayPresence) => {
  if (day.isClosed) return; // Ignore clicks on closed days
@@ -915,16 +866,16 @@ export default function App() {
  return (
  <>
  <AnimatePresence mode="wait">
- {showSplash && <SplashScreen key="splash"/>}
- {showOnboarding && !showSplash && (
- <Onboarding onComplete={handleOnboardingComplete} onSkip={handleOnboardingSkip}/>
+ {(showSplash || daysLoading) && <SplashScreen key="splash"/>}
+ {showOnboarding && !showSplash && !daysLoading && (
+ <Onboarding colleagues={colleagues} onComplete={handleOnboardingComplete} onSkip={handleOnboardingSkip}/>
  )}
  </AnimatePresence>
  <Layout activeTab={activeTab} onTabChange={handleTabChange} isSimplifiedView={isSimplifiedView} userRole={userRole}>
  <AnimatePresence mode="wait">
  {activeTab === 'organisation' ? (
  <motion.div key="organisation" initial={{opacity: 0, x: 20}} animate={{opacity: 1, x: 0}} exit={{opacity: 0, x: -20}} transition={{duration: 0.3}}>
- <Organisation days={processedDays} activeMonth={isHistoricalView ? 'September 2026' : activeMonth}/>
+ <Organisation days={processedDays} activeMonth={activeMonth}/>
  </motion.div>
  ) : activeTab === 'plan' && !showOnboarding ? (
  <motion.div key="plan" initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} className="flex flex-col">
@@ -942,7 +893,7 @@ export default function App() {
  className={`flex items-center gap-2 group transition-all px-2 py-1 -ml-2 rounded-lg ${isMonthDropdownOpen ? 'bg-primary/5 shadow-inner' : 'hover:bg-surface-container'}`}
  >
  <h1 className="font-headline text-lg sm:text-2xl font-extrabold tracking-tight">
- {isHistoricalView ? 'September 2026' : activeMonth}
+ {activeMonth}
  </h1>
  <ChevronDown className={`w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-300 ${isMonthDropdownOpen ? 'rotate-180' : ''}`}/>
  </button>
@@ -951,21 +902,25 @@ export default function App() {
  {isMonthDropdownOpen && (
  <motion.div initial={{opacity: 0, y: 10, scale: 0.95}} animate={{opacity: 1, y: 0, scale: 1}} exit={{opacity: 0, y: 10, scale: 0.95}} className="absolute top-full left-0 mt-2 w-48 bg-surface-container-lowest rounded-2xl shadow-2xl border border-outline-variant/30 z-50 overflow-hidden py-2">
  <div className="px-3 py-2 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest opacity-50">Select Month</div>
- {['November 2026', 'October 2026', 'September 2026', 'August 2026', 'July 2026', 'June 2026'].map((month) => (
+ {[NEXT_MONTH_LABEL, CUR_MONTH_LABEL, PREV_MONTH_LABEL, monthLabel(-2), monthLabel(-3), monthLabel(-4)].map((month) => {
+ const isEnabled = month === NEXT_MONTH_LABEL || month === CUR_MONTH_LABEL || month === PREV_MONTH_LABEL;
+ const isActive = activeMonth === month;
+ return (
  <button key={month} onClick={() => handleMonthSelect(month)}
- disabled={month !== 'September 2026' && month !== 'October 2026' && month !== 'November 2026'}
+ disabled={!isEnabled}
  className={`w-full text-left px-4 py-3 text-sm font-bold transition-colors flex justify-between items-center ${
- (isHistoricalView ? 'September 2026' : activeMonth) === month 
- ? 'bg-primary text-white' 
- : (month === 'October 2026' || month === 'September 2026' || month === 'November 2026')
- ? 'text-on-surface hover:bg-surface-container-high bg-surface-container-lowest' 
+ isActive
+ ? 'bg-primary text-white'
+ : isEnabled
+ ? 'text-on-surface hover:bg-surface-container-high bg-surface-container-lowest'
  : 'text-on-surface/20 cursor-not-allowed'
  }`}
  >
  {month}
- {(isHistoricalView ? 'September 2026' : activeMonth) === month && <Check className="w-4 h-4"/>}
+ {isActive && <Check className="w-4 h-4"/>}
  </button>
- ))}
+ );
+ })}
  </motion.div>
  )}
  </AnimatePresence>
@@ -979,7 +934,7 @@ export default function App() {
  <span className="font-headline text-[13px] font-bold text-primary leading-none">
  {isHistoricalView 
  ? '10/10' 
- : `${days.filter(d => d.date.startsWith(activeMonth.startsWith('October') ? '2026-10' : '2026-11') && d.isCheckedIn && (d.status === WorkStatus.IN_OFFICE || d.status === WorkStatus.OFFICE_NO_DESK)).length}/10`}
+ : `${days.filter(d => d.date.startsWith(monthLabelToStr(activeMonth)) && d.isCheckedIn && (d.status === WorkStatus.IN_OFFICE || d.status === WorkStatus.OFFICE_NO_DESK)).length}/10`}
  </span>
  <span className="font-sans text-[9px] text-on-surface-variant whitespace-nowrap">Presence days</span>
  </div>
@@ -992,7 +947,7 @@ export default function App() {
  <span className="font-headline text-sm font-bold text-primary block leading-none">
  {isHistoricalView 
  ? '10/10' 
- : `${days.filter(d => d.date.startsWith(activeMonth.startsWith('October') ? '2026-10' : '2026-11') && d.isCheckedIn && (d.status === WorkStatus.IN_OFFICE || d.status === WorkStatus.OFFICE_NO_DESK)).length}/10`}
+ : `${days.filter(d => d.date.startsWith(monthLabelToStr(activeMonth)) && d.isCheckedIn && (d.status === WorkStatus.IN_OFFICE || d.status === WorkStatus.OFFICE_NO_DESK)).length}/10`}
  </span>
  <p className="font-sans text-[10px] leading-tight text-on-surface-variant mt-0.5 whitespace-nowrap">
  Presence days
@@ -1069,9 +1024,9 @@ export default function App() {
  <div className="pt-4 sm:pt-6 flex flex-col gap-3 sm:gap-4">
  {isHistoricalView ? (
  <div className="grid grid-cols-2 gap-4 pb-32">
- {septemberDays.map((day, i) => {
+ {historicalDays.map((day, i) => {
  const isMonday = day.dayName === 'Monday';
- const hasMondayInRow = isMonday || (i % 2 === 0 ? septemberDays[i+1]?.dayName === 'Monday' : septemberDays[i-1]?.dayName === 'Monday');
+ const hasMondayInRow = isMonday || (i % 2 === 0 ? historicalDays[i+1]?.dayName === 'Monday' : historicalDays[i-1]?.dayName === 'Monday');
  return (
  <DayCard key={day.date} day={day} isSimplified={isSimplifiedView} index={i} projectTeammates={projectTeammates} showWeekSeparator={isMonday} hasMondayInRow={hasMondayInRow}/>
  );
@@ -1114,9 +1069,9 @@ export default function App() {
 
  {/* Render remaining October days in a grid */}
  <div className="grid grid-cols-2 gap-4">
- {futureDaysOctober.map((day, i) => {
+ {futureDaysCurrentMonth.map((day, i) => {
  const isMonday = day.dayName === 'Monday';
- const hasMondayInRow = isMonday || (i % 2 === 0 ? futureDaysOctober[i+1]?.dayName === 'Monday' : futureDaysOctober[i-1]?.dayName === 'Monday');
+ const hasMondayInRow = isMonday || (i % 2 === 0 ? futureDaysCurrentMonth[i+1]?.dayName === 'Monday' : futureDaysCurrentMonth[i-1]?.dayName === 'Monday');
  return (
  <DayCard key={day.date} day={{...day, isHighlighted: false}} onClick={() => handleDayClick(day)}
  onDoubleClick={() => handleDayDoubleClick(day)}
@@ -1135,22 +1090,22 @@ export default function App() {
  <div ref={monthDividerRef} className="py-6 sm:py-12 px-4 flex items-center gap-6">
  <div className="h-[1px] flex-grow bg-outline-variant/30"/>
  <span className="font-headline text-xs font-bold tracking-[0.2em] text-on-surface-variant/60 uppercase">
- November 2026
+ {NEXT_MONTH_LABEL}
  </span>
  <div className="h-[1px] flex-grow bg-outline-variant/30"/>
  </div>
 
  {/* Render November days in a grid */}
  <div className="grid grid-cols-2 gap-4 pb-4">
- {futureDaysNovember.map((day, i) => {
+ {futureDaysNextMonth.map((day, i) => {
  const isMonday = day.dayName === 'Monday';
- const hasMondayInRow = isMonday || (i % 2 === 0 ? futureDaysNovember[i+1]?.dayName === 'Monday' : futureDaysNovember[i-1]?.dayName === 'Monday');
+ const hasMondayInRow = isMonday || (i % 2 === 0 ? futureDaysNextMonth[i+1]?.dayName === 'Monday' : futureDaysNextMonth[i-1]?.dayName === 'Monday');
  return (
  <DayCard key={day.date} day={{...day, isHighlighted: false}} onClick={() => handleDayClick(day)}
  onDoubleClick={() => handleDayDoubleClick(day)}
  onCheckIn={() => handleCheckIn(day.date, false)}
  isSimplified={isSimplifiedView}
- index={pastDays.length + (currentDay ? 1 : 0) + futureDaysOctober.length + i}
+ index={pastDays.length + (currentDay ? 1 : 0) + futureDaysCurrentMonth.length + i}
  projectTeammates={projectTeammates}
  showWeekSeparator={isMonday}
  hasMondayInRow={hasMondayInRow}
@@ -1163,7 +1118,7 @@ export default function App() {
  </div>
  </motion.div>
  ) : activeTab === 'stats' && !showOnboarding ? (
- <Stats days={processedDays} currentMonth={isHistoricalView ? 'September 2026' : activeMonth} projectTeammates={projectTeammates} onAddTeammates={() => setActiveTab('profile')}
+ <Stats days={processedDays} currentMonth={activeMonth} projectTeammates={projectTeammates} onAddTeammates={() => setActiveTab('profile')}
  />
  ) : !showOnboarding ? (
  <Profile themeMode={themeMode} onSetThemeMode={setThemeMode} isSimplifiedView={isSimplifiedView} onToggleSimplifiedView={() => setIsSimplifiedView(!isSimplifiedView)}
