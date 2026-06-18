@@ -694,7 +694,7 @@ export default function App() {
  clearTimeout(timer3);
  };
  }
- }, [showOnboarding, activeTab]);
+ }, [showOnboarding, activeTab, currentDay?.date]);
 
  useEffect(() => {
  const handleScroll = () => {
