@@ -27,8 +27,11 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json();
 }
 
-export function getMe(): Promise<User> {
-  return request<User>('/auth/me');
+export async function getMe(): Promise<User | null> {
+  const res = await fetch(`${BASE_URL}/auth/me`, { credentials: 'include' });
+  if (res.status === 401) return null;
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
 }
 
 export function logout(): Promise<void> {
