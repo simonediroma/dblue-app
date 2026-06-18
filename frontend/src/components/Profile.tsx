@@ -273,33 +273,97 @@ export default function Profile({
 
  const [notifications, setNotifications] = useState({
  officeAvailable: user?.preferences?.notifications?.waitingListPromotion ?? true,
- statusReminder11: true,
- statusReminder18: false,
- projectTeammateBooking: true,
- monthlyOverview: false,
- newActivity: true
+ statusReminder11: user?.preferences?.notifications?.statusReminder11 ?? true,
+ statusReminder18: user?.preferences?.notifications?.statusReminder18 ?? false,
+ projectTeammateBooking: user?.preferences?.notifications?.projectTeammateBooking ?? true,
+ monthlyOverview: user?.preferences?.notifications?.monthlyOverview ?? false,
+ newActivity: user?.preferences?.notifications?.newActivity ?? true,
  });
+
+ const [isLargeText, setIsLargeText] = useState(
+  user?.preferences?.accessibility?.textSize === 'large'
+ );
+ const [isScreenReader, setIsScreenReader] = useState(
+  user?.preferences?.accessibility?.screenReader ?? false
+ );
+ const [isHighContrast, setIsHighContrast] = useState(
+  user?.preferences?.accessibility?.highContrast ?? false
+ );
 
  useEffect(() => {
  if (user?.preferences?.notifications) {
-  setNotifications(prev => ({
-   ...prev,
-   officeAvailable: user.preferences.notifications.waitingListPromotion,
-  }));
+  const n = user.preferences.notifications;
+  setNotifications({
+  officeAvailable: n.waitingListPromotion,
+  statusReminder11: n.statusReminder11,
+  statusReminder18: n.statusReminder18,
+  projectTeammateBooking: n.projectTeammateBooking,
+  monthlyOverview: n.monthlyOverview,
+  newActivity: n.newActivity,
+  });
+ }
+ if (user?.preferences?.accessibility) {
+  const a = user.preferences.accessibility;
+  setIsLargeText(a.textSize === 'large');
+  setIsScreenReader(a.screenReader);
+  setIsHighContrast(a.highContrast);
  }
  }, [user]);
 
+ const handleToggleLargeText = () => {
+ const newValue = !isLargeText;
+ setIsLargeText(newValue);
+ updatePreferences({
+  accessibility: {
+  reducedMotion: user?.preferences?.accessibility?.reducedMotion ?? false,
+  textSize: newValue ? 'large' : 'default',
+  screenReader: isScreenReader,
+  highContrast: isHighContrast,
+  }
+ }).catch(() => setIsLargeText(!newValue));
+ };
+
+ const handleToggleScreenReader = () => {
+ const newValue = !isScreenReader;
+ setIsScreenReader(newValue);
+ updatePreferences({
+  accessibility: {
+  reducedMotion: user?.preferences?.accessibility?.reducedMotion ?? false,
+  textSize: user?.preferences?.accessibility?.textSize ?? 'default',
+  screenReader: newValue,
+  highContrast: isHighContrast,
+  }
+ }).catch(() => setIsScreenReader(!newValue));
+ };
+
+ const handleToggleHighContrast = () => {
+ const newValue = !isHighContrast;
+ setIsHighContrast(newValue);
+ updatePreferences({
+  accessibility: {
+  reducedMotion: user?.preferences?.accessibility?.reducedMotion ?? false,
+  textSize: user?.preferences?.accessibility?.textSize ?? 'default',
+  screenReader: isScreenReader,
+  highContrast: newValue,
+  }
+ }).catch(() => setIsHighContrast(!newValue));
+ };
+
  const toggleNotification = (key: keyof typeof notifications) => {
  const newValue = !notifications[key];
- setNotifications(prev => ({ ...prev, [key]: newValue }));
- if (key === 'officeAvailable') {
-  updatePreferences({ notifications: {
-   waitingListPromotion: newValue,
-   sickLeaveReminder: user?.preferences?.notifications?.sickLeaveReminder ?? false,
-  } }).catch(() => {
-   setNotifications(prev => ({ ...prev, [key]: !newValue }));
-  });
- }
+ const newNotifs = { ...notifications, [key]: newValue };
+ setNotifications(newNotifs);
+ updatePreferences({
+  notifications: {
+  waitingListPromotion: newNotifs.officeAvailable,
+  sickLeaveReminder: user?.preferences?.notifications?.sickLeaveReminder ?? true,
+  statusReminder11: newNotifs.statusReminder11,
+  statusReminder18: newNotifs.statusReminder18,
+  projectTeammateBooking: newNotifs.projectTeammateBooking,
+  monthlyOverview: newNotifs.monthlyOverview,
+  newActivity: newNotifs.newActivity,
+  }
+ }).catch(() => setNotifications(prev => ({ ...prev, [key]: !newValue })));
  };
 
  const filteredColleagues = useMemo(() => {
@@ -373,10 +437,10 @@ export default function Profile({
  <h2 className="text-[10px] font-bold uppercase tracking-[0.25em] text-on-surface-variant/60 ml-2">Input Settings</h2>
  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
  <AccessibilityCard icon={<Ear className="w-6 h-6 text-primary"/>}
- label="Screen Reader Support" 
+ label="Screen Reader Support"
  description="Optimise navigation for screen readers"
- isActive={true} 
- onToggle={() => {}} 
+ isActive={isScreenReader}
+ onToggle={handleToggleScreenReader}
  />
  </div>
  </section>
@@ -385,10 +449,10 @@ export default function Profile({
  <h2 className="text-[10px] font-bold uppercase tracking-[0.25em] text-on-surface-variant/60 ml-2">Visual Settings</h2>
  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
  <AccessibilityCard icon={<Eye className="w-6 h-6 text-primary"/>}
- label="High Contrast Mode" 
+ label="High Contrast Mode"
  description="Increased visibility for UI elements"
- isActive={false} 
- onToggle={() => {}} 
+ isActive={isHighContrast}
+ onToggle={handleToggleHighContrast}
  />
  <AccessibilityCard icon={<Zap className="w-6 h-6 text-primary"/>}
  label="Simplified View" 
@@ -397,10 +461,10 @@ export default function Profile({
  onToggle={onToggleSimplifiedView} 
  />
  <AccessibilityCard icon={<Type className="w-6 h-6 text-primary"/>}
- label="Large Text (200%)" 
+ label="Large Text (200%)"
  description="Increase font size for readability"
- isActive={false} 
- onToggle={() => {}} 
+ isActive={isLargeText}
+ onToggle={handleToggleLargeText}
  />
  </div>
  </section>
@@ -686,12 +750,16 @@ export default function Profile({
  {/* Profile Header Section */}
  <section className="flex flex-col items-center mb-16 mt-8 w-full text-center">
  <div className="relative mb-6">
- <div className="w-32 h-32 rounded-full bg-red-600 flex items-center justify-center text-white text-5xl font-extrabold shadow-xl">
- R
+ {user?.avatar ? (
+  <img src={user.avatar} alt={user.name} className="w-32 h-32 rounded-full object-cover shadow-xl" />
+ ) : (
+  <div className="w-32 h-32 rounded-full bg-primary flex items-center justify-center text-white text-5xl font-extrabold shadow-xl">
+  {user?.name?.charAt(0).toUpperCase() ?? '?'}
+  </div>
+ )}
  </div>
- </div>
- <h2 className="text-3xl font-bold tracking-tight text-on-surface mb-1">Roberto Venditti</h2>
- <p className="text-on-surface-variant font-medium text-sm tracking-wide">User type: Owner</p>
+ <h2 className="text-3xl font-bold tracking-tight text-on-surface mb-1">{user?.name ?? '—'}</h2>
+ <p className="text-on-surface-variant font-medium text-sm tracking-wide">User type: {user?.role ?? '—'}</p>
  </section>
 
  {/* Profile Options */}

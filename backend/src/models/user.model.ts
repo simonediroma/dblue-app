@@ -15,10 +15,17 @@ export interface IUser extends Document {
     notifications: {
       waitingListPromotion: boolean;
       sickLeaveReminder: boolean;
+      statusReminder11: boolean;
+      statusReminder18: boolean;
+      projectTeammateBooking: boolean;
+      monthlyOverview: boolean;
+      newActivity: boolean;
     };
     accessibility: {
       reducedMotion: boolean;
       textSize: 'default' | 'large';
+      screenReader: boolean;
+      highContrast: boolean;
     };
   };
   onboardingCompleted: boolean;
@@ -53,10 +60,17 @@ const userSchema = new Schema<IUser>(
       notifications: {
         waitingListPromotion: { type: Boolean, default: true },
         sickLeaveReminder: { type: Boolean, default: true },
+        statusReminder11: { type: Boolean, default: true },
+        statusReminder18: { type: Boolean, default: false },
+        projectTeammateBooking: { type: Boolean, default: true },
+        monthlyOverview: { type: Boolean, default: false },
+        newActivity: { type: Boolean, default: true },
       },
       accessibility: {
         reducedMotion: { type: Boolean, default: false },
         textSize: { type: String, enum: ['default', 'large'], default: 'default' },
+        screenReader: { type: Boolean, default: false },
+        highContrast: { type: Boolean, default: false },
       },
     },
     onboardingCompleted: { type: Boolean, default: false },
