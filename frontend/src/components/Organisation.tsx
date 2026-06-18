@@ -19,8 +19,8 @@ import {
  Legend
 } from 'recharts';
 import { DayPresence } from '../types';
-import { getStatsArea, getStatsByUser, type AreaStats, type MonthlyStats } from '../services/api';
-import { useColleagues } from '../hooks/useColleagues';
+import { getStatsArea, getStatsByUser, getUsers, type AreaStats, type MonthlyStats } from '../services/api';
+import { mapUserToColleague } from '../hooks/useColleagues';
 import type { Colleague } from '../constants/colleagues';
 
 interface OrganisationProps {
@@ -67,10 +67,21 @@ export default function Organisation({ days: _days = [], activeMonth }: Organisa
  const [colleagueStats, setColleagueStats] = useState<MonthlyStats | null>(null);
  const [colleagueStatsLoading, setColleagueStatsLoading] = useState(false);
 
- const colleagues = useColleagues();
+ const [colleagues, setColleagues] = useState<Colleague[]>([]);
+ const [colleaguesLoading, setColleaguesLoading] = useState(false);
+
+ useEffect(() => {
+   if (!isColleagueDropdownOpen || colleagues.length > 0) return;
+   setColleaguesLoading(true);
+   getUsers()
+     .then(users => setColleagues(users.map(mapUserToColleague)))
+     .catch(() => {})
+     .finally(() => setColleaguesLoading(false));
+ }, [isColleagueDropdownOpen]);
+
  const filteredColleagues = colleagueSearch
- ? colleagues.filter(c => `${c.name} ${c.surname}`.toLowerCase().includes(colleagueSearch.toLowerCase()))
- : colleagues;
+   ? colleagues.filter(c => `${c.name} ${c.surname}`.toLowerCase().includes(colleagueSearch.toLowerCase()))
+   : colleagues;
 
  // Fetch 12-month trend on mount
  useEffect(() => {
@@ -311,7 +322,9 @@ export default function Organisation({ days: _days = [], activeMonth }: Organisa
  </div>
  </div>
 
- {filteredColleagues.length === 0 ? (
+ {colleaguesLoading ? (
+ <p className="px-6 py-4 text-sm text-on-surface-variant/40 font-bold">Loading…</p>
+ ) : filteredColleagues.length === 0 ? (
  <p className="px-6 py-4 text-sm text-on-surface-variant/40 font-bold">No employees found</p>
  ) : filteredColleagues.map((colleague) => (
  <button key={colleague.id} onClick={() => { setSelectedColleague(colleague); setIsColleagueDropdownOpen(false); setColleagueSearch(''); }}
