@@ -280,6 +280,10 @@ export default function Profile({
  newActivity: true
  });
 
+ const [isLargeText, setIsLargeText] = useState(
+  user?.preferences?.accessibility?.textSize === 'large'
+ );
+
  useEffect(() => {
  if (user?.preferences?.notifications) {
   setNotifications(prev => ({
@@ -287,7 +291,21 @@ export default function Profile({
    officeAvailable: user.preferences.notifications.waitingListPromotion,
   }));
  }
+ if (user?.preferences?.accessibility) {
+  setIsLargeText(user.preferences.accessibility.textSize === 'large');
+ }
  }, [user]);
+
+ const handleToggleLargeText = () => {
+ const newValue = !isLargeText;
+ setIsLargeText(newValue);
+ updatePreferences({
+  accessibility: {
+  reducedMotion: user?.preferences?.accessibility?.reducedMotion ?? false,
+  textSize: newValue ? 'large' : 'default',
+  }
+ }).catch(() => setIsLargeText(!newValue));
+ };
 
  const toggleNotification = (key: keyof typeof notifications) => {
  const newValue = !notifications[key];
@@ -397,10 +415,10 @@ export default function Profile({
  onToggle={onToggleSimplifiedView} 
  />
  <AccessibilityCard icon={<Type className="w-6 h-6 text-primary"/>}
- label="Large Text (200%)" 
+ label="Large Text (200%)"
  description="Increase font size for readability"
- isActive={false} 
- onToggle={() => {}} 
+ isActive={isLargeText}
+ onToggle={handleToggleLargeText}
  />
  </div>
  </section>
