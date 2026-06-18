@@ -2,24 +2,25 @@
 > Gitignored. Aggiornato da Claude a fine sessione.
 
 **Ultima sessione:** 2026-06-18
-**Branch corrente:** `claude/tender-knuth-hthcpv` (pushato, PR #27 aperta)
-**PR in corso:** #27 — fix fetch colleghi diretto nella vista Project Teammates di Profile
+**Branch corrente:** `claude/pensive-ptolemy-k79ei8` (pushato, PR #30 aperta)
+**PR in corso:** #30 — fix error state + retry quando il fetch dei colleghi fallisce in Project Teammates
 
 ---
 
 ## Prossima sessione — inizia da qui
 
-Fix bug "Project Teammates" vuoto in Profile (PR #27):
-- **Causa:** `allColleagues` in Profile dipendeva dal fetch iniziale di App.tsx (`useColleagues`), che se falliva silenziosamente lasciava la lista vuota senza feedback.
-- **Fix:** quando si apre la vista `teammates` in Profile, ora viene fatto un fetch diretto a `getUsers()` indipendente. Aggiunto loading state e empty state message.
+Fix bug "Project Teammates" mostra error state (PR #30):
+- **Causa originale (PR #27):** fetch diretto di `getUsers()` già aggiunto, ma `.catch(() => {})` inghiottiva silenziosamente qualsiasi errore di rete/HTTP.
+- **Fix PR #30:** aggiunto `colleaguesError` state + bottone Retry + guard su risposta non-array. Se il fetch fallisce, l'utente vede "Could not load colleagues" + Retry.
+- **Se ancora vuoto dopo merge:** controllare `VITE_API_URL` nella Railway dashboard del frontend — potrebbe puntare a URL sbagliato o il backend non è raggiungibile.
 
 **Pendente da sessione precedente:**
 - Branch `claude/mpck-interface-audit-30cwoz` con mock audit Phase 1+2 — da aprire PR separata verso main.
 
 **Prossimi step possibili:**
-1. Merge/revisione PR #27 (fix teammates)
-2. Aprire PR per `claude/mpck-interface-audit-30cwoz` (mock audit Phase 1+2)
-3. Debugging app in produzione su Railway
+1. Merge/revisione PR #30 (error state teammates)
+2. Verificare in produzione su Railway se l'errore ora è visibile (e diagnosticare la causa radice)
+3. Aprire PR per `claude/mpck-interface-audit-30cwoz` (mock audit Phase 1+2)
 4. E2E tests con Playwright (OAuth non ancora configurato)
 5. Google OAuth (rimandato)
 
