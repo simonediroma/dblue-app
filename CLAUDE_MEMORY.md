@@ -1,20 +1,25 @@
 # Stato Corrente
 > Gitignored. Aggiornato da Claude a fine sessione.
 
-**Ultima sessione:** 2026-06-17
-**Branch corrente:** nuovo branch (da creare per prossimo task)
-**PR in corso:** nessuna — PR #14 mergiata ✅
+**Ultima sessione:** 2026-06-18
+**Branch corrente:** `claude/mpck-interface-audit-30cwoz` (pushato, non ancora in PR)
+**PR in corso:** nessuna — Phase 1 + Phase 2 mock audit completate, da aprire PR
 
 ---
 
 ## Prossima sessione — inizia da qui
 
-PR #14 mergiata (fix teammates reali + test suite backend). Iniziare nuovo branch per il prossimo task.
+Completato audit mock data interfaccia (2 fasi):
+- **Phase 1** (sessione precedente): fix nomi stanze, isCurrentDay hardcoded, PARTIAL_LEAVE, Roberto Venditti hardcoded
+- **Phase 2** (questa sessione): eliminati tutti i mock rimanenti — 101 nomi COLLEAGUES, Organisation stats, StatusCarousel, avatar fallback
+
+**Branch con modifiche:** `claude/mpck-interface-audit-30cwoz` — da aprire PR verso main.
 
 **Prossimi step possibili:**
-1. Debugging app in produzione su Railway
-2. E2E tests con Playwright (opzione B — OAuth non ancora configurato, limita login reale)
-3. Google OAuth (rimandato — da configurare quando pronto)
+1. Aprire PR per `claude/mpck-interface-audit-30cwoz` (mock audit Phase 1 + Phase 2)
+2. Debugging app in produzione su Railway
+3. E2E tests con Playwright (opzione B — OAuth non ancora configurato, limita login reale)
+4. Google OAuth (rimandato — da configurare quando pronto)
 
 **Test backend:** scritti ma non eseguibili in ambiente remoto (MongoDB CDN bloccato). Per eseguire localmente: `MONGODB_URI_TEST=<atlas-uri> npm test` nella cartella `backend/`.
 
@@ -112,6 +117,7 @@ PR #14 mergiata (fix teammates reali + test suite backend). Iniziare nuovo branc
 | PR-9 | UI-2 | Status e colleghi reali |
 | PR-10 | UI-3 | Check-in, onboarding, teammates |
 | PR-11 | UI-4 | Stats, preferenze, WebSocket real-time | ✅ merged (#13) |
+| PR-12 | Mock Audit | Phase 1+2: fix stanze, isCurrentDay, COLLEAGUES rimossi, org stats reali | branch pronto, PR da aprire |
 
 ---
 
@@ -147,3 +153,4 @@ PR #14 mergiata (fix teammates reali + test suite backend). Iniziare nuovo branc
 | #8 | `claude/ecstatic-curie-og52av` | M5 — Stats API, RBAC middleware, requireRole centralizzato |
 | #8 | `claude/prossimo-task-vfcgsv` | UI-1 — Frontend setup, componenti POC, AuthContext, Login, ProtectedRoute |
 | #13 | `claude/compassionate-cray-0fn6i5` | UI-4 — Stats, preferenze, WebSocket real-time |
+| TBD | `claude/mpck-interface-audit-30cwoz` | Mock audit Phase 1+2 — stanze reali, isCurrentDay, COLLEAGUES rimossi, org stats API, colleghi reali |

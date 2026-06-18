@@ -16,7 +16,7 @@ import {
 import { useState, useEffect, useRef } from 'react';
 import React from 'react';
 
-import { COLLEAGUES, Colleague } from '../constants/colleagues';
+import type { Colleague } from '../constants/colleagues';
 
 interface DayCardProps {
  day: DayPresence;
@@ -38,7 +38,6 @@ const statusConfig = {
  [WorkStatus.LEAVE]: { color: 'bg-fuchsia-500/10 text-fuchsia-500', icon: Palmtree },
  [WorkStatus.SICK]: { color: 'bg-red-500/10 text-red-500', icon: Thermometer },
  [WorkStatus.PARENTAL_LEAVE]: { color: 'bg-indigo-500/10 text-indigo-500', icon: Crib },
- [WorkStatus.PARTIAL_LEAVE]: { color: 'bg-fuchsia-500/10 text-fuchsia-500', icon: Clock },
  [WorkStatus.PENDING]: { color: 'bg-on-surface-variant/10 text-on-surface-variant', icon: null },
  [WorkStatus.WAITING_LIST]: { color: 'bg-amber-500/10 text-amber-500', icon: null, emoji: '⌛' },
  [WorkStatus.OFFICE_NO_DESK]: { color: 'bg-primary/10 text-primary', icon: Headset },
@@ -191,31 +190,9 @@ export default function DayCard({ day, onClick, onDoubleClick, onCheckIn, isSimp
  const limit = 10;
  
  if (projectTeammates.length > 0) {
- // Priority 1: Project Teammates
  avatarsToDisplay = projectTeammates.map(c => ({ initials: c.initials, color: c.color }));
- 
- // Priority 2: Fill up to limit if needed
- if (avatarsToDisplay.length < limit) {
- const existingInitials = new Set(avatarsToDisplay.map(a => a.initials));
- for (let i = 0; avatarsToDisplay.length < limit && i < 30; i++) {
- const seed = day.date.split('-').reduce((acc, char) => acc + char.charCodeAt(0), 0) + i + 100;
- const Colleague = COLLEAGUES[seed % COLLEAGUES.length];
- if (!existingInitials.has(Colleague.initials)) {
- avatarsToDisplay.push({ initials: Colleague.initials, color: Colleague.color });
- existingInitials.add(Colleague.initials);
- }
- }
- }
  } else {
- // Old behavior: random or from day data
  avatarsToDisplay = [...(day.colleagueAvatars || [])];
- if (!day.isPast && avatarsToDisplay.length < limit) {
- for (let i = avatarsToDisplay.length; i < limit; i++) {
- const seed = day.date.split('-').reduce((acc, char) => acc + char.charCodeAt(0), 0) + i;
- const Colleague = COLLEAGUES[seed % COLLEAGUES.length];
- avatarsToDisplay.push({ initials: Colleague.initials, color: Colleague.color });
- }
- }
  }
 
  return avatarsToDisplay.slice(0, limit).map((Colleague, i) => (
@@ -256,11 +233,6 @@ export default function DayCard({ day, onClick, onDoubleClick, onCheckIn, isSimp
  </div>
  )}
  
- {(!isClosed && !isOfficeClosed) && (
- <div className="px-2 sm:px-3 py-1 sm:py-1.5 flex items-center justify-center gap-1.5 sm:gap-2 border border-primary/20 rounded-full h-[24px] sm:h-[28px] w-[95px] sm:w-[115px] bg-surface-container-lowest/50 backdrop-blur-sm shadow-sm self-end mb-0.5 animate-content-fade-in" style={{animationDelay: `${cardStartTime + 260}ms`}}>
- <StatusCarousel isCheckedIn={day.isCheckedIn} room={day.room}/>
- </div>
- )}
  </div>
  </div>
  </div>
@@ -350,31 +322,9 @@ export default function DayCard({ day, onClick, onDoubleClick, onCheckIn, isSimp
  let avatarsToDisplay: Array<{initials: string, color: string}> = [];
  
  if (projectTeammates.length > 0) {
- // Priority 1: Project Teammates
  avatarsToDisplay = projectTeammates.map(c => ({ initials: c.initials, color: c.color }));
- 
- // Priority 2: Fill up to 5 if needed
- if (avatarsToDisplay.length < 5) {
- const existingInitials = new Set(avatarsToDisplay.map(a => a.initials));
- for (let i = 0; avatarsToDisplay.length < 5 && i < 20; i++) {
- const seed = day.date.split('-').reduce((acc, char) => acc + char.charCodeAt(0), 0) + i + 100;
- const Colleague = COLLEAGUES[seed % COLLEAGUES.length];
- if (!existingInitials.has(Colleague.initials)) {
- avatarsToDisplay.push({ initials: Colleague.initials, color: Colleague.color });
- existingInitials.add(Colleague.initials);
- }
- }
- }
  } else {
- // Old behavior: random or from day data
  avatarsToDisplay = [...(day.colleagueAvatars || [])];
- if (!day.isPast && avatarsToDisplay.length < 5) {
- for (let i = avatarsToDisplay.length; i < 5; i++) {
- const seed = day.date.split('-').reduce((acc, char) => acc + char.charCodeAt(0), 0) + i;
- const Colleague = COLLEAGUES[seed % COLLEAGUES.length];
- avatarsToDisplay.push({ initials: Colleague.initials, color: Colleague.color });
- }
- }
  }
 
  return avatarsToDisplay.slice(0, 5).map((Colleague, i) => (
@@ -420,23 +370,3 @@ export default function DayCard({ day, onClick, onDoubleClick, onCheckIn, isSimp
  );
 }
 
-function StatusCarousel({ isCheckedIn, room: _room }: { isCheckedIn?: boolean, room?: string }) {
- const baseNames = ["Linda N. \u2600\uFE0F", "Giuseppe F. \u2600\uFE0F"];
- const names = isCheckedIn ? [...baseNames, "Roberto V. \u2600\uFE0F"] : baseNames;
- const [index, setIndex] = useState(0);
-
- useEffect(() => {
- const timer = setInterval(() => {
- setIndex((i) => (i + 1) % names.length);
- }, 3000);
- return () => clearInterval(timer);
- }, [names.length]);
-
- return (
- <AnimatePresence mode="wait">
- <motion.span key={index} initial={{y: 20, opacity: 0}} animate={{y: 0, opacity: 1}} exit={{y: -20, opacity: 0}} transition={{duration: 0.5, ease: "easeInOut"}} className="text-[10px] font-bold text-primary whitespace-nowrap">
- {names[index]}
- </motion.span>
- </AnimatePresence>
- );
-}
