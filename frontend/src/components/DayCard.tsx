@@ -38,7 +38,6 @@ const statusConfig = {
  [WorkStatus.LEAVE]: { color: 'bg-fuchsia-500/10 text-fuchsia-500', icon: Palmtree },
  [WorkStatus.SICK]: { color: 'bg-red-500/10 text-red-500', icon: Thermometer },
  [WorkStatus.PARENTAL_LEAVE]: { color: 'bg-indigo-500/10 text-indigo-500', icon: Crib },
- [WorkStatus.PARTIAL_LEAVE]: { color: 'bg-fuchsia-500/10 text-fuchsia-500', icon: Clock },
  [WorkStatus.PENDING]: { color: 'bg-on-surface-variant/10 text-on-surface-variant', icon: null },
  [WorkStatus.WAITING_LIST]: { color: 'bg-amber-500/10 text-amber-500', icon: null, emoji: '⌛' },
  [WorkStatus.OFFICE_NO_DESK]: { color: 'bg-primary/10 text-primary', icon: Headset },

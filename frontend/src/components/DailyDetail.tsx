@@ -9,8 +9,18 @@ import {
  toAppDateStr,
  formatAppDate,
  parseAppDate,
+ getTodayStr,
  months
 } from '../utils/dateUtils';
+import type { Room } from '../services/api';
+
+const roomTypeColor: Record<string, string> = {
+ open_space: 'bg-blue-500',
+ lab: 'bg-gradient-to-r from-[#ff0000] via-[#0000ff] to-[#00ff00]',
+ admin: 'bg-indigo-500',
+ management: 'bg-amber-500',
+};
+const roomFallbackColors = ['bg-red-500', 'bg-green-500', 'bg-purple-500', 'bg-teal-500'];
 import { 
  Building2,
  Home,
@@ -37,33 +47,6 @@ import {
  AlertTriangle
 } from 'lucide-react';
 
-const ROOMS_CONFIG = [
- { id: 'blue', name: 'Blue Room', color: 'bg-blue-500', baseCapacity: 8 },
- { id: 'red', name: 'Red Room', color: 'bg-red-500', baseCapacity: 8 },
- { id: 'green', name: 'Green Room', color: 'bg-green-500', baseCapacity: 8 },
- { id: 'innovation', name: 'Lab', color: 'bg-gradient-to-r from-red-500 via-blue-500 to-green-500', baseCapacity: 6 },
- { id: 'management', name: 'Management Room', color: 'bg-amber-500', baseCapacity: 4 },
- { id: 'admin', name: 'Admin', color: 'bg-indigo-500', baseCapacity: 4 },
-];
-
-const getRoomCapacityForDate = (date: string, roomName: string) => {
- const hash = date.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
- const roomHash = roomName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
- const room = ROOMS_CONFIG.find(r => r.name === roomName);
- const total = room?.baseCapacity || 8;
- 
- // Specific mock for "Blue Room full" on some Wednesdays or specific dates to match user request
- if (date === '2026-10-23') {
- const total = ROOMS_CONFIG.find(r => r.name === roomName)?.baseCapacity || 8;
- return { booked: total, total };
- }
- if (date === '2026-10-28' && roomName === 'Blue Room') return { booked: 8, total: 8 };
- if (date === '2026-10-14' && roomName === 'Blue Room') return { booked: 8, total: 8 };
- if (date === '2026-10-21' && roomName === 'Green Room') return { booked: 8, total: 8 };
-
- const booked = (hash + roomHash) % (total + 1);
- return { booked, total };
-};
 
 interface DailyDetailProps {
  day: DayPresence;
@@ -80,26 +63,33 @@ interface DailyDetailProps {
  onUpdateLabBooking: (date: string, isBooked: boolean) => void;
  projectTeammates?: Colleague[];
  onOpenProfile?: () => void;
+ rooms?: Room[];
+ currentUserName?: string;
 }
 
 type FlowStep = 'VIEW' | 'PLANNING' | 'WORKSPACE' | 'EXTEND' | 'HOURS_OFF' | 'ALL_COLLEAGUES';
 
-export default function DailyDetail({ 
- day, 
+export default function DailyDetail({
+ day,
  allDays,
  initialStep = 'VIEW',
  isMandatory = false,
- onClose, 
+ onClose,
  onCancel,
- onCheckIn, 
- onUpdateStatus, 
- onUpdateOffTime, 
- onNavigate, 
+ onCheckIn,
+ onUpdateStatus,
+ onUpdateOffTime,
+ onNavigate,
  onUpdateBulkStatus,
  onUpdateLabBooking,
  projectTeammates = [],
- onOpenProfile
+ onOpenProfile,
+ rooms = [],
+ currentUserName = 'You',
 }: DailyDetailProps) {
+ const todayStr = getTodayStr();
+ const currentUserInitials = currentUserName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2) || 'ME';
+ const currentUserFirstName = currentUserName.split(' ')[0] || currentUserName;
  const [step, setStep] = React.useState<FlowStep>(initialStep);
  const [extendedDates, setExtendedDates] = React.useState<string[]>([]);
  const [extendedOfficeConfigs, setExtendedOfficeConfigs] = React.useState<Record<string, { room: string, isUsingDesk: boolean }>>({});
@@ -133,16 +123,16 @@ export default function DailyDetail({
 
  // Memoize Colleague generation to avoid re-renders
  const allColleagues = React.useMemo(() => {
- const isFutureDay = day.date > '2026-10-09';
+ const isFutureDay = day.date > todayStr;
  const data: ColleagueData[] = [
  ...(day.status !== WorkStatus.IN_OFFICE && day.status !== WorkStatus.PENDING && day.status !== WorkStatus.OFFICE_NO_DESK ? [{
- name: "Roberto",
- surname: "Venditti",
- initials: "RV",
+ name: currentUserFirstName,
+ surname: currentUserName.split(' ').slice(1).join(' '),
+ initials: currentUserInitials,
  color: "bg-primary",
  status: day.status,
- role: (day.status === WorkStatus.LEAVE || day.status === WorkStatus.MISSION || day.status === WorkStatus.SICK) 
- ? (day.status === WorkStatus.LEAVE ? 'On Leave (Vacation)' : day.status === WorkStatus.MISSION ? 'On a Mission' : 'On a sick leave') 
+ role: (day.status === WorkStatus.LEAVE || day.status === WorkStatus.MISSION || day.status === WorkStatus.SICK)
+ ? (day.status === WorkStatus.LEAVE ? 'On Leave (Vacation)' : day.status === WorkStatus.MISSION ? 'On a Mission' : 'On a sick leave')
  : (day.isCheckedIn && !isFutureDay ? 'Remote' : (isFutureDay ? 'Remote' : 'Remote | Not checked-in yet')),
  isConfirmed: day.isCheckedIn && !isFutureDay,
  isMe: true
@@ -150,7 +140,7 @@ export default function DailyDetail({
  ];
  
  COLLEAGUES.forEach((Colleague, i) => {
- if (Colleague.name === "Roberto" && Colleague.surname === "Venditti") return;
+ if (Colleague.name === currentUserFirstName && Colleague.surname === currentUserName.split(' ').slice(1).join(' ')) return;
 
  let status: WorkStatus | undefined;
  let role = "";
@@ -247,19 +237,19 @@ export default function DailyDetail({
 
  const inOfficeColleagues = React.useMemo(() => {
  if (day.isClosed || day.isOfficeClosed) return [];
- 
+
  const data: ColleagueData[] = [];
- const isFutureDay = day.date > '2026-10-09';
- const rooms = ["Blue Room", "Red Room", "Green Room", "Lab", "Management Room", "Admin", "No Desk"];
+ const isFutureDay = day.date > todayStr;
+ const roomNames = rooms.length > 0 ? [...rooms.map(r => r.name), "No Desk"] : ["No Desk"];
  const count = day.bookedCount || 20;
 
  if (day.status === WorkStatus.IN_OFFICE || day.status === WorkStatus.OFFICE_NO_DESK) {
  const isUserConfirmed = isFutureDay ? false : day.isCheckedIn;
  const roomLabel = day.room || "In Office";
  data.push({
- name: "Roberto",
- surname: "Venditti",
- initials: "RV",
+ name: currentUserFirstName,
+ surname: currentUserName.split(' ').slice(1).join(' '),
+ initials: currentUserInitials,
  color: "bg-primary",
  status: WorkStatus.IN_OFFICE,
  role: (isUserConfirmed || isFutureDay) ? roomLabel : `${roomLabel} | Not checked-in yet`,
@@ -272,13 +262,13 @@ export default function DailyDetail({
  let inOfficeCount = 0;
  COLLEAGUES.forEach((Colleague, i) => {
  if (inOfficeCount >= count - (data.find(d => d.isMe) ? 1 : 0)) return;
- if (Colleague.name === "Roberto" && Colleague.surname === "Venditti") return;
+ if (Colleague.name === currentUserFirstName && Colleague.surname === currentUserName.split(' ').slice(1).join(' ')) return;
 
  const seed = day.date.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) + i;
  const rand = (n: number) => (Math.abs(seed * n) % 100);
 
- if (rand(101) < 40) { 
- const room = rooms[rand(102) % rooms.length];
+ if (rand(101) < 40) {
+ const room = roomNames[rand(102) % roomNames.length];
  const isConfirmed = !isFutureDay && rand(103) > 20;
  data.push({
  ...Colleague,
@@ -329,7 +319,6 @@ export default function DailyDetail({
  [WorkStatus.LEAVE]: { label: 'On Leave (Vacation)', icon: Palmtree, color: 'bg-fuchsia-500/10 text-fuchsia-500', emoji: '🏖️' },
  [WorkStatus.SICK]: { label: 'On a sick leave', icon: Thermometer, color: 'bg-red-500/10 text-red-500', emoji: '🤒' },
  [WorkStatus.PARENTAL_LEAVE]: { label: 'Parental Leave', icon: Crib, color: 'bg-indigo-500/10 text-indigo-500', emoji: '👶' },
- [WorkStatus.PARTIAL_LEAVE]: { label: 'Partial Leave', icon: Palmtree, color: 'bg-fuchsia-500/10 text-fuchsia-500', emoji: '🏖️' },
  [WorkStatus.PENDING]: { label: 'Pending', icon: null, color: 'bg-surface-container text-on-surface-variant', emoji: '⏳' },
  [WorkStatus.WAITING_LIST]: { label: 'Waiting List', icon: null, color: 'bg-amber-500/10 text-amber-500', emoji: '⏳' },
  [WorkStatus.OFFICE_NO_DESK]: { label: 'Office (No Desk)', icon: Headset, color: 'bg-primary/10 text-primary', emoji: '🏢' },
@@ -340,7 +329,7 @@ export default function DailyDetail({
 
  const handleStatusSelect = (status: WorkStatus) => {
  // Check for last-minute change on the current day
- const isCurrentDay = day.date === '2026-10-09';
+ const isCurrentDay = day.date === todayStr;
  const isUnbookingToday = isCurrentDay && day.status === WorkStatus.IN_OFFICE && status !== WorkStatus.IN_OFFICE;
 
  if (isUnbookingToday && !showUnbookingModal) {
@@ -721,15 +710,6 @@ export default function DailyDetail({
  if (step === 'WORKSPACE') {
  const formattedDate = formatAppDate(day.date, 'long').toUpperCase();
 
- const rooms = [
- { id: 'blue', name: 'Blue Room', color: 'bg-blue-500', capacity: '6/8' },
- { id: 'red', name: 'Red Room', color: 'bg-red-500', capacity: '3/8' },
- { id: 'green', name: 'Green Room', color: 'bg-green-500', capacity: '7/8' },
- { id: 'innovation', name: 'Lab', color: 'bg-gradient-to-r from-[#ff0000] via-[#0000ff] to-[#00ff00]', capacity: '3/6' },
- { id: 'management', name: 'Management Room', color: 'bg-amber-500', capacity: '0/4' },
- { id: 'admin', name: 'Admin', color: 'bg-indigo-500', capacity: '0/4' },
- ];
-
  return (
  <div className="fixed inset-0 bg-surface z-[120] flex flex-col overflow-y-auto font-sans">
  <ModalHeader title="Workspace Use"/>
@@ -742,16 +722,17 @@ export default function DailyDetail({
  <section className="mb-10">
  <h3 className="font-headline font-bold text-lg text-on-surface/70 mb-4 tracking-tight">I plan to use a desk in...</h3>
  <div className="flex flex-col gap-3">
- {rooms.map(room => {
- const isLab = room.id === 'innovation';
+ {rooms.map((room, roomIdx) => {
+ const isLab = room.type === 'lab';
  const hasActivityPlanned = isLab && day.isLabBooked;
- const isCurrentRoom = isLab && day.room === 'Lab';
- 
+ const isCurrentRoom = isLab && day.room === room.name;
+ const roomColor = roomTypeColor[room.type] ?? roomFallbackColors[roomIdx % roomFallbackColors.length];
+
  if (isLab && hasActivityPlanned && !isCurrentRoom) {
  return (
  <div key={room.id} className="w-full bg-surface-container-low/50 rounded-2xl p-5 border border-outline-variant/10 text-left opacity-60">
  <div className="flex items-center gap-4">
- <div className={`w-6 h-6 rounded-full flex-shrink-0 shadow-sm ${room.color}`}/>
+ <div className={`w-6 h-6 rounded-full flex-shrink-0 shadow-sm ${roomColor}`}/>
  <div className="flex flex-col">
  <span className="font-headline font-bold text-base text-on-surface">
  {room.name}
@@ -764,21 +745,21 @@ export default function DailyDetail({
  </div>
  );
  }
- 
+
  const isSelectedRoom = room.name === day.room;
- 
+
  return (
  <button key={room.id} onClick={() => handleRoomSelect(room.name, true)}
  className={`w-full bg-surface-container-lowest rounded-2xl p-5 flex items-center justify-between transition-all duration-200 border ${
- isCurrentRoom && hasActivityPlanned 
- ? 'border-orange-500 ring-1 ring-orange-500/20 shadow-orange-500/10' 
- : isSelectedRoom 
- ? 'border-green-500 ring-2 ring-green-500/20 shadow-green-200/50' 
+ isCurrentRoom && hasActivityPlanned
+ ? 'border-orange-500 ring-1 ring-orange-500/20 shadow-orange-500/10'
+ : isSelectedRoom
+ ? 'border-green-500 ring-2 ring-green-500/20 shadow-green-200/50'
  : 'border-outline-variant/10'
  } hover:border-primary/40 hover:shadow-lg active:scale-[0.98] group shadow-sm text-left`}
  >
  <div className="flex items-center gap-4">
- <div className={`w-6 h-6 rounded-full flex-shrink-0 shadow-sm ${room.color}`}/>
+ <div className={`w-6 h-6 rounded-full flex-shrink-0 shadow-sm ${roomColor}`}/>
  <div className="flex flex-col">
  <div className="flex items-center gap-2">
  <span className="font-headline font-bold text-lg text-on-surface group-hover:text-primary transition-colors">
@@ -798,7 +779,6 @@ export default function DailyDetail({
  )}
  </div>
  </div>
- <span className="text-sm font-sans font-semibold text-on-surface-variant/60">{room.capacity}</span>
  </button>
  );
  })}
@@ -822,21 +802,15 @@ export default function DailyDetail({
 
  if (step === 'EXTEND') {
  const isOffice = day.status === WorkStatus.IN_OFFICE;
- const isFutureDay = day.date > '2026-10-09';
+ const isFutureDay = day.date > todayStr;
  const isSpecialLeaveEligible = (day.status === WorkStatus.SICK || day.status === WorkStatus.LEAVE) && isFutureDay;
  const STACK_END_DATE = '2026-11-09';
  const startExtensionDate = parseAppDate(day.date);
- let rangeDays = (isSpecialLeaveEligible && extendedSickType) ? 180 : 14; 
- 
- // Helper to check if office is completely full for a given date
- const isOfficeFullForDate = (date: string) => {
- const totalCap = ROOMS_CONFIG.reduce((acc, r) => acc + r.baseCapacity, 0);
- const totalBooked = ROOMS_CONFIG.reduce((acc, r) => {
- const cap = getRoomCapacityForDate(date, r.name);
- return acc + cap.booked;
- }, 0);
- return totalBooked >= totalCap;
- };
+ let rangeDays = (isSpecialLeaveEligible && extendedSickType) ? 180 : 14;
+
+ // Capacity for future dates is not available from the API per day; the backend
+ // enforces the capacity gate at booking time (auto-downgrade to waiting_list).
+ const isOfficeFullForDate = (_date: string) => false;
 
  // Generate selectable business days
  const selectableDates: Array<{
@@ -971,12 +945,9 @@ export default function DailyDetail({
  if (isOffice) {
  const updates = extendedDates.map(date => {
  const config = extendedOfficeConfigs[date] || { room: day.room || '', isUsingDesk: day.isUsingDesk };
- const cap = getRoomCapacityForDate(date, config.room);
- const isFull = config.isUsingDesk && cap.booked >= cap.total;
- 
  return {
  date,
- status: isFull ? WorkStatus.WAITING_LIST : WorkStatus.IN_OFFICE,
+ status: WorkStatus.IN_OFFICE,
  ...config
  };
  });
@@ -1263,8 +1234,7 @@ export default function DailyDetail({
  const dayLabel = getFictionalDayName(d, 'short');
  const dateLabel = `${months[d.getMonth()].slice(0, 3)} ${d.getDate()}`;
  const currentConfig = extendedOfficeConfigs[dateStr] || { room: day.room || '', isUsingDesk: day.isUsingDesk };
- const currentRoomCap = getRoomCapacityForDate(dateStr, currentConfig.room);
- const isRoomFull = currentConfig.isUsingDesk && currentRoomCap.booked >= currentRoomCap.total;
+ const isRoomFull = false;
  
  // Deterministic project teammates logic for mock
  const tHash = dateStr.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
@@ -1302,7 +1272,7 @@ export default function DailyDetail({
  <div className="flex-grow">
  {isOfficeFullForDate(dateStr) ? (
  <div className="flex flex-col gap-2">
- <button onClick={() => updateRoomConfig(dateStr, currentConfig.room || 'Blue Room', true)}
+ <button onClick={() => updateRoomConfig(dateStr, currentConfig.room || rooms[0]?.name || 'No Desk', true)}
  className={`flex items-center justify-center gap-3 p-4 rounded-2xl border transition-all ${currentConfig.isUsingDesk ? 'bg-amber-500/10 border-amber-500 text-amber-700 shadow-sm ring-1 ring-amber-500/20' : 'bg-surface-container-lowest border-outline-variant/30 text-on-surface/60 hover:bg-surface-container'}`}
  >
  <div className="bg-amber-500/20 p-2 rounded-lg">
@@ -1321,26 +1291,24 @@ export default function DailyDetail({
  </div>
  ) : (
  <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
- {ROOMS_CONFIG.map(room => {
- const cap = getRoomCapacityForDate(dateStr, room.name);
- const isFull = cap.booked >= cap.total;
+ {rooms.map((room, roomIdx) => {
  const isActive = currentConfig.room === room.name && currentConfig.isUsingDesk;
- 
+ const extRoomColor = roomTypeColor[room.type] ?? roomFallbackColors[roomIdx % roomFallbackColors.length];
+
  return (
  <button key={room.id} onClick={() => updateRoomConfig(dateStr, room.name, true)}
- disabled={isFull && !isActive}
  className={`
  flex flex-col gap-0.5 px-2.5 py-2.5 rounded-xl border text-left transition-all
- ${isActive ? 'bg-primary/5 border-primary shadow-sm' : isFull ? 'bg-surface-container-low/40 border-outline-variant/5 opacity-30 cursor-not-allowed' : 'bg-surface-container-lowest border-outline-variant/30 hover:border-primary/40'}
+ ${isActive ? 'bg-primary/5 border-primary shadow-sm' : 'bg-surface-container-lowest border-outline-variant/30 hover:border-primary/40'}
  `}
  >
  <div className="flex items-center gap-1.5 overflow-hidden">
- <div className={`w-2 h-2 rounded-full ${room.color} shrink-0`}/>
+ <div className={`w-2 h-2 rounded-full ${extRoomColor} shrink-0`}/>
  <span className={`text-[10px] font-bold truncate ${isActive ? 'text-on-surface' : 'text-on-surface/80'}`}>
- {room.name === 'Lab' ? 'Lab' : room.name === 'Management Room' ? 'Management' : room.name}
+ {room.type === 'lab' ? 'Lab' : room.type === 'management' ? 'Management' : room.name}
  </span>
  </div>
- <span className={`text-[9px] font-bold ml-3.5 ${isActive ? 'text-primary' : 'text-on-surface-variant/40'}`}>{cap.booked}/{cap.total}</span>
+ <span className={`text-[9px] font-bold ml-3.5 ${isActive ? 'text-primary' : 'text-on-surface-variant/40'}`}>{room.capacity} seats</span>
  </button>
  );
  })}
@@ -1386,7 +1354,7 @@ export default function DailyDetail({
  
  <h3 className="font-headline text-xl font-bold text-on-surface text-center mb-3">Last-minute change</h3>
  <p className="font-sans text-sm text-on-surface-variant text-center mb-8 px-2 leading-relaxed">
- If you change the status for <span className="font-bold text-on-surface">{day.date === '2026-10-09' && unbookingWarningDays.includes(day.date) ? 'today' : unbookingWarningDays.map(d => formatAppDate(d, 'short')).join(', ')}</span> you will do a last-minute unbooking.
+ If you change the status for <span className="font-bold text-on-surface">{day.date === todayStr && unbookingWarningDays.includes(day.date) ? 'today' : unbookingWarningDays.map(d => formatAppDate(d, 'short')).join(', ')}</span> you will do a last-minute unbooking.
  <br/><br/>
  Are you sure you want to proceed?
  </p>
@@ -1420,7 +1388,7 @@ export default function DailyDetail({
  );
  }
 
- const isCurrentDay = day.date === '2026-10-09';
+ const isCurrentDay = day.date === todayStr;
 
  if (step === 'ALL_COLLEAGUES') {
  const otherColleaguesFiltered = allColleagues;
