@@ -264,6 +264,16 @@ export default function Profile({
  const [fetchedColleagues, setFetchedColleagues] = useState<Colleague[]>(allColleagues);
  const [colleaguesLoading, setColleaguesLoading] = useState(false);
  const [colleaguesError, setColleaguesError] = useState(false);
+ const [osIsDark, setOsIsDark] = useState(
+   () => window.matchMedia('(prefers-color-scheme: dark)').matches
+ );
+
+ useEffect(() => {
+   const mq = window.matchMedia('(prefers-color-scheme: dark)');
+   const handler = (e: MediaQueryListEvent) => setOsIsDark(e.matches);
+   mq.addEventListener('change', handler);
+   return () => mq.removeEventListener('change', handler);
+ }, []);
 
  const ALL_COLLEAGUES: GroupMember[] = useMemo(() => fetchedColleagues.map(c => ({
    id: c.id,
@@ -804,22 +814,23 @@ export default function Profile({
  <div className="space-y-4">
  <div className="grid grid-cols-3 gap-3">
  <button onClick={() => onSetThemeMode('light')}
- className={`flex flex-col items-center gap-3 p-5 rounded-2xl transition-all duration-200 border shadow-sm ${themeMode === 'light' ? 'bg-surface-container-lowest border-primary ring-4 ring-primary/5' : 'bg-surface-container-lowest border-outline-variant/10 hover:border-primary/20 hover:bg-white text-on-surface-variant'}`}
+ className={`flex flex-col items-center gap-3 p-5 rounded-2xl transition-all duration-200 border shadow-sm ${themeMode === 'light' ? 'bg-surface-container-lowest border-primary ring-4 ring-primary/5' : 'bg-surface-container-lowest border-outline-variant/10 hover:border-primary/20 hover:bg-surface-container-low text-on-surface-variant'}`}
  >
  <Sun className={`w-7 h-7 ${themeMode === 'light' ? 'text-primary' : 'text-slate-400'}`}/>
  <span className={`text-sm font-bold ${themeMode === 'light' ? 'text-on-surface' : 'text-slate-500'}`}>Light</span>
  </button>
  <button onClick={() => onSetThemeMode('dark')}
- className={`flex flex-col items-center gap-3 p-5 rounded-2xl transition-all duration-200 border shadow-sm ${themeMode === 'dark' ? 'bg-surface-container-lowest border-primary ring-4 ring-primary/5' : 'bg-surface-container-lowest border-outline-variant/10 hover:border-primary/20 hover:bg-white text-on-surface-variant'}`}
+ className={`flex flex-col items-center gap-3 p-5 rounded-2xl transition-all duration-200 border shadow-sm ${themeMode === 'dark' ? 'bg-surface-container-lowest border-primary ring-4 ring-primary/5' : 'bg-surface-container-lowest border-outline-variant/10 hover:border-primary/20 hover:bg-surface-container-low text-on-surface-variant'}`}
  >
  <Moon className={`w-7 h-7 ${themeMode === 'dark' ? 'text-primary' : 'text-slate-400'}`}/>
  <span className={`text-sm font-bold ${themeMode === 'dark' ? 'text-on-surface' : 'text-slate-500'}`}>Dark</span>
  </button>
  <button onClick={() => onSetThemeMode('system')}
- className={`flex flex-col items-center gap-3 p-5 rounded-2xl transition-all duration-200 border shadow-sm ${themeMode === 'system' ? 'bg-surface-container-lowest border-primary ring-4 ring-primary/5' : 'bg-surface-container-lowest border-outline-variant/10 hover:border-primary/20 hover:bg-white text-on-surface-variant'}`}
+ className={`flex flex-col items-center gap-3 p-5 rounded-2xl transition-all duration-200 border shadow-sm ${themeMode === 'system' ? 'bg-surface-container-lowest border-primary ring-4 ring-primary/5' : 'bg-surface-container-lowest border-outline-variant/10 hover:border-primary/20 hover:bg-surface-container-low text-on-surface-variant'}`}
  >
  <Monitor className={`w-7 h-7 ${themeMode === 'system' ? 'text-primary' : 'text-slate-400'}`}/>
  <span className={`text-sm font-bold ${themeMode === 'system' ? 'text-on-surface' : 'text-slate-500'}`}>System</span>
+ <span className={`text-[10px] leading-none ${themeMode === 'system' ? 'text-on-surface-variant' : 'text-slate-400'}`}>{osIsDark ? 'Dark' : 'Light'}</span>
  </button>
  </div>
  </div>
