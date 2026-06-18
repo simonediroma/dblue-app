@@ -1109,7 +1109,7 @@ export default function App() {
  </div>
  ) : (
  <>
- {/* Render Past Days in a grid */}
+ {/* Unified grid: past days + today (col-span-2) + future days of current month */}
  <div className="grid grid-cols-2 gap-4">
  {pastDays.map((day, i) => {
  const isMonday = day.dayName === 'Monday';
@@ -1125,11 +1125,9 @@ export default function App() {
  />
  );
  })}
- </div>
 
- {/* Render Current Day next */}
  {currentDay && (
- <div ref={currentDayRef} className={`snap-start scroll-mt-[176px] sm:scroll-mt-[236px]`}>
+ <div ref={currentDayRef} className={`col-span-2 snap-start scroll-mt-[176px] sm:scroll-mt-[236px]`}>
  <DayCard key={currentDay.date} day={currentDay} onClick={() => handleDayClick(currentDay)}
  onDoubleClick={!currentDay.isCheckedIn ? () => handleDayDoubleClick(currentDay) : undefined}
  onCheckIn={() => handleCheckIn(currentDay.date, false)}
@@ -1142,8 +1140,6 @@ export default function App() {
  </div>
  )}
 
- {/* Render remaining current month days in a grid */}
- <div className="grid grid-cols-2 gap-4">
  {futureDaysCurrentMonth.map((day, i) => {
  const isMonday = day.dayName === 'Monday';
  const hasMondayInRow = isMonday || (i % 2 === 0 ? futureDaysCurrentMonth[i+1]?.dayName === 'Monday' : futureDaysCurrentMonth[i-1]?.dayName === 'Monday');
