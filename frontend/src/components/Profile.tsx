@@ -41,6 +41,12 @@ interface ProfileProps {
  onSetThemeMode: (newMode: 'light' | 'dark' | 'system') => void;
  isSimplifiedView: boolean;
  onToggleSimplifiedView: () => void;
+ isHighContrast: boolean;
+ onToggleHighContrast: () => void;
+ isLargeText: boolean;
+ onToggleLargeText: () => void;
+ isScreenReader: boolean;
+ onToggleScreenReader: () => void;
  projectTeammates: Colleague[];
  onUpdateProjectTeammates: (teammates: Colleague[]) => void;
  allColleagues?: Colleague[];
@@ -240,6 +246,12 @@ export default function Profile({
  onSetThemeMode,
  isSimplifiedView,
  onToggleSimplifiedView,
+ isHighContrast,
+ onToggleHighContrast,
+ isLargeText,
+ onToggleLargeText,
+ isScreenReader,
+ onToggleScreenReader,
  projectTeammates,
  onUpdateProjectTeammates,
  allColleagues = [],
@@ -293,16 +305,6 @@ export default function Profile({
  newActivity: user?.preferences?.notifications?.newActivity ?? true,
  });
 
- const [isLargeText, setIsLargeText] = useState(
-  user?.preferences?.accessibility?.textSize === 'large'
- );
- const [isScreenReader, setIsScreenReader] = useState(
-  user?.preferences?.accessibility?.screenReader ?? false
- );
- const [isHighContrast, setIsHighContrast] = useState(
-  user?.preferences?.accessibility?.highContrast ?? false
- );
-
  useEffect(() => {
  if (user?.preferences?.notifications) {
   const n = user.preferences.notifications;
@@ -315,52 +317,7 @@ export default function Profile({
   newActivity: n.newActivity,
   });
  }
- if (user?.preferences?.accessibility) {
-  const a = user.preferences.accessibility;
-  setIsLargeText(a.textSize === 'large');
-  setIsScreenReader(a.screenReader);
-  setIsHighContrast(a.highContrast);
- }
  }, [user]);
-
- const handleToggleLargeText = () => {
- const newValue = !isLargeText;
- setIsLargeText(newValue);
- updatePreferences({
-  accessibility: {
-  reducedMotion: user?.preferences?.accessibility?.reducedMotion ?? false,
-  textSize: newValue ? 'large' : 'default',
-  screenReader: isScreenReader,
-  highContrast: isHighContrast,
-  }
- }).catch(() => setIsLargeText(!newValue));
- };
-
- const handleToggleScreenReader = () => {
- const newValue = !isScreenReader;
- setIsScreenReader(newValue);
- updatePreferences({
-  accessibility: {
-  reducedMotion: user?.preferences?.accessibility?.reducedMotion ?? false,
-  textSize: user?.preferences?.accessibility?.textSize ?? 'default',
-  screenReader: newValue,
-  highContrast: isHighContrast,
-  }
- }).catch(() => setIsScreenReader(!newValue));
- };
-
- const handleToggleHighContrast = () => {
- const newValue = !isHighContrast;
- setIsHighContrast(newValue);
- updatePreferences({
-  accessibility: {
-  reducedMotion: user?.preferences?.accessibility?.reducedMotion ?? false,
-  textSize: user?.preferences?.accessibility?.textSize ?? 'default',
-  screenReader: isScreenReader,
-  highContrast: newValue,
-  }
- }).catch(() => setIsHighContrast(!newValue));
- };
 
  const toggleNotification = (key: keyof typeof notifications) => {
  const newValue = !notifications[key];
@@ -453,7 +410,7 @@ export default function Profile({
  label="Screen Reader Support"
  description="Optimise navigation for screen readers"
  isActive={isScreenReader}
- onToggle={handleToggleScreenReader}
+ onToggle={onToggleScreenReader}
  />
  </div>
  </section>
@@ -465,7 +422,7 @@ export default function Profile({
  label="High Contrast Mode"
  description="Increased visibility for UI elements"
  isActive={isHighContrast}
- onToggle={handleToggleHighContrast}
+ onToggle={onToggleHighContrast}
  />
  <AccessibilityCard icon={<Zap className="w-6 h-6 text-primary"/>}
  label="Simplified View" 
@@ -477,7 +434,7 @@ export default function Profile({
  label="Large Text (200%)"
  description="Increase font size for readability"
  isActive={isLargeText}
- onToggle={handleToggleLargeText}
+ onToggle={onToggleLargeText}
  />
  </div>
  </section>

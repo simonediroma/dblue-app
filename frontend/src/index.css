@@ -217,3 +217,25 @@ html {
 .is-visible .animate-content-scale-in {
   animation: content-scale-in 240ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
+
+.high-contrast {
+  --on-surface: #000000;
+  --on-surface-variant: #111111;
+  --outline-variant: #555555;
+  --surface-container-high: #D0D8DC;
+  --surface-container-highest: #C0C8CC;
+}
+.high-contrast.dark {
+  --on-surface: #FFFFFF;
+  --on-surface-variant: #EEEEEE;
+  --outline-variant: #AAAAAA;
+}
+
+.large-text {
+  font-size: 112.5%;
+}
+
+.screen-reader-focus *:focus-visible {
+  outline: 3px solid var(--primary) !important;
+  outline-offset: 3px !important;
+}

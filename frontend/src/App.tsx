@@ -119,6 +119,9 @@ export default function App() {
  const [isMandatoryWorkspace, setIsMandatoryWorkspace] = useState(false);
  const [themeMode, setThemeMode] = useState<'light' | 'dark' | 'system'>('light');
  const [isSimplifiedView, setIsSimplifiedView] = useState(false);
+ const [isHighContrast, setIsHighContrast] = useState(false);
+ const [isLargeText, setIsLargeText] = useState(false);
+ const [isScreenReader, setIsScreenReader] = useState(false);
  const [isHistoricalView, setIsHistoricalView] = useState(false);
  const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
  const [originalDaysSnapshot, setOriginalDaysSnapshot] = useState<DayPresence[] | null>(null);
@@ -315,8 +318,23 @@ export default function App() {
  if (user) {
   setThemeMode(user.preferences.theme);
   setIsSimplifiedView(user.preferences.accessibility.reducedMotion);
+  setIsHighContrast(user.preferences.accessibility.highContrast ?? false);
+  setIsLargeText(user.preferences.accessibility.textSize === 'large');
+  setIsScreenReader(user.preferences.accessibility.screenReader ?? false);
  }
  }, [user]);
+
+ useEffect(() => {
+ document.documentElement.classList.toggle('high-contrast', isHighContrast);
+ }, [isHighContrast]);
+
+ useEffect(() => {
+ document.documentElement.classList.toggle('large-text', isLargeText);
+ }, [isLargeText]);
+
+ useEffect(() => {
+ document.documentElement.classList.toggle('screen-reader-focus', isScreenReader);
+ }, [isScreenReader]);
 
  const handleSetThemeMode = (mode: 'light' | 'dark' | 'system') => {
  setThemeMode(mode);
@@ -326,8 +344,32 @@ export default function App() {
  const handleToggleSimplifiedView = () => {
  const newValue = !isSimplifiedView;
  setIsSimplifiedView(newValue);
- updatePreferences({ accessibility: { reducedMotion: newValue, textSize: user?.preferences.accessibility.textSize ?? 'default', screenReader: user?.preferences.accessibility.screenReader ?? false, highContrast: user?.preferences.accessibility.highContrast ?? false } }).catch(() => {
+ updatePreferences({ accessibility: { reducedMotion: newValue, textSize: isLargeText ? 'large' : 'default', screenReader: isScreenReader, highContrast: isHighContrast } }).catch(() => {
   setIsSimplifiedView(!newValue);
+ });
+ };
+
+ const handleToggleHighContrast = () => {
+ const newValue = !isHighContrast;
+ setIsHighContrast(newValue);
+ updatePreferences({ accessibility: { reducedMotion: isSimplifiedView, textSize: isLargeText ? 'large' : 'default', screenReader: isScreenReader, highContrast: newValue } }).catch(() => {
+  setIsHighContrast(!newValue);
+ });
+ };
+
+ const handleToggleLargeText = () => {
+ const newValue = !isLargeText;
+ setIsLargeText(newValue);
+ updatePreferences({ accessibility: { reducedMotion: isSimplifiedView, textSize: newValue ? 'large' : 'default', screenReader: isScreenReader, highContrast: isHighContrast } }).catch(() => {
+  setIsLargeText(!newValue);
+ });
+ };
+
+ const handleToggleScreenReader = () => {
+ const newValue = !isScreenReader;
+ setIsScreenReader(newValue);
+ updatePreferences({ accessibility: { reducedMotion: isSimplifiedView, textSize: isLargeText ? 'large' : 'default', screenReader: newValue, highContrast: isHighContrast } }).catch(() => {
+  setIsScreenReader(!newValue);
  });
  };
 
@@ -1155,6 +1197,9 @@ export default function App() {
  />
  ) : !showOnboarding ? (
  <Profile themeMode={themeMode} onSetThemeMode={handleSetThemeMode} isSimplifiedView={isSimplifiedView} onToggleSimplifiedView={handleToggleSimplifiedView}
+ isHighContrast={isHighContrast} onToggleHighContrast={handleToggleHighContrast}
+ isLargeText={isLargeText} onToggleLargeText={handleToggleLargeText}
+ isScreenReader={isScreenReader} onToggleScreenReader={handleToggleScreenReader}
  projectTeammates={projectTeammates}
  onUpdateProjectTeammates={handleUpdateProjectTeammates}
  allColleagues={colleagues}
