@@ -12,6 +12,11 @@ function isConsumingDesk(status: WorkStatus, isUsingDesk?: boolean): boolean {
   return status === WorkStatus.IN_OFFICE && isUsingDesk !== false;
 }
 
+function enrichDay(day: DayPresence): DayPresence {
+  if (day.dayName) return day;
+  return { ...day, dayName: getFictionalDayName(day.date, 'long') };
+}
+
 export function usePresence(months: string[]) {
   const [days, setDays] = useState<DayPresence[]>([]);
   const [loading, setLoading] = useState(true);
@@ -19,7 +24,7 @@ export function usePresence(months: string[]) {
 
   useEffect(() => {
     Promise.all(months.map(m => getPresence(m)))
-      .then(results => setDays(results.flat().sort((a, b) => a.date.localeCompare(b.date))))
+      .then(results => setDays(results.flat().map(enrichDay).sort((a, b) => a.date.localeCompare(b.date))))
       .catch(err => setError((err as Error).message))
       .finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -63,7 +68,7 @@ export function usePresence(months: string[]) {
 
     try {
       const updated = await upsertStatus(date, { status, isUsingDesk, room });
-      setDays(current => current.map(d => d.date === date ? updated : d));
+      setDays(current => current.map(d => d.date === date ? enrichDay(updated) : d));
     } catch (err) {
       setDays(current => {
         if (prev) return current.map(d => d.date === date ? prev : d);
@@ -118,7 +123,7 @@ export function usePresence(months: string[]) {
         const newDays = [...current];
         updated.forEach(u => {
           const index = newDays.findIndex(d => d.date === u.date);
-          if (index !== -1) newDays[index] = u;
+          if (index !== -1) newDays[index] = enrichDay(u);
         });
         return newDays;
       });
@@ -149,7 +154,7 @@ export function usePresence(months: string[]) {
 
     try {
       const updated = await apiUpdateOffTime(date, offTime);
-      setDays(current => current.map(d => d.date === date ? updated : d));
+      setDays(current => current.map(d => d.date === date ? enrichDay(updated) : d));
     } catch (err) {
       setDays(current => current.map(d => d.date === date ? (prev ?? d) : d));
       throw err;
