@@ -13,6 +13,7 @@ import RoomSelection from './components/RoomSelection';
 import SplashScreen from './components/SplashScreen';
 import Organisation from './components/Organisation';
 import Onboarding from './components/Onboarding';
+import AdminBar from './components/AdminBar';
 import { WorkStatus, DayPresence, OffTimeType, UserRole, ColleagueAvatarInfo } from './types';
 import type { Colleague } from './constants/colleagues';
 import { parseAppDate, getTodayStr, toAppDateStr, months } from './utils/dateUtils';
@@ -1358,6 +1359,7 @@ export default function App() {
  )}
  </AnimatePresence>
  </Layout>
+ <AdminBar />
  </>
  );
 }
