@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { loginAsDirector, loginAsEmployee } from '../fixtures/auth';
 
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:5173';
-const API_BASE = BASE_URL.replace(':5173', ':4000');
+const API_BASE = process.env.API_BASE_URL ?? BASE_URL.replace(':5173', ':4000');
 
 test.describe('Role-based access control', () => {
   test('director sees Organisation tab in nav', async ({ page }) => {
