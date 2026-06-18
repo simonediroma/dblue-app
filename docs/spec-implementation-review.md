@@ -40,7 +40,7 @@
 | Google OAuth 2.0 con Passport.js | ✅ | |
 | Restrizione dominio @dblue.it | ✅ | `passport.ts` |
 | JWT 7 giorni | ✅ | `signToken()` in `jwt.ts` |
-| Cookie httpOnly, sameSite: lax, secure in prod | ⚠️ | Backend setta correttamente il cookie. Il frontend però ignora il cookie e salva il token in `localStorage` come `auth_token`, inviandolo come `Authorization: Bearer`. **Viola le spec di sicurezza — vulnerabile a XSS.** |
+| Cookie httpOnly, sameSite: lax, secure in prod | ⚠️ | Backend setta il cookie correttamente. In Railway, frontend e backend sono su domini diversi: il browser blocca i cookie cross-origin con `sameSite: lax`. Soluzione adottata: token in **sessionStorage** + `Authorization: Bearer`. sessionStorage si svuota alla chiusura del tab (più sicuro di localStorage). Decisione architetturale consapevole, non un bug. |
 | `GET /auth/google` | ✅ | |
 | `GET /auth/google/callback` | ✅ | |
 | `POST /auth/dev-login` | ✅ | attivo solo se `ENABLE_DEV_LOGIN=true` |
@@ -347,7 +347,7 @@
 
 | Gap | Impatto | File da correggere |
 |-----|---------|-------------------|
-| JWT in `localStorage` invece di cookie httpOnly | **Alto — XSS vulnerability** | `frontend/src/context/AuthContext.tsx`, `frontend/src/services/api.ts` |
+| JWT in `sessionStorage` invece di cookie httpOnly | Basso — scelta consapevole (CORS cross-domain su Railway impedisce cookie cross-origin). sessionStorage si svuota alla chiusura del tab. | `frontend/src/context/AuthContext.tsx`, `frontend/src/services/api.ts` |
 | `getAnnualStats()` — filtro mesi completati da verificare | Basso | `backend/src/services/stats.service.ts` |
 | `DELETE /rooms/:id` — check prenotazioni future da verificare | Basso | `backend/src/routes/rooms.routes.ts` |
 
@@ -369,8 +369,8 @@
 
 | Priorità | Azione | File |
 |----------|--------|------|
-| 🔴 Alta | Fix JWT: rimuovere localStorage, leggere cookie httpOnly | `AuthContext.tsx`, `api.ts` |
+| 🔴 Alta | Validazione server-side tipo stanza nel booking | `working-status.service.ts:upsertStatus()`, `presence.routes.ts` (handler checkin) |
 | 🟡 Media | Aggiungere campo `area` al User model e filtrare `getColleaguePresences()` | `user.model.ts`, `working-status.service.ts` |
-| 🟡 Media | Validazione server-side tipo stanza nel booking | `working-status.service.ts`, `presence.routes.ts` |
 | 🟢 Bassa | Verificare filtro mesi completati in `getAnnualStats()` | `stats.service.ts` |
 | 🟢 Bassa | Verificare check prenotazioni future in `DELETE /rooms/:id` | `rooms.routes.ts` |
+| ℹ️ Nota | JWT in sessionStorage (non cookie) è scelta architetturale per CORS cross-domain Railway — non da correggere | — |
