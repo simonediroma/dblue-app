@@ -1,6 +1,6 @@
 import { useState, FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { BASE_URL } from '../services/api';
+import { BASE_URL, setStoredToken } from '../services/api';
 
 const DEV_LOGIN_ENABLED = import.meta.env.VITE_DEV_LOGIN_ENABLED === 'true'
   || new URLSearchParams(window.location.search).get('dev') === 'true';
@@ -30,6 +30,8 @@ export default function Login() {
         setDevError((err as { error?: string }).error || 'Credenziali non valide');
         return;
       }
+      const data = await res.json().catch(() => ({})) as { token?: string };
+      if (data.token) setStoredToken(data.token);
       window.location.href = '/';
     } catch {
       setDevError('Errore di rete');
