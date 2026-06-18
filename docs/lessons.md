@@ -88,6 +88,62 @@ Non usare `cors()` senza opzioni in produzione. Specificare sempre `origin`, `cr
 
 ---
 
+## Frontend — Dati API e Serializzazione
+
+**Mongoose non serializza il virtual `id` senza `toJSON: { virtuals: true }`**
+Per default, Mongoose serializza solo `_id` (ObjectId) nei documenti JSON. Il getter virtuale `id` (stringa) non viene incluso nella risposta REST a meno che lo schema non abbia `{ toJSON: { virtuals: true }, toObject: { virtuals: true } }`. Il frontend usa `u.id`, che risulta `undefined`, causando crash in operazioni successive (es. `"".length` su undefined) catturati silenziosamente dal `.catch()` e trasformati in stati di errore UI senza alcun messaggio diagnostico utile.
+
+```typescript
+// ❌ Schema senza toJSON: il JSON della risposta ha solo _id, mai id
+const userSchema = new Schema<IUser>({ ... }, { timestamps: true });
+
+// ✅ Corretto: aggiungere toJSON e toObject per serializzare i virtual
+const userSchema = new Schema<IUser>({ ... }, {
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true },
+});
+```
+
+Applicare a **tutti** i modelli Mongoose del progetto (User, Room, WorkingStatus), non solo a quello immediatamente coinvolto nel bug.
+
+**Mai usare `.catch(() => {})` — ogni errore va loggato e gestito**
+I catch silenti trasformano bug diagnosticabili in malfunzionamenti invisibili. Il pattern corretto ha tre responsabilità: loggare l'errore, resettare lo stato di loading, mostrare feedback all'utente.
+
+```typescript
+// ❌ Catch silente: il bug scompare e non si sa perché
+getUsers().then(setColleagues).catch(() => {});
+
+// ✅ Corretto: log + reset stato + feedback opzionale
+getUsers()
+  .then(users => {
+    if (!Array.isArray(users)) throw new Error('Invalid response');
+    setColleagues(users.map(mapUserToColleague));
+  })
+  .catch((err) => {
+    console.error('Failed to load users:', err);
+    setColleagues([]);
+    setError(true); // se l'UI deve mostrare feedback
+  })
+  .finally(() => setLoading(false));
+```
+
+**Validare che le risposte API siano del tipo atteso prima di usarle**
+Il TypeScript garantisce i tipi a compile-time, non a runtime. Una risposta API può arrivare malformata (oggetto invece di array, campi mancanti). Aggiungere sempre un type guard esplicito prima di operazioni su dati API.
+
+```typescript
+// ❌ Assunzione implicita: se la risposta non è un array, .map() esplode
+.then(users => setColleagues(users.map(mapUserToColleague)))
+
+// ✅ Guard esplicita che produce un errore leggibile
+.then(users => {
+  if (!Array.isArray(users)) throw new Error(`Expected array, got ${typeof users}`);
+  setColleagues(users.map(mapUserToColleague));
+})
+```
+
+---
+
 ## Specifiche del Progetto
 
 **Email fire-and-forget: non bloccare il response loop con sendMail**
