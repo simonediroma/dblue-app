@@ -686,12 +686,16 @@ export default function Profile({
  {/* Profile Header Section */}
  <section className="flex flex-col items-center mb-16 mt-8 w-full text-center">
  <div className="relative mb-6">
- <div className="w-32 h-32 rounded-full bg-red-600 flex items-center justify-center text-white text-5xl font-extrabold shadow-xl">
- R
+ {user?.avatar ? (
+  <img src={user.avatar} alt={user.name} className="w-32 h-32 rounded-full object-cover shadow-xl" />
+ ) : (
+  <div className="w-32 h-32 rounded-full bg-primary flex items-center justify-center text-white text-5xl font-extrabold shadow-xl">
+  {user?.name?.charAt(0).toUpperCase() ?? '?'}
+  </div>
+ )}
  </div>
- </div>
- <h2 className="text-3xl font-bold tracking-tight text-on-surface mb-1">Roberto Venditti</h2>
- <p className="text-on-surface-variant font-medium text-sm tracking-wide">User type: Owner</p>
+ <h2 className="text-3xl font-bold tracking-tight text-on-surface mb-1">{user?.name ?? '—'}</h2>
+ <p className="text-on-surface-variant font-medium text-sm tracking-wide">User type: {user?.role ?? '—'}</p>
  </section>
 
  {/* Profile Options */}
