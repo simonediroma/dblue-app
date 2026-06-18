@@ -246,20 +246,21 @@ export default function Profile({
  onLogout
 }: ProfileProps) {
  const { user } = useAuth();
- const ALL_COLLEAGUES: GroupMember[] = allColleagues.map(c => ({
- id: c.id,
- name: `${c.name} ${c.surname}`,
- initials: c.initials,
- color: c.color,
- }));
  const [activeView, setActiveView] = useState<'main' | 'groups' | 'accessibility' | 'room-config' | 'teammates'>('main');
  const [selectedTeammates, setSelectedTeammates] = useState<Colleague[]>(projectTeammates);
  const [teammateSearchQuery, setTeammateSearchQuery] = useState('');
  const [fetchedColleagues, setFetchedColleagues] = useState<Colleague[]>(allColleagues);
  const [colleaguesLoading, setColleaguesLoading] = useState(false);
 
+ const ALL_COLLEAGUES: GroupMember[] = useMemo(() => fetchedColleagues.map(c => ({
+   id: c.id,
+   name: `${c.name} ${c.surname}`,
+   initials: c.initials,
+   color: c.color,
+ })), [fetchedColleagues]);
+
  useEffect(() => {
-   if (activeView !== 'teammates') return;
+   if (activeView !== 'teammates' && activeView !== 'groups') return;
    setColleaguesLoading(true);
    getUsers()
      .then(users => setFetchedColleagues(users.map(mapUserToColleague)))
@@ -380,10 +381,10 @@ export default function Profile({
 
  const filteredColleagues = useMemo(() => {
  if (!searchQuery) return [];
- return ALL_COLLEAGUES.filter(c => 
+ return ALL_COLLEAGUES.filter(c =>
  c.name.toLowerCase().includes(searchQuery.toLowerCase())
  );
- }, [searchQuery]);
+ }, [searchQuery, ALL_COLLEAGUES]);
 
  const addMemberToArea = (area: string, Colleague: GroupMember) => {
  setAreaGroups(prev => {
