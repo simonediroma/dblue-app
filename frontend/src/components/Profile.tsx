@@ -263,6 +263,7 @@ export default function Profile({
  const [teammateSearchQuery, setTeammateSearchQuery] = useState('');
  const [fetchedColleagues, setFetchedColleagues] = useState<Colleague[]>(allColleagues);
  const [colleaguesLoading, setColleaguesLoading] = useState(false);
+ const [colleaguesError, setColleaguesError] = useState(false);
 
  const ALL_COLLEAGUES: GroupMember[] = useMemo(() => fetchedColleagues.map(c => ({
    id: c.id,
@@ -271,13 +272,21 @@ export default function Profile({
    color: c.color,
  })), [fetchedColleagues]);
 
+ const fetchColleagues = () => {
+   setColleaguesLoading(true);
+   setColleaguesError(false);
+   getUsers()
+     .then(users => {
+       if (!Array.isArray(users)) throw new Error('Invalid response');
+       setFetchedColleagues(users.map(mapUserToColleague));
+     })
+     .catch(() => setColleaguesError(true))
+     .finally(() => setColleaguesLoading(false));
+ };
+
  useEffect(() => {
    if (activeView !== 'teammates' && activeView !== 'groups') return;
-   setColleaguesLoading(true);
-   getUsers()
-     .then(users => setFetchedColleagues(users.map(mapUserToColleague)))
-     .catch(() => {})
-     .finally(() => setColleaguesLoading(false));
+   fetchColleagues();
  }, [activeView]);
  const [areaGroups, setAreaGroups] = useState<Record<string, GroupMember[]>>({
  'Tech': [],
@@ -656,6 +665,13 @@ export default function Profile({
  {colleaguesLoading ? (
  <div className="flex items-center justify-center py-16 text-on-surface-variant/40 text-sm font-medium">
  Loading colleagues…
+ </div>
+ ) : colleaguesError ? (
+ <div className="flex flex-col items-center justify-center py-16 gap-4">
+   <p className="text-on-surface-variant/40 text-sm font-medium">Could not load colleagues</p>
+   <button onClick={fetchColleagues} className="px-5 py-2.5 bg-primary text-white text-sm font-bold rounded-2xl shadow-sm shadow-primary/20 active:scale-95 transition-transform">
+     Retry
+   </button>
  </div>
  ) : filteredColleaguesSelection.length === 0 ? (
  <div className="flex items-center justify-center py-16 text-on-surface-variant/40 text-sm font-medium">
