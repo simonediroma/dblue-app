@@ -2,24 +2,26 @@
 > Gitignored. Aggiornato da Claude a fine sessione.
 
 **Ultima sessione:** 2026-06-18
-**Branch corrente:** `claude/mpck-interface-audit-30cwoz` (pushato, non ancora in PR)
-**PR in corso:** nessuna — Phase 1 + Phase 2 mock audit completate, da aprire PR
+**Branch corrente:** `claude/tender-knuth-hthcpv` (pushato, PR #27 aperta)
+**PR in corso:** #27 — fix fetch colleghi diretto nella vista Project Teammates di Profile
 
 ---
 
 ## Prossima sessione — inizia da qui
 
-Completato audit mock data interfaccia (2 fasi):
-- **Phase 1** (sessione precedente): fix nomi stanze, isCurrentDay hardcoded, PARTIAL_LEAVE, Roberto Venditti hardcoded
-- **Phase 2** (questa sessione): eliminati tutti i mock rimanenti — 101 nomi COLLEAGUES, Organisation stats, StatusCarousel, avatar fallback
+Fix bug "Project Teammates" vuoto in Profile (PR #27):
+- **Causa:** `allColleagues` in Profile dipendeva dal fetch iniziale di App.tsx (`useColleagues`), che se falliva silenziosamente lasciava la lista vuota senza feedback.
+- **Fix:** quando si apre la vista `teammates` in Profile, ora viene fatto un fetch diretto a `getUsers()` indipendente. Aggiunto loading state e empty state message.
 
-**Branch con modifiche:** `claude/mpck-interface-audit-30cwoz` — da aprire PR verso main.
+**Pendente da sessione precedente:**
+- Branch `claude/mpck-interface-audit-30cwoz` con mock audit Phase 1+2 — da aprire PR separata verso main.
 
 **Prossimi step possibili:**
-1. Aprire PR per `claude/mpck-interface-audit-30cwoz` (mock audit Phase 1 + Phase 2)
-2. Debugging app in produzione su Railway
-3. E2E tests con Playwright (opzione B — OAuth non ancora configurato, limita login reale)
-4. Google OAuth (rimandato — da configurare quando pronto)
+1. Merge/revisione PR #27 (fix teammates)
+2. Aprire PR per `claude/mpck-interface-audit-30cwoz` (mock audit Phase 1+2)
+3. Debugging app in produzione su Railway
+4. E2E tests con Playwright (OAuth non ancora configurato)
+5. Google OAuth (rimandato)
 
 **Test backend:** scritti ma non eseguibili in ambiente remoto (MongoDB CDN bloccato). Per eseguire localmente: `MONGODB_URI_TEST=<atlas-uri> npm test` nella cartella `backend/`.
 
