@@ -16,7 +16,7 @@ import Onboarding from './components/Onboarding';
 import AdminBar from './components/AdminBar';
 import { WorkStatus, DayPresence, OffTimeType, UserRole, ColleagueAvatarInfo } from './types';
 import type { Colleague } from './constants/colleagues';
-import { parseAppDate, getTodayStr, toAppDateStr, months } from './utils/dateUtils';
+import { parseAppDate, getTodayStr, toAppDateStr, months, getFictionalDayName } from './utils/dateUtils';
 import { ChevronDown, Check, X, AlertTriangle, Building2, Home, Plane, Palmtree, Thermometer } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from './context/AuthContext';
@@ -98,7 +98,7 @@ export default function App() {
  const loadHistoricalMonth = async (monthKey: string) => {
    try {
      const data = await getPresence(monthKey);
-     setHistoricalDays(data);
+     setHistoricalDays(data.map(d => d.dayName ? d : { ...d, dayName: getFictionalDayName(d.date, 'long') }));
    } catch {
      setHistoricalDays([]);
    }
