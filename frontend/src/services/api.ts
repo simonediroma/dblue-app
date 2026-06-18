@@ -184,4 +184,33 @@ export function triggerSeed(fresh = false): Promise<{ ok: boolean; summary: Seed
   });
 }
 
+export interface ColleaguePresenceItem {
+  userId: string;
+  name: string;
+  status: string;
+  room?: string;
+  isConfirmed?: boolean;
+}
+
+export function getColleaguePresence(date: string): Promise<ColleaguePresenceItem[]> {
+  return request<ColleaguePresenceItem[]>(`/presence/${date}/colleagues`);
+}
+
+export interface AreaStats {
+  month: string;
+  totalUsers: number;
+  avgPresenceDaysConfirmed: number;
+  usersAboveTarget: number;
+  usersBelowTarget: number;
+  totalUnbooking: { standard: number; lastMinute: number };
+}
+
+export function getStatsArea(month: string): Promise<AreaStats> {
+  return request<AreaStats>(`/stats/area?month=${encodeURIComponent(month)}`);
+}
+
+export function getStatsByUser(userId: string, month: string): Promise<MonthlyStats> {
+  return request<MonthlyStats>(`/admin/stats/${userId}/monthly?month=${encodeURIComponent(month)}`);
+}
+
 export { BASE_URL };

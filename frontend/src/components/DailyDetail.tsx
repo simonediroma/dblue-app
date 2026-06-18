@@ -2,7 +2,10 @@ import React from 'react';
 import { Alert } from './Alert';
 import { motion, AnimatePresence } from 'motion/react';
 import { DayPresence, WorkStatus, OffTimeType } from '../types';
-import { COLLEAGUES, Colleague } from '../constants/colleagues';
+import type { Colleague } from '../constants/colleagues';
+import type { User } from '../types/api';
+import { getColleaguePresence, type ColleaguePresenceItem } from '../services/api';
+import { mapUserToColleague } from '../hooks/useColleagues';
 import {
  getFictionalDayName,
  getFictionalIsWeekend,
@@ -21,6 +24,21 @@ const roomTypeColor: Record<string, string> = {
  management: 'bg-amber-500',
 };
 const roomFallbackColors = ['bg-red-500', 'bg-green-500', 'bg-purple-500', 'bg-teal-500'];
+
+function mapBackendStatus(s: string): WorkStatus {
+  const map: Record<string, WorkStatus> = {
+    in_office: WorkStatus.IN_OFFICE,
+    remote: WorkStatus.REMOTE,
+    mission: WorkStatus.MISSION,
+    leave: WorkStatus.LEAVE,
+    sick: WorkStatus.SICK,
+    parental_leave: WorkStatus.PARENTAL_LEAVE,
+    pending: WorkStatus.PENDING,
+    waiting_list: WorkStatus.WAITING_LIST,
+    office_no_desk: WorkStatus.OFFICE_NO_DESK,
+  };
+  return map[s] ?? WorkStatus.PENDING;
+}
 import { 
  Building2,
  Home,
@@ -104,6 +122,12 @@ export default function DailyDetail({
  const [showLabConfirmModal, setShowLabConfirmModal] = React.useState(false);
  const [unbookingWarningDays, setUnbookingWarningDays] = React.useState<string[]>([]);
  const [pendingStatusUpdate, setPendingStatusUpdate] = React.useState<WorkStatus | null>(null);
+ const [colleagueData, setColleagueData] = React.useState<ColleaguePresenceItem[]>([]);
+
+ React.useEffect(() => {
+   setColleagueData([]);
+   getColleaguePresence(day.date).then(setColleagueData).catch(() => {});
+ }, [day.date]);
 
  const displayMonth = months[parseAppDate(day.date).getMonth()];
  const dayNumDisplay = day.date.split('-')[2];
@@ -139,77 +163,43 @@ export default function DailyDetail({
  } as ColleagueData] : [])
  ];
  
- COLLEAGUES.forEach((Colleague, i) => {
- if (Colleague.name === currentUserFirstName && Colleague.surname === currentUserName.split(' ').slice(1).join(' ')) return;
-
- let status: WorkStatus | undefined;
- let role = "";
- let hasOffTime = false;
- let offTimeType: OffTimeType | undefined;
- let isConfirmed = !isFutureDay;
- let remind = false;
- let showQuestionMark = false;
- 
- const seed = day.date.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) + i;
- const rand = (n: number) => (Math.abs(seed * n) % 100);
- 
- if (isFutureDay) {
- if (rand(12) < 25) { 
- status = undefined;
- showQuestionMark = true;
- isConfirmed = false;
- } else if (rand(13) < 70) {
- status = WorkStatus.REMOTE;
- isConfirmed = false;
- role = "Remote";
- if (rand(14) < 15) {
- hasOffTime = true;
- offTimeType = rand(15) < 50 ? OffTimeType.MORNING : OffTimeType.AFTERNOON;
- }
- } else if (rand(16) < 85) {
- status = WorkStatus.LEAVE;
- role = "On Leave (Vacation)";
- } else {
- status = WorkStatus.MISSION;
- role = "On a Mission";
- }
- } else {
- if (rand(17) < 5) {
- status = undefined;
+ colleagueData.forEach((item) => {
+ const mapped = mapUserToColleague({ id: item.userId, name: item.name } as User);
+ const isPendingStatus = item.status === 'pending';
+ const status: WorkStatus | undefined = isPendingStatus ? undefined : mapBackendStatus(item.status);
+ const showQuestionMark = isPendingStatus && isFutureDay;
+ const remind = isPendingStatus && !isFutureDay;
+ let role = '';
+ if (remind) {
  role = "Remind them to update their status!";
- remind = true;
- isConfirmed = false;
- } else if (rand(18) < 70) {
- status = WorkStatus.REMOTE;
- if (rand(19) < 40) {
- isConfirmed = false;
- role = "Remote | Not checked-in yet";
- } else {
- role = "Remote";
+ } else if (item.status === 'in_office' || item.status === 'office_no_desk') {
+ const room = item.room || 'In Office';
+ role = item.isConfirmed ? room : `${room} | Not checked-in yet`;
+ } else if (item.status === 'remote') {
+ role = item.isConfirmed ? 'Remote' : 'Remote | Not checked-in yet';
+ } else if (item.status === 'leave') {
+ role = 'On Leave (Vacation)';
+ } else if (item.status === 'mission') {
+ role = 'On a Mission';
+ } else if (item.status === 'sick') {
+ role = 'On a sick leave';
+ } else if (item.status === 'parental_leave') {
+ role = 'Parental Leave';
+ } else if (item.status === 'waiting_list') {
+ role = 'Waiting List';
  }
- if (rand(20) < 10) {
- hasOffTime = true;
- offTimeType = rand(21) < 50 ? OffTimeType.MORNING : OffTimeType.AFTERNOON;
- }
- } else if (rand(22) < 90) {
- status = WorkStatus.LEAVE;
- role = "On Leave (Vacation)";
- } else {
- status = WorkStatus.MISSION;
- role = "On a Mission";
- }
- }
-
  data.push({
- ...Colleague,
+ id: mapped.id,
+ name: mapped.name,
+ surname: mapped.surname,
+ initials: mapped.initials,
+ color: mapped.color,
  status,
  role,
- hasOffTime,
- offTimeType,
- isConfirmed,
- remind,
  showQuestionMark,
- isGoldStar: i % 15 === 0
+ remind,
+ isConfirmed: item.isConfirmed ?? !isFutureDay,
+ isGoldStar: false,
  });
  });
 
@@ -233,15 +223,13 @@ export default function DailyDetail({
  
  return (a.name ?? '').localeCompare(b.name ?? '');
  });
- }, [day.status, day.isCheckedIn, day.date]);
+ }, [day.status, day.isCheckedIn, day.date, colleagueData]);
 
  const inOfficeColleagues = React.useMemo(() => {
  if (day.isClosed || day.isOfficeClosed) return [];
 
  const data: ColleagueData[] = [];
  const isFutureDay = day.date > todayStr;
- const roomNames = rooms.length > 0 ? [...rooms.map(r => r.name), "No Desk"] : ["No Desk"];
- const count = day.bookedCount || 20;
 
  if (day.status === WorkStatus.IN_OFFICE || day.status === WorkStatus.OFFICE_NO_DESK) {
  const isUserConfirmed = isFutureDay ? false : day.isCheckedIn;
@@ -259,26 +247,23 @@ export default function DailyDetail({
  });
  }
 
- let inOfficeCount = 0;
- COLLEAGUES.forEach((Colleague, i) => {
- if (inOfficeCount >= count - (data.find(d => d.isMe) ? 1 : 0)) return;
- if (Colleague.name === currentUserFirstName && Colleague.surname === currentUserName.split(' ').slice(1).join(' ')) return;
-
- const seed = day.date.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) + i;
- const rand = (n: number) => (Math.abs(seed * n) % 100);
-
- if (rand(101) < 40) {
- const room = roomNames[rand(102) % roomNames.length];
- const isConfirmed = !isFutureDay && rand(103) > 20;
+ colleagueData
+ .filter(c => c.status === 'in_office' || c.status === 'office_no_desk')
+ .forEach((item) => {
+ const mapped = mapUserToColleague({ id: item.userId, name: item.name } as User);
+ const room = item.room || 'In Office';
+ const isConfirmed = item.isConfirmed ?? !isFutureDay;
  data.push({
- ...Colleague,
+ id: mapped.id,
+ name: mapped.name,
+ surname: mapped.surname,
+ initials: mapped.initials,
+ color: mapped.color,
  status: WorkStatus.IN_OFFICE,
- role: (isConfirmed || isFutureDay) ? room : `${room} | Not checked-in yet`,
- workspaceIcon: room === 'No Desk' ? 'headset' : 'desk',
+ role: isConfirmed ? room : `${room} | Not checked-in yet`,
+ workspaceIcon: item.status === 'office_no_desk' || room === 'No Desk' ? 'headset' : 'desk',
  isConfirmed,
  });
- inOfficeCount++;
- }
  });
 
  return data.sort((a, b) => {
@@ -287,7 +272,7 @@ export default function DailyDetail({
  if (a.isConfirmed !== b.isConfirmed) return a.isConfirmed ? -1 : 1;
  return (a.name ?? '').localeCompare(b.name ?? '');
  });
- }, [day.date, day.status, day.room, day.isCheckedIn, day.bookedCount, day.isClosed, day.isOfficeClosed, day.isUsingDesk]);
+ }, [day.date, day.status, day.room, day.isCheckedIn, day.bookedCount, day.isClosed, day.isOfficeClosed, day.isUsingDesk, colleagueData]);
 
  const goldStarProjectTeammates = React.useMemo(() => {
  if (projectTeammates.length > 0) {

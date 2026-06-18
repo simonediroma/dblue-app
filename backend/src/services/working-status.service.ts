@@ -248,3 +248,38 @@ export async function retrofitStatus(
 
   return result!;
 }
+
+export interface ColleaguePresenceItem {
+  userId: string;
+  name: string;
+  status: string;
+  room?: string;
+  isConfirmed?: boolean;
+}
+
+export async function getColleaguePresences(
+  date: string,
+  requestingUserId: string
+): Promise<ColleaguePresenceItem[]> {
+  const [allUsers, dayStatuses] = await Promise.all([
+    User.find({}).select('name').lean(),
+    WorkingStatus.find({ date }).lean(),
+  ]);
+
+  const statusByUser = new Map(
+    dayStatuses.map((ws) => [ws.userId.toString(), ws])
+  );
+
+  return allUsers
+    .filter((u) => u._id.toString() !== requestingUserId)
+    .map((u) => {
+      const ws = statusByUser.get(u._id.toString());
+      return {
+        userId: u._id.toString(),
+        name: u.name,
+        status: ws?.status ?? 'pending',
+        room: ws?.room,
+        isConfirmed: ws?.isConfirmed,
+      };
+    });
+}

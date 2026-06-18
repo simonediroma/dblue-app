@@ -6,6 +6,7 @@ import {
   bulkUpsertStatus,
   updateOffTime,
   retrofitStatus,
+  getColleaguePresences,
 } from '../services/working-status.service';
 import { WorkingStatus } from '../models/working-status.model';
 import { IUser } from '../models/user.model';
@@ -155,6 +156,17 @@ router.delete('/:date/offtime', async (req: Request, res: Response): Promise<voi
   const { date } = req.params;
   try {
     const result = await updateOffTime(userId(req), date, null);
+    res.json(result);
+  } catch (err) {
+    handleError(res, err);
+  }
+});
+
+// GET /presence/:date/colleagues
+router.get('/:date/colleagues', async (req: Request, res: Response): Promise<void> => {
+  const { date } = req.params;
+  try {
+    const result = await getColleaguePresences(date, userId(req).toString());
     res.json(result);
   } catch (err) {
     handleError(res, err);

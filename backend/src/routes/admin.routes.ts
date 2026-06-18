@@ -4,6 +4,7 @@ import { requireAuth } from '../middleware/auth.middleware';
 import { requireRole } from '../middleware/rbac.middleware';
 import { User, IUser } from '../models/user.model';
 import { retrofitStatus } from '../services/working-status.service';
+import { getMonthlyStats } from '../services/stats.service';
 import { runSeed } from '../services/seed.service';
 
 const router = Router();
@@ -119,6 +120,31 @@ router.patch(
         return;
       }
       res.json(updated);
+    } catch (err) {
+      handleError(res, err);
+    }
+  }
+);
+
+// GET /admin/stats/:userId/monthly — Director/Owner, stats mensili per singolo utente
+router.get(
+  '/stats/:userId/monthly',
+  requireRole('director', 'owner'),
+  async (req: Request, res: Response): Promise<void> => {
+    const { userId: targetUserId } = req.params;
+    const { month } = req.query as { month?: string };
+
+    if (!month || !/^\d{4}-\d{2}$/.test(month)) {
+      res.status(400).json({ error: 'Parametro month richiesto (YYYY-MM)' });
+      return;
+    }
+    if (!Types.ObjectId.isValid(targetUserId)) {
+      res.status(400).json({ error: 'userId non valido' });
+      return;
+    }
+    try {
+      const stats = await getMonthlyStats(targetUserId, month);
+      res.json(stats);
     } catch (err) {
       handleError(res, err);
     }

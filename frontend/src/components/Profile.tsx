@@ -31,7 +31,7 @@ import {
  Star
 } from 'lucide-react';
 
-import { COLLEAGUES, Colleague } from '../constants/colleagues';
+import type { Colleague } from '../constants/colleagues';
 import { useAuth } from '../context/AuthContext';
 import { updatePreferences } from '../services/api';
 
@@ -233,12 +233,6 @@ function NotificationToggle({ label, isActive, onToggle }: { label: string, isAc
  );
 }
 
-const ALL_COLLEAGUES: GroupMember[] = COLLEAGUES.map(c => ({
- id: `${c.name}-${c.surname}`,
- name: `${c.name} ${c.surname}`,
- initials: c.initials,
- color: c.color
-}));
 
 export default function Profile({
  themeMode,
@@ -247,18 +241,24 @@ export default function Profile({
  onToggleSimplifiedView,
  projectTeammates,
  onUpdateProjectTeammates,
- allColleagues = COLLEAGUES,
+ allColleagues = [],
  onLogout
 }: ProfileProps) {
  const { user } = useAuth();
+ const ALL_COLLEAGUES: GroupMember[] = allColleagues.map(c => ({
+ id: c.id,
+ name: `${c.name} ${c.surname}`,
+ initials: c.initials,
+ color: c.color,
+ }));
  const [activeView, setActiveView] = useState<'main' | 'groups' | 'accessibility' | 'room-config' | 'teammates'>('main');
  const [selectedTeammates, setSelectedTeammates] = useState<Colleague[]>(projectTeammates);
  const [teammateSearchQuery, setTeammateSearchQuery] = useState('');
  const [areaGroups, setAreaGroups] = useState<Record<string, GroupMember[]>>({
- 'Tech': [ALL_COLLEAGUES[0], ALL_COLLEAGUES[1]],
- 'HF Innovative': [ALL_COLLEAGUES[0], ALL_COLLEAGUES[2]],
- 'Manufacturing': [ALL_COLLEAGUES[3]],
- 'AMT': [ALL_COLLEAGUES[4]],
+ 'Tech': [],
+ 'HF Innovative': [],
+ 'Manufacturing': [],
+ 'AMT': [],
  });
 
  const [activeSearchArea, setActiveSearchArea] = useState<string | null>(null);
@@ -373,7 +373,7 @@ export default function Profile({
  );
  }, [searchQuery]);
 
- const addMemberToArea = (area: string, Colleague: typeof ALL_COLLEAGUES[0]) => {
+ const addMemberToArea = (area: string, Colleague: GroupMember) => {
  setAreaGroups(prev => {
  const current = prev[area] || [];
  if (current.find(m => m.id === Colleague.id)) return prev;
