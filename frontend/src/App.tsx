@@ -326,7 +326,7 @@ export default function App() {
  const handleToggleSimplifiedView = () => {
  const newValue = !isSimplifiedView;
  setIsSimplifiedView(newValue);
- updatePreferences({ accessibility: { reducedMotion: newValue, textSize: user?.preferences.accessibility.textSize ?? 'default' } }).catch(() => {
+ updatePreferences({ accessibility: { reducedMotion: newValue, textSize: user?.preferences.accessibility.textSize ?? 'default', screenReader: user?.preferences.accessibility.screenReader ?? false, highContrast: user?.preferences.accessibility.highContrast ?? false } }).catch(() => {
   setIsSimplifiedView(!newValue);
  });
  };
