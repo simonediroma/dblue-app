@@ -36,9 +36,12 @@ export function useColleagues(): Colleague[] {
   const [colleagues, setColleagues] = useState<Colleague[]>([]);
 
   useEffect(() => {
-    getUsers().then(users => {
-      setColleagues(users.map(mapUserToColleague));
-    }).catch(() => {});
+    getUsers()
+      .then(users => {
+        if (!Array.isArray(users)) throw new Error(`Expected array, got ${typeof users}`);
+        setColleagues(users.map(mapUserToColleague));
+      })
+      .catch((err) => console.error('useColleagues: failed to load users', err));
   }, []);
 
   return colleagues;

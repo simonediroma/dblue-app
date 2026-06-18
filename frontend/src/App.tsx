@@ -338,7 +338,7 @@ export default function App() {
 
  const handleSetThemeMode = (mode: 'light' | 'dark' | 'system') => {
  setThemeMode(mode);
- updatePreferences({ theme: mode }).catch(() => {});
+ updatePreferences({ theme: mode }).catch((err) => console.error('App: failed to save theme preference', err));
  };
 
  const handleToggleSimplifiedView = () => {
@@ -732,7 +732,7 @@ export default function App() {
  const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
  useEffect(() => {
- getRooms().then(setRooms).catch(() => {});
+ getRooms().then(setRooms).catch((err) => console.error('App: failed to load rooms', err));
  }, []);
 
  useWebSocket((update) => {
@@ -751,12 +751,15 @@ export default function App() {
 
  useEffect(() => {
  if (user && user.onboardingCompleted && user.teammates.length > 0) {
-  getUsers().then(allUsers => {
-   const myTeammates = allUsers
-    .filter(u => user.teammates.includes(u.id))
-    .map(mapUserToColleague);
-   setProjectTeammates(myTeammates);
-  }).catch(() => {});
+  getUsers()
+   .then(allUsers => {
+    if (!Array.isArray(allUsers)) throw new Error(`Expected array, got ${typeof allUsers}`);
+    const myTeammates = allUsers
+     .filter(u => user.teammates.includes(u.id))
+     .map(mapUserToColleague);
+    setProjectTeammates(myTeammates);
+   })
+   .catch((err) => console.error('App: failed to load project teammates', err));
  }
  }, [user]);
 

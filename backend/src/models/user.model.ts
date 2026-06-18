@@ -75,7 +75,7 @@ const userSchema = new Schema<IUser>(
     },
     onboardingCompleted: { type: Boolean, default: false },
   },
-  { timestamps: true }
+  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
 export const User = mongoose.model<IUser>('User', userSchema);

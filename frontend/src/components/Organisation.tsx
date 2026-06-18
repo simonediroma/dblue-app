@@ -74,8 +74,11 @@ export default function Organisation({ days: _days = [], activeMonth }: Organisa
    if (!isColleagueDropdownOpen || colleagues.length > 0) return;
    setColleaguesLoading(true);
    getUsers()
-     .then(users => setColleagues(users.map(mapUserToColleague)))
-     .catch(() => {})
+     .then(users => {
+       if (!Array.isArray(users)) throw new Error(`Expected array, got ${typeof users}`);
+       setColleagues(users.map(mapUserToColleague));
+     })
+     .catch((err) => console.error('Organisation: failed to load colleagues', err))
      .finally(() => setColleaguesLoading(false));
  }, [isColleagueDropdownOpen]);
 
@@ -104,7 +107,7 @@ export default function Organisation({ days: _days = [], activeMonth }: Organisa
  // Fetch stats for selected month
  useEffect(() => {
  setSelectedMonthStats(null);
- getStatsArea(monthToYYYYMM(selectedMonth)).then(setSelectedMonthStats).catch(() => {});
+ getStatsArea(monthToYYYYMM(selectedMonth)).then(setSelectedMonthStats).catch((err) => console.error('Organisation: failed to load area stats', err));
  }, [selectedMonth]);
 
  // Fetch stats for selected colleague

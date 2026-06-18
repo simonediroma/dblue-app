@@ -126,7 +126,7 @@ export default function DailyDetail({
 
  React.useEffect(() => {
    setColleagueData([]);
-   getColleaguePresence(day.date).then(setColleagueData).catch(() => {});
+   getColleaguePresence(day.date).then(setColleagueData).catch((err) => console.error('DailyDetail: failed to load colleague presence', err));
  }, [day.date]);
 
  const displayMonth = months[parseAppDate(day.date).getMonth()];

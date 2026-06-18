@@ -61,13 +61,13 @@ export default function Stats({ currentMonth, projectTeammates = [], onAddTeamma
  useEffect(() => {
   if (view !== 'monthly') return;
   const key = monthLabelToKey(selectedMonth);
-  getStatsMonthly(key).then(setMonthlyStats).catch(() => setMonthlyStats(null));
+  getStatsMonthly(key).then(setMonthlyStats).catch((err) => { console.error('Stats: failed to load monthly stats', err); setMonthlyStats(null); });
  }, [selectedMonth, view]);
 
  useEffect(() => {
   if (view !== 'yearly') return;
   const year = parseInt(selectedMonth.split(' ')[1]) || new Date().getFullYear();
-  getStatsAnnual(year).then(setAnnualStats).catch(() => setAnnualStats(null));
+  getStatsAnnual(year).then(setAnnualStats).catch((err) => { console.error('Stats: failed to load annual stats', err); setAnnualStats(null); });
  }, [view, selectedMonth]);
 
  const inOfficeDays = monthlyStats?.presenceDaysConfirmed ?? 0;
