@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import type { User } from '../types/api';
-import { getMe, logout as apiLogout } from '../services/api';
+import { getMe, logout as apiLogout, setStoredToken, clearStoredToken } from '../services/api';
 
 interface AuthContextValue {
   user: User | null;
@@ -16,6 +16,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlToken = params.get('token');
+    if (urlToken) {
+      setStoredToken(urlToken);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+
     getMe()
       .then(setUser)
       .catch(() => setUser(null))
@@ -28,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // ignore errors — still clear local state
     }
+    clearStoredToken();
     setUser(null);
     window.location.href = '/login';
   }

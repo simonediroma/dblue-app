@@ -10,13 +10,33 @@ export interface Room {
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
+const TOKEN_KEY = 'auth_token';
+
+export function getStoredToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function setStoredToken(token: string): void {
+  localStorage.setItem(TOKEN_KEY, token);
+}
+
+export function clearStoredToken(): void {
+  localStorage.removeItem(TOKEN_KEY);
+}
+
+function authHeaders(): Record<string, string> {
+  const token = getStoredToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...authHeaders(), ...options?.headers },
     ...options,
   });
   if (res.status === 401) {
+    clearStoredToken();
     window.location.href = '/login';
     throw new Error('Non autenticato');
   }
@@ -28,13 +48,17 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export async function getMe(): Promise<User | null> {
-  const res = await fetch(`${BASE_URL}/auth/me`, { credentials: 'include' });
+  const res = await fetch(`${BASE_URL}/auth/me`, {
+    credentials: 'include',
+    headers: authHeaders(),
+  });
   if (res.status === 401) return null;
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
 
 export function logout(): Promise<void> {
+  clearStoredToken();
   return request<void>('/auth/logout', { method: 'POST' });
 }
 

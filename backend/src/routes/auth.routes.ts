@@ -29,8 +29,9 @@ router.get(
   }),
   (req: Request, res: Response) => {
     const user = req.user as IUser;
+    const token = signToken(String(user._id));
     setAuthCookie(res, String(user._id));
-    res.redirect(process.env.APP_URL ?? '/');
+    res.redirect(`${process.env.APP_URL ?? '/'}?token=${token}`);
   }
 );
 
@@ -77,8 +78,9 @@ router.post('/dev-login', async (req: Request, res: Response): Promise<void> => 
     });
   }
 
+  const token = signToken(String(user._id));
   setAuthCookie(res, String(user._id));
-  res.json({ ok: true });
+  res.json({ ok: true, token });
 });
 
 export default router;
