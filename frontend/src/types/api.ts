@@ -8,8 +8,21 @@ export interface User {
   contract: { presenceDaysTarget: number };
   preferences: {
     theme: 'light' | 'dark' | 'system';
-    notifications: { waitingListPromotion: boolean; sickLeaveReminder: boolean };
-    accessibility: { reducedMotion: boolean; textSize: 'default' | 'large' };
+    notifications: {
+      waitingListPromotion: boolean;
+      sickLeaveReminder: boolean;
+      statusReminder11: boolean;
+      statusReminder18: boolean;
+      projectTeammateBooking: boolean;
+      monthlyOverview: boolean;
+      newActivity: boolean;
+    };
+    accessibility: {
+      reducedMotion: boolean;
+      textSize: 'default' | 'large';
+      screenReader: boolean;
+      highContrast: boolean;
+    };
   };
   onboardingCompleted: boolean;
 }
