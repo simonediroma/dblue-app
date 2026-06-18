@@ -63,28 +63,28 @@ export default function Layout({ children, activeTab, onTabChange, isSimplifiedV
 
  {/* Navigation Bar - Mobile Only */}
  <nav className="fixed bottom-0 left-0 right-0 bg-surface-container-lowest/90 backdrop-blur-md border-t border-outline-variant/30 px-6 py-4 flex justify-around items-center z-50 md:hidden">
- <button onClick={() => onTabChange('plan')}
+ <button data-testid="nav-plan" onClick={() => onTabChange('plan')}
  className="flex flex-col items-center gap-1 group transition-all"
  >
  <CalendarDays className={`w-6 h-6 transition-all ${activeTab === 'plan' ? 'text-primary fill-current' : 'text-on-surface-variant group-hover:text-primary'}`}/>
  <span className={`font-headline text-[10px] font-bold tracking-wide uppercase transition-all ${activeTab === 'plan' ? 'text-primary' : 'text-on-surface-variant group-hover:text-primary'}`}>PLAN</span>
  </button>
  {!isSimplifiedView && (
- <button onClick={() => onTabChange('stats')}
+ <button data-testid="nav-stats" onClick={() => onTabChange('stats')}
  className="flex flex-col items-center gap-1 group transition-all"
  >
  <BarChart3 className={`w-6 h-6 transition-all ${activeTab === 'stats' ? 'text-primary fill-current' : 'text-on-surface-variant group-hover:text-primary'}`}/>
  <span className={`font-headline text-[10px] font-bold tracking-wide uppercase transition-all ${activeTab === 'stats' ? 'text-primary' : 'text-on-surface-variant group-hover:text-primary'}`}>MY STATS</span>
  </button>
  )}
- <button onClick={() => onTabChange('profile')}
+ <button data-testid="nav-profile" onClick={() => onTabChange('profile')}
  className="flex flex-col items-center gap-1 group transition-all"
  >
  <User className={`w-6 h-6 transition-all ${activeTab === 'profile' ? 'text-primary fill-current' : 'text-on-surface-variant group-hover:text-primary'}`}/>
  <span className={`font-headline text-[10px] font-bold tracking-wide uppercase transition-all ${activeTab === 'profile' ? 'text-primary' : 'text-on-surface-variant group-hover:text-primary'}`}>PROFILE</span>
  </button>
  {isDirector && (
- <button onClick={() => onTabChange('organisation')}
+ <button data-testid="nav-organisation" onClick={() => onTabChange('organisation')}
  className="flex flex-col items-center gap-1 group transition-all"
  >
  <Landmark className={`w-6 h-6 transition-all ${activeTab === 'organisation' ? 'text-primary fill-current' : 'text-on-surface-variant group-hover:text-primary'}`}/>

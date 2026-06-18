@@ -964,7 +964,7 @@ export default function DailyDetail({
 
  const auxLabel = day.isUsingDesk ? `Using a desk in ${day.room}` : 'Not using a desk';
  return (
- <div className="fixed inset-0 bg-surface z-[130] flex flex-col font-sans overflow-y-auto pb-40">
+ <div data-testid="daily-detail" className="fixed inset-0 bg-surface z-[130] flex flex-col font-sans overflow-y-auto pb-40">
  <ModalHeader title="Extend status"/>
 
  <main className="pt-24 px-6 max-w-xl mx-auto w-full pb-10">
