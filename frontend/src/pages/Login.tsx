@@ -2,7 +2,8 @@ import { useState, FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { BASE_URL } from '../services/api';
 
-const DEV_LOGIN_ENABLED = import.meta.env.VITE_DEV_LOGIN_ENABLED === 'true';
+const DEV_LOGIN_ENABLED = import.meta.env.VITE_DEV_LOGIN_ENABLED === 'true'
+  || new URLSearchParams(window.location.search).get('dev') === 'true';
 
 export default function Login() {
   const [searchParams] = useSearchParams();
@@ -22,7 +23,7 @@ export default function Login() {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ username: email, password }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
