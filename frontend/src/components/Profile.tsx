@@ -33,7 +33,8 @@ import {
 
 import type { Colleague } from '../constants/colleagues';
 import { useAuth } from '../context/AuthContext';
-import { updatePreferences } from '../services/api';
+import { updatePreferences, getUsers } from '../services/api';
+import { mapUserToColleague } from '../hooks/useColleagues';
 
 interface ProfileProps {
  themeMode: 'light' | 'dark' | 'system';
@@ -245,15 +246,27 @@ export default function Profile({
  onLogout
 }: ProfileProps) {
  const { user } = useAuth();
- const ALL_COLLEAGUES: GroupMember[] = allColleagues.map(c => ({
- id: c.id,
- name: `${c.name} ${c.surname}`,
- initials: c.initials,
- color: c.color,
- }));
  const [activeView, setActiveView] = useState<'main' | 'groups' | 'accessibility' | 'room-config' | 'teammates'>('main');
  const [selectedTeammates, setSelectedTeammates] = useState<Colleague[]>(projectTeammates);
  const [teammateSearchQuery, setTeammateSearchQuery] = useState('');
+ const [fetchedColleagues, setFetchedColleagues] = useState<Colleague[]>(allColleagues);
+ const [colleaguesLoading, setColleaguesLoading] = useState(false);
+
+ const ALL_COLLEAGUES: GroupMember[] = useMemo(() => fetchedColleagues.map(c => ({
+   id: c.id,
+   name: `${c.name} ${c.surname}`,
+   initials: c.initials,
+   color: c.color,
+ })), [fetchedColleagues]);
+
+ useEffect(() => {
+   if (activeView !== 'teammates' && activeView !== 'groups') return;
+   setColleaguesLoading(true);
+   getUsers()
+     .then(users => setFetchedColleagues(users.map(mapUserToColleague)))
+     .catch(() => {})
+     .finally(() => setColleaguesLoading(false));
+ }, [activeView]);
  const [areaGroups, setAreaGroups] = useState<Record<string, GroupMember[]>>({
  'Tech': [],
  'HF Innovative': [],
@@ -368,10 +381,10 @@ export default function Profile({
 
  const filteredColleagues = useMemo(() => {
  if (!searchQuery) return [];
- return ALL_COLLEAGUES.filter(c => 
+ return ALL_COLLEAGUES.filter(c =>
  c.name.toLowerCase().includes(searchQuery.toLowerCase())
  );
- }, [searchQuery]);
+ }, [searchQuery, ALL_COLLEAGUES]);
 
  const addMemberToArea = (area: string, Colleague: GroupMember) => {
  setAreaGroups(prev => {
@@ -637,7 +650,7 @@ export default function Profile({
  }
 
  if (activeView === 'teammates') {
- const filteredColleaguesSelection = [...allColleagues]
+ const filteredColleaguesSelection = [...fetchedColleagues]
  .filter(c => `${c.name} ${c.surname}`.toLowerCase().includes(teammateSearchQuery.toLowerCase()))
  .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -683,7 +696,15 @@ export default function Profile({
  </header>
 
  <main className="flex-grow overflow-y-auto px-6 pb-40 space-y-2">
- {filteredColleaguesSelection.map((Colleague) => {
+ {colleaguesLoading ? (
+ <div className="flex items-center justify-center py-16 text-on-surface-variant/40 text-sm font-medium">
+ Loading colleagues…
+ </div>
+ ) : filteredColleaguesSelection.length === 0 ? (
+ <div className="flex items-center justify-center py-16 text-on-surface-variant/40 text-sm font-medium">
+ {teammateSearchQuery ? 'No results' : 'No colleagues found'}
+ </div>
+ ) : filteredColleaguesSelection.map((Colleague) => {
  const active = isTeammateSelected(Colleague);
  return (
  <button key={`${Colleague.name}-${Colleague.surname}`} onClick={() => toggleTeammate(Colleague)}
