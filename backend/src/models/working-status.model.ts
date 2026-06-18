@@ -54,7 +54,7 @@ const workingStatusSchema = new Schema<IWorkingStatus>(
     isRetrofit: { type: Boolean, default: false },
     isLastMinuteUnbooking: { type: Boolean, default: false },
   },
-  { timestamps: true }
+  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
 workingStatusSchema.index({ userId: 1, date: 1 }, { unique: true });

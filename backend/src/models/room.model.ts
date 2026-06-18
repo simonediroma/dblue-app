@@ -22,7 +22,7 @@ const roomSchema = new Schema<IRoom>(
     isActive: { type: Boolean, default: true },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
-  { timestamps: true }
+  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
 roomSchema.index({ type: 1, isActive: 1 });
