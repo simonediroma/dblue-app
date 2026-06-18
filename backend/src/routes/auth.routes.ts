@@ -68,15 +68,12 @@ router.post('/dev-login', async (req: Request, res: Response): Promise<void> => 
   }
 
   const email = process.env.DEV_LOGIN_USER ?? '';
-  let user = await User.findOne({ email });
-  if (!user) {
-    user = await User.create({
-      googleId: 'dev-login',
-      email,
-      name: process.env.DEV_LOGIN_NAME ?? 'Dev User',
-      role: (process.env.DEV_LOGIN_ROLE as IUser['role']) ?? 'director',
-    });
-  }
+  const role = (process.env.DEV_LOGIN_ROLE as IUser['role']) ?? 'director';
+  const user = await User.findOneAndUpdate(
+    { email },
+    { $setOnInsert: { googleId: 'dev-login', email, name: process.env.DEV_LOGIN_NAME ?? 'Dev User' }, $set: { role } },
+    { upsert: true, new: true }
+  );
 
   const token = signToken(String(user._id));
   setAuthCookie(res, String(user._id));
