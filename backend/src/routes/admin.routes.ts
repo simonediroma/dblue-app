@@ -4,6 +4,7 @@ import { requireAuth } from '../middleware/auth.middleware';
 import { requireRole } from '../middleware/rbac.middleware';
 import { User, IUser } from '../models/user.model';
 import { retrofitStatus } from '../services/working-status.service';
+import { runSeed } from '../services/seed.service';
 
 const router = Router();
 router.use(requireAuth);
@@ -118,6 +119,21 @@ router.patch(
         return;
       }
       res.json(updated);
+    } catch (err) {
+      handleError(res, err);
+    }
+  }
+);
+
+// POST /admin/seed — Owner only, popola il DB con dati di test
+router.post(
+  '/seed',
+  requireRole('owner'),
+  async (req: Request, res: Response): Promise<void> => {
+    const { fresh } = req.body as { fresh?: boolean };
+    try {
+      const summary = await runSeed(fresh === true);
+      res.json({ ok: true, summary });
     } catch (err) {
       handleError(res, err);
     }

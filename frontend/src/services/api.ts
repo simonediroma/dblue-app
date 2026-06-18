@@ -169,4 +169,19 @@ export function getStatsAnnual(year: number): Promise<AnnualStats> {
   return request<AnnualStats>(`/stats/annual?year=${year}`);
 }
 
+export interface SeedSummary {
+  users: number;
+  rooms: number;
+  workingStatuses: number;
+  rangeMe: string;
+  rangeColleagues: string;
+}
+
+export function triggerSeed(fresh = false): Promise<{ ok: boolean; summary: SeedSummary }> {
+  return request<{ ok: boolean; summary: SeedSummary }>('/admin/seed', {
+    method: 'POST',
+    body: JSON.stringify({ fresh }),
+  });
+}
+
 export { BASE_URL };
