@@ -13,7 +13,7 @@ export default function AdminBar() {
   const { user } = useAuth();
   const [state, setState] = useState<SeedState>({ status: 'idle' });
 
-  if (!user || user.role !== 'owner') return null;
+  if (!user || (user.role !== 'owner' && user.role !== 'director')) return null;
 
   async function handleSeed(fresh: boolean) {
     setState({ status: 'loading' });
