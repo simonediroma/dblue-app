@@ -28,12 +28,13 @@ All major modules are implemented and deployed. You can start testing immediatel
 | **Working Status** | Set daily status (in office / remote / mission / leave / sick / parental leave) | ✅ | |
 | **Working Status** | Bulk-set status across multiple days | ✅ | |
 | **Working Status** | Sick leave restricted to current day only | ✅ | Future dates should be rejected |
+| **Working Status** | Sick leave confirmation email | ⚠️ | **Cannot be tested** — SMTP not configured on Railway. The sick status itself can be tested; email delivery cannot. |
 | **Working Status** | Off-time (morning / afternoon / custom hours) | ✅ | |
 | **Working Status** | Block modification of a confirmed day | ✅ | |
 | **Working Status** | Retrofit (correct previous month's status) | ✅ | Own retrofit: any role; admin retrofit for other users: director/owner only |
 | **Desk Booking** | Auto-downgrade to waiting list when office is full | ✅ | Booking `in_office` when capacity is reached should return `waiting_list` |
 | **Desk Booking** | FIFO waiting list promotion when a desk frees up | ✅ | Cancel an in-office booking → first person in waiting list gets promoted |
-| **Desk Booking** | Waiting list promotion email | ✅ | Only if SMTP is configured; otherwise logged to console |
+| **Desk Booking** | Waiting list promotion email | ⚠️ | **Cannot be tested** — SMTP not configured on Railway. The promotion logic itself (status change) can be verified, but the email delivery cannot. |
 | **Check-in** | "Say Good Morning" — confirm today's presence | ✅ | Only available for the current day |
 | **Check-in** | Room + desk selection at check-in | ✅ | |
 | **Check-in** | Block check-in if on waiting list | ✅ | |
@@ -46,7 +47,7 @@ All major modules are implemented and deployed. You can start testing immediatel
 | **Stats — Org** | Per-colleague drill-down (director/owner only) | ✅ | |
 | **Profile** | Theme preference (light / dark / system) | ✅ | Persisted to backend |
 | **Profile** | Accessibility preferences (reduced motion, text size, screen reader, high contrast) | ✅ | |
-| **Profile** | Notification preferences toggles | ✅ | Toggles persist; emails for 4 of 6 types are not yet sent (see known gaps) |
+| **Profile** | Notification preferences toggles | ⚠️ | Toggle UI and persistence can be tested. **Email delivery cannot be tested** — SMTP not configured on Railway. Additionally, 4 of 6 notification types (`Status reminder 11:00`, `Status reminder 18:00`, `Project teammate booking`, `Monthly overview`) have no email implementation yet (see Known Gaps #4). |
 | **Profile** | Manage project teammates (add / remove) | ✅ | |
 | **Real-time** | Live desk count update without page refresh | ✅ | WebSocket broadcast on any booking change |
 | **Auto-confirm** | Mission / leave / sick / parental leave auto-confirmed at 23:59 | ✅ | Scheduled job — difficult to test manually without mocking time |
@@ -121,5 +122,5 @@ If the seed endpoint (`POST /admin/seed`, owner only) has been triggered, 80+ te
 | Feature | Note |
 |---------|------|
 | ⚠️ **Google OAuth — action required** | OAuth credentials have not yet been configured on Google Cloud Platform. Before Google login can work in any environment, the following steps must be completed manually: (1) create a project on GCP, (2) enable the Google OAuth 2.0 API, (3) configure the **OAuth consent screen** (app name, support email, authorised domain `dblue.it`), (4) create OAuth 2.0 credentials (Web application type), (5) add the Railway backend callback URL as an authorised redirect URI (`https://<backend-url>/auth/google/callback`), (6) copy `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` into the Railway backend environment variables. Until this is done, **dev login is the only available auth method** in staging. |
-| SMTP email delivery | Not configured in staging; emails are printed to the backend console log instead |
+| ⚠️ **SMTP email delivery — action required** | SMTP credentials are not configured on Railway. All email notifications (waiting list promotion, sick leave confirmation) are silently logged to the backend console instead of being sent. To enable: set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` in the Railway backend environment variables. Until then, **any feature involving email delivery cannot be fully tested** (marked ⚠️ in the table above). |
 | E2E tests (Playwright) | Test files exist in `e2e/` but cannot run in CI until Google OAuth is configured |
