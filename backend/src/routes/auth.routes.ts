@@ -55,6 +55,15 @@ router.get('/me', requireAuth, (req: Request, res: Response) => {
   });
 });
 
+const DEV_ACCOUNTS: { email: string; name: string; role: IUser['role'] }[] = [
+  { email: 'dev@dblue.it',            name: 'Dev User',        role: 'owner' },
+  { email: 'mario.rossi@dblue.it',    name: 'Mario Rossi',     role: 'employee' },
+  { email: 'sara.ferrari@dblue.it',   name: 'Sara Ferrari',    role: 'lab_responsible' },
+  { email: 'luca.esposito@dblue.it',  name: 'Luca Esposito',   role: 'admin_member' },
+  { email: 'giulia.bianchi@dblue.it', name: 'Giulia Bianchi',  role: 'director' },
+  { email: 'marco.conti@dblue.it',    name: 'Marco Conti',     role: 'owner' },
+];
+
 router.post('/dev-login', async (req: Request, res: Response): Promise<void> => {
   if (!process.env.ENABLE_DEV_LOGIN) {
     res.status(404).end();
@@ -62,16 +71,15 @@ router.post('/dev-login', async (req: Request, res: Response): Promise<void> => 
   }
 
   const { username, password } = req.body as { username?: string; password?: string };
-  if (!username || !password || username !== process.env.DEV_LOGIN_USER || password !== process.env.DEV_LOGIN_PASS) {
+  const account = DEV_ACCOUNTS.find(a => a.email === username);
+  if (!username || !password || !account || password !== process.env.DEV_LOGIN_PASS) {
     res.status(401).json({ error: 'Credenziali non valide' });
     return;
   }
 
-  const email = process.env.DEV_LOGIN_USER ?? '';
-  const role = (process.env.DEV_LOGIN_ROLE as IUser['role']) ?? 'director';
   const user = await User.findOneAndUpdate(
-    { email },
-    { $setOnInsert: { googleId: 'dev-login', email, name: process.env.DEV_LOGIN_NAME ?? 'Dev User' }, $set: { role } },
+    { email: account.email },
+    { $setOnInsert: { googleId: 'dev-login', email: account.email, name: account.name }, $set: { role: account.role } },
     { upsert: true, new: true }
   );
 
