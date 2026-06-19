@@ -14,7 +14,7 @@ All major modules are implemented and deployed. You can start testing immediatel
 
 | Module | Feature area | Ready to test | Notes |
 |--------|-------------|:-------------:|-------|
-| **Auth** | Google OAuth login (`@dblue.it` only) | ✅ | Use a `@dblue.it` Google account; non-`@dblue.it` accounts should be rejected |
+| **Auth** | Google OAuth login (`@dblue.it` only) | ⚠️ | **Requires GCP setup before it can be tested** — OAuth consent screen and credentials must be configured on Google Cloud Platform first (see "Out of Scope" section). Use dev login in the meantime. |
 | **Auth** | Dev login (email + password) | ✅ | Only available in staging; hidden in production |
 | **Auth** | Logout | ✅ | |
 | **Auth** | Protected routes (redirect to `/login`) | ✅ | |
@@ -120,6 +120,6 @@ If the seed endpoint (`POST /admin/seed`, owner only) has been triggered, 80+ te
 
 | Feature | Note |
 |---------|------|
-| Google OAuth in production | OAuth credentials not yet configured on Google Cloud Console; dev login is the only auth method in staging |
+| ⚠️ **Google OAuth — action required** | OAuth credentials have not yet been configured on Google Cloud Platform. Before Google login can work in any environment, the following steps must be completed manually: (1) create a project on GCP, (2) enable the Google OAuth 2.0 API, (3) configure the **OAuth consent screen** (app name, support email, authorised domain `dblue.it`), (4) create OAuth 2.0 credentials (Web application type), (5) add the Railway backend callback URL as an authorised redirect URI (`https://<backend-url>/auth/google/callback`), (6) copy `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` into the Railway backend environment variables. Until this is done, **dev login is the only available auth method** in staging. |
 | SMTP email delivery | Not configured in staging; emails are printed to the backend console log instead |
 | E2E tests (Playwright) | Test files exist in `e2e/` but cannot run in CI until Google OAuth is configured |
