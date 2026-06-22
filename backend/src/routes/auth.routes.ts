@@ -19,14 +19,28 @@ function setAuthCookie(res: Response, userId: string): void {
   res.cookie('token', signToken(userId), COOKIE_OPTIONS);
 }
 
-router.get('/google', passport.authenticate('google', { session: false, scope: ['profile', 'email'] }));
+const googleStrategyAvailable = !!process.env.GOOGLE_CLIENT_ID;
+
+router.get('/google', (req: Request, res: Response, next) => {
+  if (!googleStrategyAvailable) {
+    res.status(503).json({ error: 'Google OAuth non configurato' });
+    return;
+  }
+  passport.authenticate('google', { session: false, scope: ['profile', 'email'] })(req, res, next);
+});
 
 router.get(
   '/google/callback',
-  passport.authenticate('google', {
-    session: false,
-    failureRedirect: `${process.env.APP_URL}/login?error=unauthorized`,
-  }),
+  (req: Request, res: Response, next) => {
+    if (!googleStrategyAvailable) {
+      res.redirect(`${process.env.APP_URL ?? '/'}/login?error=oauth_not_configured`);
+      return;
+    }
+    passport.authenticate('google', {
+      session: false,
+      failureRedirect: `${process.env.APP_URL}/login?error=unauthorized`,
+    })(req, res, next);
+  },
   (req: Request, res: Response) => {
     const user = req.user as IUser;
     const token = signToken(String(user._id));
@@ -79,7 +93,7 @@ router.post('/dev-login', async (req: Request, res: Response): Promise<void> => 
 
   const user = await User.findOneAndUpdate(
     { email: account.email },
-    { $setOnInsert: { googleId: 'dev-login', email: account.email, name: account.name }, $set: { role: account.role } },
+    { $setOnInsert: { googleId: `dev-login:${account.email}`, email: account.email, name: account.name }, $set: { role: account.role } },
     { upsert: true, new: true }
   );
 
