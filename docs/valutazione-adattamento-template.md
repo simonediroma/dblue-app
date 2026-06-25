@@ -7,18 +7,24 @@
 
 ## 0. La domanda di fondo: è una richiesta sensata o solo overhead?
 
-Il boilerplate **non è una cosa sola**: contiene due livelli con valore molto diverso, e la risposta
-cambia a seconda di quale si guarda.
+> **Premessa decisiva: `dblue-office` non esiste oggi.** È un servizio *futuro pianificato* (backend
+> condiviso dei tool interni Deep Blue) che il template anticipa. Nel boilerplate le sue "proxy routes"
+> ritornano **dati mockati** (`backend/data/mockedUsers.ts`, `mockedRooms.ts`): sono un segnaposto, non
+> un'integrazione reale. Questa premessa cambia radicalmente la valutazione e va tenuta presente in
+> tutto il documento.
+
+Il boilerplate **non è una cosa sola**: contiene due livelli con valore molto diverso.
 
 **Livello 1 — Modello di integrazione** (dblue-office come fonte di verità per utenti/stanze, JWT
-condiviso, login proxato). → **Sensato, aggiunge valore reale. Non è overhead.**
-- Oggi l'app duplica la gestione utenti che dblue-office già fornisce: due sistemi sugli stessi utenti
-  significano drift garantito nel tempo (disattivazioni non propagate, ruoli divergenti, filtro `@dblue.it`
-  mantenuto a mano).
-- Single source of truth + SSO con gli altri tool interni è un beneficio architetturale concreto, che si
-  ripaga in manutenzione evitata.
-- Se l'app deve vivere sotto `*.dblue.it` insieme agli altri strumenti aziendali, questa parte **non è
-  negoziabile**: senza, l'app resta un silo separato dall'ecosistema.
+condiviso, login proxato). → **Valore reale ma SOLO in futuro, quando dblue-office esisterà. Oggi sarebbe
+una regressione.**
+- L'idea (single source of truth + SSO tra i tool interni) è architetturalmente sana e, quando ci sarà un
+  backend condiviso, eliminerà la duplicazione della gestione utenti.
+- **Ma adottarla adesso significherebbe rimuovere la gestione utenti/stanze reale e funzionante dell'app
+  per sostituirla con proxy verso un servizio inesistente — cioè rimpiazzare codice vero con mock.** È una
+  regressione netta. Su questo punto **l'app attuale è più matura del template**: ha già implementato per
+  davvero ciò che il template si limita a simulare.
+- Conclusione: l'integrazione è un target **futuro**, non un lavoro da fare ora.
 
 **Livello 2 — Convenzioni di stack** (Tailwind→SCSS, fetch→axios, ws→socket.io, Express 5, layout
 cartelle). → **In larga misura overhead, se preso per sé.**
@@ -26,20 +32,26 @@ cartelle). → **In larga misura overhead, se preso per sé.**
 - È lavoro meccanico con rischio di regressione a fronte di zero feature (la conversione styling ha il
   peggior rapporto valore/costo).
 - L'unico valore è la **coerenza cross-progetto**: chi lavora sui tool Deep Blue ritrova la stessa
-  struttura. È un valore reale ma *organizzativo*, non tecnico — vale quanto il cliente lo ritiene importante.
+  struttura. È un valore reale ma *organizzativo*, non tecnico.
 
-**Verdetto:** non è "solo overhead", ma nemmeno tutto valore. L'integrazione con dblue-office (Livello 1)
-è sensata **a prescindere** dal boilerplate, perché risolve un problema reale di duplicazione. L'allineamento
-di stack (Livello 2) è overhead giustificato **solo** dalla coerenza d'ecosistema.
+**Verdetto:** dato che dblue-office non esiste ancora, **gran parte dell'adattamento oggi è overhead**, e
+la sua parte centrale (l'integrazione) sarebbe addirittura controproducente se forzata adesso. Il
+boilerplate va letto per quello che è realmente *oggi*: un **riferimento di convenzioni e una dichiarazione
+di direzione futura**, non un'architettura da implementare subito.
 
-**La domanda che determina la risposta finale — da chiarire col contatto dblue:** il boilerplate è un
-**requisito vincolante di consegna** o una **linea guida preferenziale**?
-- Se **vincolante** → si fa tutto, è parte del contratto; l'overhead del Livello 2 è il prezzo della coerenza.
-- Se **preferenziale** → si fa il Livello 1 (vero valore) e si rimanda/salta il Livello 2 (specie lo
-  styling): ~90% del beneficio con ~40% del lavoro e quasi tutto il rischio evitato.
+**Cosa è effettivamente sensato fare ora (raccomandazione):**
+1. **Non** sostituire la gestione utenti/stanze reale con i proxy mockati. Mantenere l'app funzionante.
+2. **Allineare struttura, naming e — dove a basso costo — lo stack** alle convenzioni del template, così che
+   la futura integrazione con dblue-office (quando esisterà) sia poco costosa. Questo è l'unico lavoro con
+   un rapporto valore/costo difendibile nell'immediato.
+3. **Isolare il confine di auth/utenti** (un solo punto da cui oggi si leggono utenti/stanze) così da poter
+   in futuro sostituire "DB locale" con "proxy dblue-office" cambiando un solo modulo.
+4. **Rimandare** l'integrazione vera a quando dblue-office sarà reale, e valutare lo styling (Livello 2)
+   come opzionale: si fa solo se la coerenza d'ecosistema è una priorità esplicita del cliente.
 
-**Raccomandazione operativa:** adottare comunque l'integrazione dblue-office (è la cosa giusta a
-prescindere) e trattare il resto come negoziabile in base a quanto pesa la standardizzazione per il cliente.
+**La domanda da girare comunque al contatto dblue:** esiste una **timeline reale per dblue-office**? Se è
+imminente, conviene preparare il confine d'integrazione adesso; se è vago/lontano, l'adattamento è in gran
+parte overhead prematuro e va ridotto al minimo (sola struttura).
 
 ---
 
@@ -148,72 +160,79 @@ Frontend → Styling. Mantiene l'app sempre buildabile.
 
 ## 4. Valutazione della necessità
 
-**Quanto è necessario questo adattamento?**
+**Quanto è necessario questo adattamento?** (ricordando: dblue-office non esiste ancora — vedi §0)
 
 | Driver | Necessità | Motivazione |
 |---|---|---|
-| **Integrazione ecosistema Deep Blue** | **Alta** se l'app deve vivere sotto `*.dblue.it` e condividere login/utenti con gli altri tool interni | Il template è la specifica con cui il cliente fa convivere i suoi tool. Senza, l'app resta un silo separato. |
-| **Single source of truth utenti/stanze** | **Alta** | Oggi l'app duplica la gestione utenti che dblue-office già fornisce: drift e doppia manutenzione garantiti nel tempo. |
-| **Aderenza agli standard del cliente** | **Media-Alta** | Il cliente ha fornito esplicitamente il boilerplate "come vuole i file organizzati": è una richiesta diretta, non un suggerimento. |
+| **Integrazione ecosistema Deep Blue** | **Futura, non attuale** | Sensata quando dblue-office esisterà. Oggi non c'è nulla con cui integrarsi: il "silo" è inevitabile finché il backend condiviso non è reale. |
+| **Single source of truth utenti/stanze** | **Nulla oggi** | dblue-office non esiste: non c'è una fonte alternativa. L'app *è* l'unica fonte. Adottare i proxy mockati ora **aumenterebbe** i problemi, non li ridurrebbe. |
+| **Aderenza agli standard del cliente** | **Media** | Il cliente ha fornito il boilerplate come direzione: allineare struttura/convenzioni ha senso; implementare l'integrazione fittizia no. |
 | **Necessità funzionale per l'utente finale** | **Nulla** | L'utente non percepisce nessuna delle differenze (Tailwind vs SCSS, ws vs socket.io, fetch vs axios). |
-| **Necessità tecnica immediata (l'app oggi funziona?)** | **Bassa** | L'app attuale è completa e funzionante. Nulla è "rotto". |
+| **Necessità tecnica immediata (l'app oggi funziona?)** | **Bassa** | L'app attuale è completa e funzionante. Nulla è "rotto"; è più matura del template. |
 
-**Sintesi necessità:** l'adattamento è necessario **se e solo se** l'obiettivo è far entrare l'app
-nell'infrastruttura condivisa Deep Blue e rispettare la richiesta esplicita del cliente. Non è necessario
-per far funzionare l'app in sé. **La domanda decisiva da porre al cliente è: questo boilerplate è un
-requisito vincolante di consegna, o una linea guida preferenziale?** La risposta cambia la priorità da
-"obbligatorio" a "opportuno".
+**Sintesi necessità:** **nessuna necessità immediata.** dblue-office non esistendo, l'adattamento non
+risolve oggi alcun problema reale — e la sua parte di integrazione sarebbe una regressione. L'unico
+intervento con senso nel breve è **preparatorio**: allineare struttura/convenzioni per abbattere il costo
+della futura integrazione. **La domanda decisiva per il contatto dblue: esiste una timeline reale per
+dblue-office?** Se vicina, conviene preparare ora il confine d'integrazione; se vaga/lontana, l'adattamento
+è overhead prematuro e va ridotto alla sola struttura.
 
 ---
 
 ## 5. Valutazione dell'utilità
 
-**Benefici reali dell'adattamento:**
+**Benefici dell'adattamento — distinguendo *oggi* da *quando dblue-office esisterà*:**
 
-1. **Eliminazione della duplicazione utenti/stanze** (beneficio più tangibile). dblue-office diventa
-   l'unica fonte: niente sync, niente provisioning lato app, niente filtro `@dblue.it` da mantenere.
-   Riduce codice e superficie di bug a lungo termine.
-2. **SSO coerente con gli altri tool interni**: l'utente usa lo stesso login dell'ecosistema, JWT condiviso.
-3. **Manutenibilità e onboarding**: chiunque lavori sui tool Deep Blue ritrova la stessa struttura,
-   convenzioni e file "DO NOT MODIFY". Riduce il costo cognitivo cross-progetto.
-4. **Allineamento contrattuale col cliente**: consegnare nella forma richiesta evita rilavorazioni future.
+1. **Eliminazione duplicazione utenti/stanze** → beneficio **solo futuro**. Oggi non si applica:
+   dblue-office non esiste, quindi non c'è duplicazione da eliminare (l'app è l'unica fonte). Si
+   materializza quando il backend condiviso sarà reale.
+2. **SSO coerente tra tool interni** → **solo futuro**, stesso motivo.
+3. **Manutenibilità e onboarding cross-progetto** → beneficio **anche oggi**, ma limitato: ritrovare la
+   stessa struttura/convenzioni nei tool Deep Blue. È il principale valore *attuale*, ed è organizzativo.
+4. **Confine d'integrazione pronto** → beneficio **oggi in ottica futura**: isolando ora il punto da cui si
+   leggono utenti/stanze, la futura migrazione a dblue-office diventa un cambio localizzato e non un refactor.
 
 **Costi/contro reali:**
 
 1. **Refactoring ampio senza valore funzionale immediato**: l'utente finale non vede nulla di nuovo.
    È rischio puro (regressioni) a fronte di zero feature.
-2. **Perdita di granularità RBAC**: da 5 ruoli a `user`/`admin` + `tool_access`. Se i 5 ruoli servono
-   davvero, va negoziato con dblue-office un modello ruoli più ricco.
-3. **Dipendenza forte da dblue-office**: l'app non è più autonoma; richiede dblue-office disponibile e
-   il `JWT_SECRET` condiviso. Aumenta l'accoppiamento.
+2. **Rischio di regressione se si forza l'integrazione ora**: sostituire utenti/stanze reali con proxy
+   mockati = perdere funzionalità. Da evitare finché dblue-office non esiste.
+3. **Perdita di granularità RBAC** (al momento dell'integrazione futura): da 5 ruoli a `user`/`admin` +
+   `tool_access`. Se i 5 ruoli servono davvero, andrà negoziato con dblue-office un modello ruoli più ricco.
 4. **Conversione styling = costo alto, valore basso**: tanto lavoro meccanico solo per cambiare tecnologia
    CSS. È la parte la cui utilità marginale è più discutibile presa da sola.
 
-**Verdetto utilità:** **medio-alta sul piano strategico, bassa sul piano funzionale.** Il valore sta quasi
-tutto nell'integrazione con dblue-office e nell'allineamento agli standard del cliente. Le conversioni
-puramente tecnologiche (styling, http client) hanno utilità intrinseca scarsa e si giustificano solo come
-parte del "pacchetto coerenza" richiesto dal cliente.
+**Verdetto utilità:** **futura, non attuale, sul piano strategico; nulla sul piano funzionale.** Il valore
+forte (integrazione con dblue-office) è interamente *posticipato* a quando quel backend esisterà; oggi non è
+realizzabile. Nell'immediato resta solo l'utilità *organizzativa* dell'allineamento di convenzioni — modesta
+— e il vantaggio di predisporre un confine d'integrazione pulito. Le conversioni puramente tecnologiche
+(styling, http client) hanno utilità intrinseca scarsa.
 
 ---
 
 ## 6. Raccomandazione
 
-**Adottare l'adattamento, ma con priorità differenziata e in modo incrementale:**
+Dato che **dblue-office non esiste ancora ma è pianificato** (vedi §0), la strategia corretta è
+**"allinea ora, integra dopo"** — non una migrazione completa immediata.
 
-1. **Prima conferma col cliente** se il boilerplate è vincolante o preferenziale. Questo determina se è
-   un obbligo di consegna o un miglioramento opzionale.
-2. **Se vincolante / si vuole l'integrazione:** procedere per PR nell'ordine Scaffold → Data layer (proxy)
-   → Real-time → Frontend → Styling. Il valore si concentra nelle prime due PR (integrazione dblue-office):
-   anche fermandosi lì si ottiene il beneficio strategico principale.
-3. **Se preferenziale / risorse limitate:** adottare **solo** l'integrazione dblue-office + le convenzioni
-   di struttura/naming, e **rimandare** la conversione styling (Tailwind → SCSS), che è la voce a peggior
-   rapporto valore/costo.
-4. **Decidere esplicitamente il mapping RBAC** con dblue-office prima di iniziare la PR data layer: è
-   l'unico punto che può richiedere modifiche lato dblue-office, non solo lato app.
+1. **NON fare ora** l'integrazione dblue-office (Data layer → proxy). Sostituire utenti/stanze reali con
+   mock sarebbe una regressione. Va fatta **quando dblue-office sarà reale**.
+2. **Fare ora, a basso costo, solo il lavoro preparatorio:**
+   - Allineare struttura cartelle, naming e convenzioni alle linee del template.
+   - **Isolare il confine utenti/stanze/auth** dietro un'unica interfaccia, così che in futuro si sostituisca
+     "DB locale" con "proxy dblue-office" cambiando un solo modulo. È il singolo intervento col miglior
+     rapporto valore/costo oggi.
+3. **Valutare come opzionali** le conversioni di stack pure (styling Tailwind→SCSS, fetch→axios, ws→socket.io):
+   farle solo se la coerenza d'ecosistema è una priorità esplicita del cliente. Lo styling, in particolare,
+   è la voce a peggior rapporto valore/costo e va rimandata.
+4. **Quando dblue-office esisterà:** eseguire l'integrazione vera (proxy, JWT condiviso, mapping RBAC su
+   `user`/`admin` + `tool_access`) come progetto a sé, partendo dal confine già isolato al punto 2.
 
-**Non** trattare l'adattamento come un blocco: l'app attuale funziona e può continuare a evolvere; la
-migrazione è un allineamento pianificabile, idealmente prima che la UI cresca ulteriormente (così la
-conversione styling resta contenuta).
+**Domanda aperta per il contatto dblue (determina la priorità):** qual è la **timeline di dblue-office**?
+Imminente → conviene fare ora il punto 2. Lontana/incerta → ridurre tutto al minimo indispensabile, perché
+sarebbe overhead prematuro. **Non** trattare l'adattamento come un blocco: l'app attuale funziona, è più
+matura del template e può continuare a evolvere.
 
 ---
 
