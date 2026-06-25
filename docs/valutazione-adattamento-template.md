@@ -5,6 +5,18 @@
 
 ---
 
+## Abstract
+
+L'app attuale è già completa e funzionante. Il boilerplate fornito dal cliente presuppone un servizio
+interno condiviso (`dblue-office`) che **non esiste ancora**: è un'architettura futura. Di conseguenza
+adattare l'app al boilerplate **oggi** non risolve alcun problema reale, e la sua parte centrale —
+l'integrazione con dblue-office — sarebbe addirittura una **regressione** (sostituirebbe utenti/stanze
+reali con dati mockati). Raccomandazione: **"allinea ora, integra dopo"** — nell'immediato allineare solo
+struttura/convenzioni e isolare il confine utenti/auth; rimandare l'integrazione vera a quando dblue-office
+sarà reale. **Domanda aperta per il contatto dblue: qual è la timeline di dblue-office?**
+
+---
+
 ## 0. La domanda di fondo: è una richiesta sensata o solo overhead?
 
 > **Premessa decisiva: `dblue-office` non esiste oggi.** È un servizio *futuro pianificato* (backend
