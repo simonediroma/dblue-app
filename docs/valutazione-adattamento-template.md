@@ -5,6 +5,44 @@
 
 ---
 
+## 0. La domanda di fondo: è una richiesta sensata o solo overhead?
+
+Il boilerplate **non è una cosa sola**: contiene due livelli con valore molto diverso, e la risposta
+cambia a seconda di quale si guarda.
+
+**Livello 1 — Modello di integrazione** (dblue-office come fonte di verità per utenti/stanze, JWT
+condiviso, login proxato). → **Sensato, aggiunge valore reale. Non è overhead.**
+- Oggi l'app duplica la gestione utenti che dblue-office già fornisce: due sistemi sugli stessi utenti
+  significano drift garantito nel tempo (disattivazioni non propagate, ruoli divergenti, filtro `@dblue.it`
+  mantenuto a mano).
+- Single source of truth + SSO con gli altri tool interni è un beneficio architetturale concreto, che si
+  ripaga in manutenzione evitata.
+- Se l'app deve vivere sotto `*.dblue.it` insieme agli altri strumenti aziendali, questa parte **non è
+  negoziabile**: senza, l'app resta un silo separato dall'ecosistema.
+
+**Livello 2 — Convenzioni di stack** (Tailwind→SCSS, fetch→axios, ws→socket.io, Express 5, layout
+cartelle). → **In larga misura overhead, se preso per sé.**
+- L'utente finale non percepisce nulla; funzionalmente non cambia niente.
+- È lavoro meccanico con rischio di regressione a fronte di zero feature (la conversione styling ha il
+  peggior rapporto valore/costo).
+- L'unico valore è la **coerenza cross-progetto**: chi lavora sui tool Deep Blue ritrova la stessa
+  struttura. È un valore reale ma *organizzativo*, non tecnico — vale quanto il cliente lo ritiene importante.
+
+**Verdetto:** non è "solo overhead", ma nemmeno tutto valore. L'integrazione con dblue-office (Livello 1)
+è sensata **a prescindere** dal boilerplate, perché risolve un problema reale di duplicazione. L'allineamento
+di stack (Livello 2) è overhead giustificato **solo** dalla coerenza d'ecosistema.
+
+**La domanda che determina la risposta finale — da chiarire col contatto dblue:** il boilerplate è un
+**requisito vincolante di consegna** o una **linea guida preferenziale**?
+- Se **vincolante** → si fa tutto, è parte del contratto; l'overhead del Livello 2 è il prezzo della coerenza.
+- Se **preferenziale** → si fa il Livello 1 (vero valore) e si rimanda/salta il Livello 2 (specie lo
+  styling): ~90% del beneficio con ~40% del lavoro e quasi tutto il rischio evitato.
+
+**Raccomandazione operativa:** adottare comunque l'integrazione dblue-office (è la cosa giusta a
+prescindere) e trattare il resto come negoziabile in base a quanto pesa la standardizzazione per il cliente.
+
+---
+
 ## 1. Executive summary
 
 Il cliente ha fornito un boilerplate che descrive **come vuole che l'app di booking sia organizzata e
