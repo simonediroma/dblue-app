@@ -1,0 +1,48 @@
+{
+  "name": "booking-app",
+  "version": "1.0.0",
+  "description": "Deep Blue room booking application",
+  "main": "app.ts",
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "start": "cross-env NODE_ENV=production concurrently \"ts-node backend/app.ts\" \"nodemon backend/cron-worker.ts\"",
+    "staging": "cross-env NODE_ENV=staging concurrently \"ts-node backend/app.ts\" \"nodemon backend/cron-worker.ts\"",
+    "server": "cross-env NODE_ENV=development concurrently \"nodemon backend/app.ts\" \"nodemon backend/cron-worker.ts\"",
+    "client": "npm run dev --prefix frontend",
+    "dev": "concurrently \"npm run server\" \"npm run client\""
+  },
+  "author": "Deep Blue SRL",
+  "license": "ISC",
+  "dependencies": {
+    "compression": "^1.8.1",
+    "concurrently": "^9.2.1",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "cross-env": "^10.0.0",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "google-auth-library": "^9.15.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.15.0",
+    "morgan": "^1.10.1",
+    "node-cron": "^4.3.0",
+    "nodemailer": "^9.0.1",
+    "socket.io": "^4.8.1",
+    "typescript": "^5.9.2",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/compression": "^1.8.1",
+    "@types/cookie-parser": "^1.4.9",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/mongoose": "^5.11.96",
+    "@types/morgan": "^1.9.10",
+    "@types/nodemailer": "^8.0.1",
+    "nodemon": "^3.1.10",
+    "ts-node": "^10.9.2"
+  }
+}

@@ -1,0 +1,65 @@
+/* ========================================
+  1. Theme Variables
+========================================
+*/
+
+:root {
+  /* Backgrounds */
+  --bg-primary: #fafdfe;
+  --bg-secondary: #f5f7fa;
+  --bg-tertiary: #f9f9f9;
+  --bg-hover: #f2f2f250;
+
+  /* Text */
+  --text-primary: #3d3c3a;
+  --text-secondary: #001b3f;
+  --text-muted: #000000a6;
+
+  /* Borders */
+  --border-primary: #bebebe;
+  --border-secondary: #dfdbdb;
+
+  /* Brand & Accents */
+  --brand-primary: #59c1dc;
+  --brand-primary-dark: #0072e9;
+  --brand-secondary: #065760;
+  --accent-red: #e2395c;
+
+  /* Status */
+  --status-success-text: #54aa09;
+  --status-success-bg: #d8efc5;
+  --status-danger-text: #d21204;
+  --status-danger-bg: #eeccc9;
+  --status-info-text: #4285f4;
+  --status-info-bg: #4285f430;
+}
+
+/* ========================================
+  2. SCSS Breakpoints & Mixins
+========================================
+*/
+
+$breakpoint-sm: 640px;
+$breakpoint-md: 768px;
+$breakpoint-lg: 1024px;
+$breakpoint-xl: 1280px;
+
+@mixin sm {
+  @media (min-width: #{$breakpoint-sm}) { @content; }
+}
+
+@mixin md {
+  @media (min-width: #{$breakpoint-md}) { @content; }
+}
+
+@mixin lg {
+  @media (min-width: #{$breakpoint-lg}) { @content; }
+}
+
+@mixin xl {
+  @media (min-width: #{$breakpoint-xl}) { @content; }
+}
+
+@mixin md-down {
+  @media (max-width: #{$breakpoint-md - 0.02px}) { @content; }
+}
