@@ -1523,7 +1523,7 @@ export default function DailyDetail({
  </div>
 
  <div className="flex flex-col gap-4">
- {isCurrentDay && !day.isCheckedIn && (
+ {isCurrentDay && !day.isCheckedIn && [WorkStatus.IN_OFFICE, WorkStatus.REMOTE, WorkStatus.OFFICE_NO_DESK].includes(day.status) && (
  <button onClick={onCheckIn} className="w-full bg-primary text-white py-4 rounded-2xl font-bold text-base shadow-md hover:shadow-lg active:scale-[0.98] transition-all">
  Say Good Morning
  </button>
