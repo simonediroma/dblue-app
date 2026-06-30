@@ -1131,7 +1131,7 @@ export default function App() {
 
  {currentDay && (
  <div ref={currentDayRef} className={`col-span-2 snap-start scroll-mt-[176px] sm:scroll-mt-[236px]`}>
- <DayCard key={currentDay.date} day={currentDay} onClick={() => handleDayClick(currentDay)}
+ <DayCard key={currentDay.date} day={{...currentDay, isHighlighted: true}} onClick={() => handleDayClick(currentDay)}
  onDoubleClick={!currentDay.isCheckedIn ? () => handleDayDoubleClick(currentDay) : undefined}
  onCheckIn={() => handleCheckIn(currentDay.date, false)}
  isSimplified={isSimplifiedView}
@@ -1384,7 +1384,7 @@ export default function App() {
  {!isHistoricalView && !isCurrentInView && !showOnboarding &&
  activeTab === 'plan' && 
  days.find(d => d.date === TODAY) &&
- ![WorkStatus.PENDING, WorkStatus.WAITING_LIST].includes(days.find(d => d.date === TODAY)!.status) &&
+ [WorkStatus.IN_OFFICE, WorkStatus.REMOTE, WorkStatus.OFFICE_NO_DESK].includes(days.find(d => d.date === TODAY)!.status) &&
  !(days.find(d => d.date === TODAY)?.isCheckedIn && fabCheckStatus === 'idle') && (
  <motion.div initial={{opacity: 0, y: 100}} animate={{opacity: 1, y: 0}} exit={{opacity: 0, y: 100, transition: { duration: 0.3, ease: "easeInOut" }}} transition={{duration: 0.4, ease: "easeOut"}} className="fixed bottom-24 right-6 z-50 pointer-events-auto">
  <motion.button data-testid="fab-checkin" onClick={(e) => { e.stopPropagation(); handleFabCheckIn(); }}

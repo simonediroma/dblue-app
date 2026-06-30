@@ -120,13 +120,13 @@ router.post('/:date/checkin', async (req: Request, res: Response): Promise<void>
     return;
   }
 
-  if (ws.status === 'waiting_list') {
+  if (ws.status.toLowerCase() === 'waiting_list') {
     res.status(400).json({ error: 'Sei in waiting list, non puoi fare check-in' });
     return;
   }
 
   const checkinAllowed = ['in_office', 'office_no_desk', 'remote'];
-  if (!checkinAllowed.includes(ws.status)) {
+  if (!checkinAllowed.includes(ws.status.toLowerCase())) {
     res.status(400).json({ error: 'Check-in non applicabile per questo status' });
     return;
   }
