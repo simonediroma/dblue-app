@@ -1131,7 +1131,7 @@ export default function App() {
 
  {currentDay && (
  <div ref={currentDayRef} className={`col-span-2 snap-start scroll-mt-[176px] sm:scroll-mt-[236px]`}>
- <DayCard key={currentDay.date} day={currentDay} onClick={() => handleDayClick(currentDay)}
+ <DayCard key={currentDay.date} day={{...currentDay, isHighlighted: true}} onClick={() => handleDayClick(currentDay)}
  onDoubleClick={!currentDay.isCheckedIn ? () => handleDayDoubleClick(currentDay) : undefined}
  onCheckIn={() => handleCheckIn(currentDay.date, false)}
  isSimplified={isSimplifiedView}

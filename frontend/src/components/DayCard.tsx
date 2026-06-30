@@ -153,7 +153,7 @@ export default function DayCard({ day, onClick, onDoubleClick, onCheckIn, isSimp
  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3.5} d="M5 13l4 4L19 7"/>
  </svg>
  </motion.div>
- ) : (!isClosed && !day.isPast) ? (
+ ) : (!isClosed && !day.isPast && [WorkStatus.IN_OFFICE, WorkStatus.REMOTE, WorkStatus.OFFICE_NO_DESK].includes(day.status)) ? (
  <motion.button key="button" exit={{opacity: 0, scale: 0.8}} onClick={(e) => { e.stopPropagation(); onCheckIn?.(); }}
  className="bg-primary text-white text-[9px] sm:text-[11px] font-bold py-2 sm:py-2.5 px-4 sm:px-5 rounded-full shadow-md hover:opacity-90 active:scale-95 transition-all outline-none animate-content-scale-in"
  style={{ animationDelay: `${cardStartTime + 80}ms` }}
