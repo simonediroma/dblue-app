@@ -107,6 +107,8 @@ export async function upsertStatus(
   date: string,
   payload: { status: string; isUsingDesk?: boolean; room?: string }
 ): Promise<IWorkingStatus> {
+  payload = { ...payload, status: payload.status.toLowerCase() };
+
   const existing = await WorkingStatus.findOne({ userId, date });
 
   if (existing?.isConfirmed) {
@@ -235,7 +237,7 @@ export async function retrofitStatus(
     { userId, date },
     {
       $set: {
-        status: payload.status,
+        status: payload.status.toLowerCase(),
         isRetrofit: true,
         ...(payload.offTime !== undefined && { offTime: payload.offTime }),
       },

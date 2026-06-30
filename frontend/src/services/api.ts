@@ -1,5 +1,23 @@
 import type { User } from '../types/api';
 import type { DayPresence } from '../types';
+import { WorkStatus } from '../types';
+
+const STATUS_MAP: Record<string, WorkStatus> = {
+  in_office: WorkStatus.IN_OFFICE,
+  remote: WorkStatus.REMOTE,
+  mission: WorkStatus.MISSION,
+  leave: WorkStatus.LEAVE,
+  sick: WorkStatus.SICK,
+  parental_leave: WorkStatus.PARENTAL_LEAVE,
+  pending: WorkStatus.PENDING,
+  waiting_list: WorkStatus.WAITING_LIST,
+  office_no_desk: WorkStatus.OFFICE_NO_DESK,
+};
+
+function normalizeDay(d: DayPresence): DayPresence {
+  const mapped = STATUS_MAP[d.status?.toLowerCase?.()];
+  return mapped ? { ...d, status: mapped } : d;
+}
 
 export interface Room {
   id: string;
@@ -86,7 +104,7 @@ export function completeOnboarding(): Promise<void> {
 }
 
 export function getPresence(month: string): Promise<DayPresence[]> {
-  return request<DayPresence[]>(`/presence?month=${encodeURIComponent(month)}`);
+  return request<DayPresence[]>(`/presence?month=${encodeURIComponent(month)}`).then(days => days.map(normalizeDay));
 }
 
 export function upsertStatus(date: string, payload: {
@@ -97,7 +115,7 @@ export function upsertStatus(date: string, payload: {
   return request<DayPresence>('/presence', {
     method: 'POST',
     body: JSON.stringify({ date, ...payload }),
-  });
+  }).then(normalizeDay);
 }
 
 export function bulkUpsertStatus(updates: Array<{
@@ -109,14 +127,14 @@ export function bulkUpsertStatus(updates: Array<{
   return request<DayPresence[]>('/presence/bulk', {
     method: 'POST',
     body: JSON.stringify({ updates }),
-  });
+  }).then(days => days.map(normalizeDay));
 }
 
 export function checkIn(date: string, room?: string, isUsingDesk?: boolean): Promise<DayPresence> {
   return request<DayPresence>(`/presence/${date}/checkin`, {
     method: 'POST',
     body: JSON.stringify({ room, isUsingDesk }),
-  });
+  }).then(normalizeDay);
 }
 
 export function getRooms(): Promise<Room[]> {
