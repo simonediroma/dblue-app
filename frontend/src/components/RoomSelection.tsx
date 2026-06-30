@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 
 import { getFictionalDayName, months } from '../utils/dateUtils';
 import type { Room } from '../services/api';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 const roomTypeColor: Record<string, string> = {
   open_space: 'bg-blue-500',
@@ -22,6 +23,7 @@ interface RoomSelectionProps {
 }
 
 export default function RoomSelection({ date, rooms, onSelect, onBack, mode = 'confirm', plannedRoom }: RoomSelectionProps) {
+  useBodyScrollLock();
   const d = new Date(date + 'T00:00:00');
   const formattedDate = `${getFictionalDayName(d, 'long')}, ${d.getDate()} ${months[d.getMonth()]}`.toUpperCase();
 
@@ -44,7 +46,7 @@ export default function RoomSelection({ date, rooms, onSelect, onBack, mode = 'c
         </div>
       </header>
 
-      <main className="px-6 flex flex-col gap-6 max-w-xl mx-auto w-full">
+      <main className="px-6 flex flex-col gap-6 max-w-xl mx-auto w-full flex-1 overflow-y-auto pb-8">
         <div>
           <h3 className="font-headline font-bold text-lg text-on-surface/70 mb-4 tracking-tight">{sectionTitle}</h3>
           <div className="flex flex-col gap-3">

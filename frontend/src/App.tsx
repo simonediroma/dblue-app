@@ -390,7 +390,6 @@ export default function App() {
 
  if (isToday && day?.status === WorkStatus.IN_OFFICE) {
  setRoomSelectionDate(date);
- setSelectedDay(null); // Ensure the detailed view is closed when moving to room selection
  } else {
  setDays(prev => prev.map(d => d.date === date ? { ...d, isCheckedIn: true } : d));
 
@@ -461,6 +460,7 @@ export default function App() {
  });
 
  setRoomSelectionDate(null);
+ setSelectedDay(null);
 
  try {
  await checkIn(dateForRequest, isUsingDesk ? roomName : undefined, isUsingDesk);
@@ -730,6 +730,15 @@ export default function App() {
  }, [activeTab, isHistoricalView]);
 
  const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+ useEffect(() => {
+ if (lastMinuteWarning) {
+  document.body.style.overflow = 'hidden';
+ } else {
+  document.body.style.overflow = '';
+ }
+ return () => { document.body.style.overflow = ''; };
+ }, [lastMinuteWarning]);
 
  useEffect(() => {
  getRooms().then(setRooms).catch((err) => console.error('App: failed to load rooms', err));
@@ -1214,7 +1223,7 @@ export default function App() {
  <AnimatePresence>
  {roomSelectionDate && (
  <RoomSelection date={roomSelectionDate} rooms={rooms} mode="confirm" plannedRoom={days.find(d => d.date === roomSelectionDate)?.room}
- onBack={() => setRoomSelectionDate(null)}
+ onBack={() => { setRoomSelectionDate(null); setSelectedDay(null); }}
  onSelect={handleRoomSelect}
  />
  )}

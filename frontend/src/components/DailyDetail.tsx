@@ -1,4 +1,5 @@
 import React from 'react';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { Alert } from './Alert';
 import { motion, AnimatePresence } from 'motion/react';
 import { DayPresence, WorkStatus, OffTimeType } from '../types';
@@ -123,6 +124,8 @@ export default function DailyDetail({
  const [unbookingWarningDays, setUnbookingWarningDays] = React.useState<string[]>([]);
  const [pendingStatusUpdate, setPendingStatusUpdate] = React.useState<WorkStatus | null>(null);
  const [colleagueData, setColleagueData] = React.useState<ColleaguePresenceItem[]>([]);
+
+ useBodyScrollLock();
 
  React.useEffect(() => {
    setColleagueData([]);
