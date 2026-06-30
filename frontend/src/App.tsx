@@ -732,6 +732,15 @@ export default function App() {
  const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
  useEffect(() => {
+ if (lastMinuteWarning) {
+  document.body.style.overflow = 'hidden';
+ } else {
+  document.body.style.overflow = '';
+ }
+ return () => { document.body.style.overflow = ''; };
+ }, [lastMinuteWarning]);
+
+ useEffect(() => {
  getRooms().then(setRooms).catch((err) => console.error('App: failed to load rooms', err));
  }, []);
 
