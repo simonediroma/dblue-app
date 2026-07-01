@@ -111,7 +111,7 @@ export async function upsertStatus(
 
   const existing = await WorkingStatus.findOne({ userId, date });
 
-  if (existing?.isConfirmed) {
+  if (existing?.isConfirmed && date !== getTodayStr()) {
     const err = Object.assign(new Error('Status già confermato, non modificabile'), { statusCode: 409 });
     throw err;
   }
@@ -145,7 +145,9 @@ export async function upsertStatus(
         ...(payload.isUsingDesk !== undefined && { isUsingDesk: payload.isUsingDesk }),
         ...(payload.room !== undefined && { room: payload.room }),
         isLastMinuteUnbooking,
+        isConfirmed: false,
       },
+      $unset: { confirmedAt: '' },
     },
     { upsert: true, new: true, setDefaultsOnInsert: true }
   );
