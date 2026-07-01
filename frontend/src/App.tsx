@@ -991,7 +991,7 @@ export default function App() {
  <div className="relative">
  <section className="mb-1 flex justify-between items-center text-on-surface">
  <div className="relative">
- <button onClick={() => setIsMonthDropdownOpen(!isMonthDropdownOpen)}
+ <button data-testid="month-selector-button" onClick={() => setIsMonthDropdownOpen(!isMonthDropdownOpen)}
  className={`flex items-center gap-2 group transition-all px-2 py-1 -ml-2 rounded-lg ${isMonthDropdownOpen ? 'bg-primary/5 shadow-inner' : 'hover:bg-surface-container'}`}
  >
  <h1 className="font-headline text-lg sm:text-2xl font-extrabold tracking-tight">
@@ -1008,7 +1008,7 @@ export default function App() {
  const mKey = monthLabelToKey(month);
  const isFuture = mKey > nextMonthKey;
  return (
- <button key={month} onClick={() => handleMonthSelect(month)}
+ <button key={month} data-testid="month-option" onClick={() => handleMonthSelect(month)}
  disabled={isFuture}
  className={`w-full text-left px-4 py-3 text-sm font-bold transition-colors flex justify-between items-center ${
  activeMonth === month
