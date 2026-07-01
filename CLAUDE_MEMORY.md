@@ -1,21 +1,23 @@
 # Stato Corrente
 > Gitignored. Aggiornato da Claude a fine sessione.
 
-**Ultima sessione:** 2026-06-18
-**Branch corrente:** `claude/pensive-ptolemy-k79ei8` (pushato, PR #30 aperta)
-**PR in corso:** #30 — fix error state + retry quando il fetch dei colleghi fallisce in Project Teammates
+**Ultima sessione:** 2026-07-01
+**Branch corrente:** `claude/retrofitting-area-start-fix-u7f2h7` (pushato, PR #42 aperta)
+**PR in corso:** #42 — fix retrofit: card mese storico non cliccabili + endpoint corretto
 
 ---
 
 ## Prossima sessione — inizia da qui
 
-Fix bug "Project Teammates" mostra error state (PR #30):
-- **Causa originale (PR #27):** fetch diretto di `getUsers()` già aggiunto, ma `.catch(() => {})` inghiottiva silenziosamente qualsiasi errore di rete/HTTP.
-- **Fix PR #30:** aggiunto `colleaguesError` state + bottone Retry + guard su risposta non-array. Se il fetch fallisce, l'utente vede "Could not load colleagues" + Retry.
-- **Se ancora vuoto dopo merge:** controllare `VITE_API_URL` nella Railway dashboard del frontend — potrebbe puntare a URL sbagliato o il backend non è raggiungibile.
+Fix retrofit PR #42:
+- **Bug originale:** card dei mesi passati non erano cliccabili (mancava `onClick` nel rendering `isHistoricalView`)
+- **Fix 1 (commit 1):** aggiunto `onClick` ai card storici; `handleUpdateStatus` chiama API diretta invece di `hookUpdateStatus` per non inquinare `days` state; reload `historicalDays` dopo ogni aggiornamento; fix `isPast` in `handleUpdateOffTime`
+- **Fix 2 (commit 2):** aggiunta `retrofitStatus()` in `api.ts` → chiama `POST /presence/:date/retrofit` (endpoint corretto per spec); gestione errori 400/409 con notifica visibile all'utente
+- **Spec retrofit:** tutti gli utenti possono retrofittare il proprio status del mese precedente; Director/Owner possono retrofittare status di altri utenti via `/admin/retrofit/:userId/:date`
 
-**Pendente da sessione precedente:**
+**Pendente da sessioni precedenti:**
 - Branch `claude/mpck-interface-audit-30cwoz` con mock audit Phase 1+2 — da aprire PR separata verso main.
+- PR #30 (fix error state teammates) — verificare stato merge.
 
 **Prossimi step possibili:**
 1. Merge/revisione PR #30 (error state teammates)

@@ -11,7 +11,8 @@ import {
  Sunset,
  Headset,
  Monitor,
- Heart as Crib
+ Heart as Crib,
+ RotateCcw
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import React from 'react';
@@ -293,6 +294,11 @@ export default function DayCard({ day, onClick, onDoubleClick, onCheckIn, isSimp
  )}
  {day.status === WorkStatus.PENDING && day.isPast && (
  <span className="font-sans text-[10px] font-bold text-on-surface-variant/40 leading-none mr-0.5 animate-content-fade-in" style={{animationDelay: `${cardStartTime + 50}ms`}}>Status not set</span>
+ )}
+ {day.isRetrofit && (
+ <div className="bg-amber-100 text-amber-600 rounded-full w-[22px] h-[22px] flex items-center justify-center shadow-sm shrink-0 animate-content-fade-in" title="Retrofitted" style={{animationDelay: `${cardStartTime + 45}ms`}}>
+ <RotateCcw className="w-[11px] h-[11px]"/>
+ </div>
  )}
  <div className={`${day.isPast ? 'bg-surface-container-high text-on-surface-variant' : config.color} rounded-full w-[30px] h-[30px] flex items-center justify-center shadow-sm shrink-0 animate-content-fade-in`} style={{animationDelay: `${cardStartTime + 60}ms`}}>
  {StatusIcon ? (

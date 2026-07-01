@@ -64,4 +64,5 @@ export interface DayPresence {
     type: OffTimeType;
     hours?: number;
   };
+  isRetrofit?: boolean;
 }

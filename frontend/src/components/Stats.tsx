@@ -1,12 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
-import { WorkStatus, DayPresence } from '../types';
+import { WorkStatus, DayPresence, OffTimeType } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { AlertCircle, CalendarX, AlertTriangle, ChevronDown, Users, Info, Settings } from 'lucide-react';
 import { Alert } from './Alert';
 import { Colleague } from '../constants/colleagues';
 import { useAuth } from '../context/AuthContext';
-import { getStatsMonthly, getStatsAnnual } from '../services/api';
+import { getStatsMonthly, getStatsAnnual, getPresence } from '../services/api';
 import type { MonthlyStats, AnnualStats } from '../services/api';
 import { months, shortMonths } from '../utils/dateUtils';
 
@@ -57,11 +57,13 @@ export default function Stats({ currentMonth, projectTeammates = [], onAddTeamma
  const [showTooltip, setShowTooltip] = useState(false);
  const [monthlyStats, setMonthlyStats] = useState<MonthlyStats | null>(null);
  const [annualStats, setAnnualStats] = useState<AnnualStats | null>(null);
+ const [presenceDays, setPresenceDays] = useState<DayPresence[]>([]);
 
  useEffect(() => {
   if (view !== 'monthly') return;
   const key = monthLabelToKey(selectedMonth);
   getStatsMonthly(key).then(setMonthlyStats).catch((err) => { console.error('Stats: failed to load monthly stats', err); setMonthlyStats(null); });
+  getPresence(key).then(setPresenceDays).catch(() => setPresenceDays([]));
  }, [selectedMonth, view]);
 
  useEffect(() => {
@@ -263,6 +265,40 @@ export default function Stats({ currentMonth, projectTeammates = [], onAddTeamma
  ))}
  </div>
  </section>
+
+ {/* Permesso ore Section */}
+ {(() => {
+  const mornings = presenceDays.filter(d => d.offTime?.type === OffTimeType.MORNING).length;
+  const afternoons = presenceDays.filter(d => d.offTime?.type === OffTimeType.AFTERNOON).length;
+  const customHours = presenceDays.filter(d => d.offTime?.type === OffTimeType.CUSTOM).reduce((sum, d) => sum + (d.offTime?.hours ?? 0), 0);
+  const hasAny = mornings > 0 || afternoons > 0 || customHours > 0;
+  if (!hasAny) return null;
+  return (
+  <section className="bg-surface-container-lowest rounded-3xl p-6 shadow-ambient border border-outline-variant/10">
+  <h3 className="font-headline text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-4">Hours Off</h3>
+  <div className="grid grid-cols-2 gap-3">
+  {mornings > 0 && (
+  <div className="bg-amber-50 border border-amber-100 p-4 rounded-2xl flex flex-col gap-1">
+  <span className="font-sans text-[10px] text-amber-700 font-bold uppercase tracking-wide">Mornings</span>
+  <span className="font-headline text-3xl font-extrabold text-amber-600">{mornings}</span>
+  </div>
+  )}
+  {afternoons > 0 && (
+  <div className="bg-orange-50 border border-orange-100 p-4 rounded-2xl flex flex-col gap-1">
+  <span className="font-sans text-[10px] text-orange-700 font-bold uppercase tracking-wide">Afternoons</span>
+  <span className="font-headline text-3xl font-extrabold text-orange-600">{afternoons}</span>
+  </div>
+  )}
+  {customHours > 0 && (
+  <div className="bg-purple-50 border border-purple-100 p-4 rounded-2xl flex flex-col gap-1">
+  <span className="font-sans text-[10px] text-purple-700 font-bold uppercase tracking-wide">Custom hrs</span>
+  <span className="font-headline text-3xl font-extrabold text-purple-600">{customHours}h</span>
+  </div>
+  )}
+  </div>
+  </section>
+  );
+ })()}
 
  {/* Unbookings Section */}
  <section className="bg-surface-container-lowest rounded-3xl p-6 shadow-ambient border border-outline-variant/10">
