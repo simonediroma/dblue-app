@@ -1139,7 +1139,7 @@ export default function DailyDetail({
  {/* Standard Extension Calendar (Show only if special leave is NOT open/configured) */}
  <div className={`transition-all duration-500 overflow-hidden ${extendedSickType ? 'max-h-0 opacity-0 pointer-events-none' : 'max-h-[1000px] opacity-100'}`}>
  {day.status === WorkStatus.SICK && !extendedSickType ? (
- <div className="bg-surface-container-lowest rounded-[28px] p-6 shadow-sm border border-outline-variant/10 mb-8 flex flex-col items-center text-center gap-3">
+ <div data-testid="extend-sick-info" className="bg-surface-container-lowest rounded-[28px] p-6 shadow-sm border border-outline-variant/10 mb-8 flex flex-col items-center text-center gap-3">
  <span className="text-2xl">🤒</span>
  <p className="text-sm text-on-surface-variant leading-relaxed max-w-xs">
  Sick leave cannot be planned in advance. Use the <span className="font-bold text-on-surface">"I need a special extended leave"</span> section above for parental leave or long-term absence.
@@ -1336,7 +1336,7 @@ export default function DailyDetail({
  <p className="text-[10px] text-on-surface-variant/60 text-center font-bold uppercase tracking-wider">
  Extensions will overwrite existing working statuses (if any)
  </p>
- <button onClick={handleApply} disabled={extendedDates.length === 0} className="w-full bg-primary text-white font-headline font-extrabold py-5 rounded-[24px] shadow-lg shadow-primary/20 disabled:opacity-30 disabled:shadow-none transition-all active:scale-[0.98] text-center">
+ <button data-testid="extend-confirm" onClick={handleApply} disabled={extendedDates.length === 0} className="w-full bg-primary text-white font-headline font-extrabold py-5 rounded-[24px] shadow-lg shadow-primary/20 disabled:opacity-30 disabled:shadow-none transition-all active:scale-[0.98] text-center">
  {extendedDates.length > 0 
  ? `Extend status to ${extendedDates.length} other day${extendedDates.length === 1 ? '' : 's'}` 
  : 'Select dates to extend'}
@@ -1573,7 +1573,7 @@ export default function DailyDetail({
  )}
 
  {!day.isPast && !day.isCheckedIn && day.status !== WorkStatus.WAITING_LIST && (
- <button onClick={() => setStep('EXTEND')}
+ <button data-testid="extend-trigger" onClick={() => setStep('EXTEND')}
  className="w-full bg-surface-container-low/40 border border-outline-variant/10 rounded-2xl py-3.5 flex items-center justify-center gap-2 text-on-surface font-bold text-[13px] hover:bg-surface-container transition-colors shadow-sm"
  >
  Extend to other days
