@@ -565,7 +565,11 @@ export default function App() {
 
  try {
  await hookBulkUpdateStatus(updates);
- } catch {
+ } catch (err) {
+ setNotification({
+ message: `Impossibile estendere lo stato: ${(err as Error).message}`,
+ date: updates[0].date,
+ });
  return;
  }
 

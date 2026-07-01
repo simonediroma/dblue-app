@@ -1138,6 +1138,14 @@ export default function DailyDetail({
 
  {/* Standard Extension Calendar (Show only if special leave is NOT open/configured) */}
  <div className={`transition-all duration-500 overflow-hidden ${extendedSickType ? 'max-h-0 opacity-0 pointer-events-none' : 'max-h-[1000px] opacity-100'}`}>
+ {day.status === WorkStatus.SICK && !extendedSickType ? (
+ <div className="bg-surface-container-lowest rounded-[28px] p-6 shadow-sm border border-outline-variant/10 mb-8 flex flex-col items-center text-center gap-3">
+ <span className="text-2xl">🤒</span>
+ <p className="text-sm text-on-surface-variant leading-relaxed max-w-xs">
+ Sick leave cannot be planned in advance. Use the <span className="font-bold text-on-surface">"I need a special extended leave"</span> section above for parental leave or long-term absence.
+ </p>
+ </div>
+ ) : (
  <div className="bg-surface-container-lowest rounded-[28px] p-6 shadow-sm border border-outline-variant/10 mb-8">
  <div className="flex flex-col mb-6 px-1">
  <span className="font-headline font-bold text-lg text-on-surface">
@@ -1216,6 +1224,7 @@ export default function DailyDetail({
  </div>
  )}
  </div>
+ )}
  </div>
  {/* Room Assignment List */}
  {isOffice && extendedDates.length > 0 && (
