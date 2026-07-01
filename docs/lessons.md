@@ -154,5 +154,8 @@ sendWaitingListPromotion(email, date).catch((err) =>
 );
 ```
 
+**Tutta l'interfaccia utente deve essere in inglese**
+Nessuna label, titolo, bottone, messaggio di notifica o testo UI deve essere in italiano. Il progetto ha un'audience internazionale e la lingua dell'interfaccia è l'inglese. Le variabili interne, i commenti nel codice e i file di configurazione possono restare in italiano, ma tutto ciò che l'utente vede deve essere in inglese. Verificare sempre prima del commit che nessuna stringa visibile sia in italiano.
+
 **SMTP simulato in dev: pattern emailEnabled guard**
 Creare una variabile `const emailEnabled = !!process.env.SMTP_HOST` all'avvio del modulo email. Se non configurata, loggare l'email in console invece di inviarla. Questo elimina la necessità di un server SMTP in locale e rende i test più semplici. Le variabili SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`) sono opzionali in dev — documentarle in `.env.example` con i valori vuoti.
