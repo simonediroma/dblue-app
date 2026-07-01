@@ -119,11 +119,21 @@ export function usePresence(months: string[]) {
 
     try {
       const updated = await bulkUpsertStatus(updates);
+      if (updated.length === 0 && updates.length > 0) {
+        throw new Error('Nessun aggiornamento riuscito');
+      }
       setDays(current => {
         const newDays = [...current];
         updated.forEach(u => {
           const index = newDays.findIndex(d => d.date === u.date);
-          if (index !== -1) newDays[index] = enrichDay(u);
+          if (index !== -1) {
+            const existing = newDays[index];
+            newDays[index] = {
+              ...enrichDay(u),
+              bookedCount: u.bookedCount ?? existing.bookedCount,
+              totalCapacity: u.totalCapacity ?? existing.totalCapacity,
+            };
+          }
         });
         return newDays;
       });

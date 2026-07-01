@@ -134,10 +134,10 @@ export function bulkUpsertStatus(updates: Array<{
   isUsingDesk?: boolean;
   room?: string;
 }>): Promise<DayPresence[]> {
-  return request<DayPresence[]>('/presence/bulk', {
+  return request<{ succeeded: DayPresence[]; failed: Array<{ date: string; error: string }> }>('/presence/bulk', {
     method: 'POST',
     body: JSON.stringify({ updates }),
-  }).then(days => days.map(normalizeDay));
+  }).then(res => res.succeeded.map(normalizeDay));
 }
 
 export function checkIn(date: string, room?: string, isUsingDesk?: boolean): Promise<DayPresence> {
