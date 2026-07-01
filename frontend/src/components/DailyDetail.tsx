@@ -516,6 +516,9 @@ export default function DailyDetail({
  <StatusOption emoji="🤒" label="On a sick leave" color="bg-red-100 text-red-600" onClick={() => handleStatusSelect(WorkStatus.SICK)}
  isActive={day.status === WorkStatus.SICK}
  />
+ <StatusOption emoji="👶" label="Parental Leave" color="bg-purple-100 text-purple-600" onClick={() => handleStatusSelect(WorkStatus.PARENTAL_LEAVE)}
+ isActive={day.status === WorkStatus.PARENTAL_LEAVE}
+ />
  </div>
 
  <div className="mt-12 pt-8 border-t border-outline-variant/20">
