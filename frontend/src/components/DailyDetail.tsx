@@ -795,9 +795,11 @@ export default function DailyDetail({
  const isOffice = day.status === WorkStatus.IN_OFFICE;
  const isFutureDay = day.date > todayStr;
  const isSpecialLeaveEligible = (day.status === WorkStatus.SICK || day.status === WorkStatus.LEAVE) && isFutureDay;
- const STACK_END_DATE = '2026-11-09';
+ const stackEndDateObj = parseAppDate(todayStr);
+ stackEndDateObj.setDate(stackEndDateObj.getDate() + 30);
+ const STACK_END_DATE = toAppDateStr(stackEndDateObj);
  const startExtensionDate = parseAppDate(day.date);
- let rangeDays = (isSpecialLeaveEligible && extendedSickType) ? 180 : 14;
+ let rangeDays = (isSpecialLeaveEligible && extendedSickType) ? 180 : 30;
 
  // Capacity for future dates is not available from the API per day; the backend
  // enforces the capacity gate at booking time (auto-downgrade to waiting_list).
@@ -1158,7 +1160,7 @@ export default function DailyDetail({
  ) : (
  <div className={`space-y-8 max-h-[400px] overflow-y-auto px-1 scrollbar-hide py-2`}>
  {/* Standard calendar content... */}
- {Object.entries(selectableDates.slice(0, 14).reduce((acc, curr) => {
+ {Object.entries(selectableDates.reduce((acc, curr) => {
  const month = curr.monthLabel;
  if (!acc[month]) acc[month] = [];
  acc[month].push(curr);
