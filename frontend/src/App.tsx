@@ -23,7 +23,7 @@ import { useAuth } from './context/AuthContext';
 import type { User } from './types/api';
 import { usePresence } from './hooks/usePresence';
 import { useColleagues, mapUserToColleague } from './hooks/useColleagues';
-import { getPresence, checkIn, getRooms, getUsers, updateTeammates, completeOnboarding, updatePreferences } from './services/api';
+import { getPresence, checkIn, getRooms, getUsers, updateTeammates, completeOnboarding, updatePreferences, upsertStatus } from './services/api';
 import type { Room } from './services/api';
 import { useWebSocket } from './hooks/useWebSocket';
 
@@ -509,7 +509,9 @@ export default function App() {
  const isChange = !Array.isArray(dateOrDates) && days.find(d => d.date === dateOrDates)?.status !== WorkStatus.PENDING;
 
  try {
- if (targetDates.length === 1) {
+ if (isHistoricalView && targetDates.length === 1) {
+ await upsertStatus(targetDates[0], { status, isUsingDesk, room });
+ } else if (targetDates.length === 1) {
  await hookUpdateStatus(targetDates[0], status, isUsingDesk, room);
  } else {
  await hookBulkUpdateStatus(targetDates.map(date => ({
@@ -521,6 +523,10 @@ export default function App() {
  }
  } catch {
  return;
+ }
+
+ if (isHistoricalView) {
+ loadHistoricalMonth(monthLabelToKey(activeMonth));
  }
 
  // Set notification
@@ -593,14 +599,17 @@ export default function App() {
  };
 
  const handleUpdateOffTime = async (date: string, offTime: { type: OffTimeType, hours?: number } | undefined) => {
- const day = days.find(d => d.date === date);
- const isPast = day?.isPast || false;
+ const isPast = isHistoricalView || !!(days.find(d => d.date === date)?.isPast);
  const dayNum = date.split('-')[2];
 
  try {
  await hookUpdateOffTime(date, offTime ?? null);
  } catch {
  return;
+ }
+
+ if (isHistoricalView) {
+ loadHistoricalMonth(monthLabelToKey(activeMonth));
  }
 
  if (isPast) {
@@ -1115,7 +1124,7 @@ export default function App() {
  const isMonday = day.dayName === 'Monday';
  const hasMondayInRow = isMonday || (i % 2 === 0 ? historicalDays[i+1]?.dayName === 'Monday' : historicalDays[i-1]?.dayName === 'Monday');
  return (
- <DayCard key={day.date} day={day} isSimplified={isSimplifiedView} index={i} projectTeammates={projectTeammates} showWeekSeparator={isMonday} hasMondayInRow={hasMondayInRow}/>
+ <DayCard key={day.date} day={day} onClick={() => handleDayClick(day)} isSimplified={isSimplifiedView} index={i} projectTeammates={projectTeammates} showWeekSeparator={isMonday} hasMondayInRow={hasMondayInRow}/>
  );
  })}
  </div>
