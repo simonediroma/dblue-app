@@ -23,7 +23,7 @@ import { useAuth } from './context/AuthContext';
 import type { User } from './types/api';
 import { usePresence } from './hooks/usePresence';
 import { useColleagues, mapUserToColleague } from './hooks/useColleagues';
-import { getPresence, checkIn, getRooms, getUsers, updateTeammates, completeOnboarding, updatePreferences, upsertStatus } from './services/api';
+import { getPresence, checkIn, getRooms, getUsers, updateTeammates, completeOnboarding, updatePreferences, retrofitStatus } from './services/api';
 import type { Room } from './services/api';
 import { useWebSocket } from './hooks/useWebSocket';
 
@@ -510,7 +510,7 @@ export default function App() {
 
  try {
  if (isHistoricalView && targetDates.length === 1) {
- await upsertStatus(targetDates[0], { status, isUsingDesk, room });
+ await retrofitStatus(targetDates[0], { status });
  } else if (targetDates.length === 1) {
  await hookUpdateStatus(targetDates[0], status, isUsingDesk, room);
  } else {
@@ -521,7 +521,9 @@ export default function App() {
  room: room ?? '',
  })));
  }
- } catch {
+ } catch (err) {
+ const message = err instanceof Error ? err.message : 'Retrofit non riuscito';
+ setNotification({ message, date: targetDates[0] });
  return;
  }
 

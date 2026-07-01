@@ -118,6 +118,16 @@ export function upsertStatus(date: string, payload: {
   }).then(normalizeDay);
 }
 
+export function retrofitStatus(date: string, payload: {
+  status: string;
+  offTime?: { type: string; hours?: number };
+}): Promise<DayPresence> {
+  return request<DayPresence>(`/presence/${date}/retrofit`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }).then(normalizeDay);
+}
+
 export function bulkUpsertStatus(updates: Array<{
   date: string;
   status: string;
