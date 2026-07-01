@@ -275,7 +275,7 @@ export default function Stats({ currentMonth, projectTeammates = [], onAddTeamma
   if (!hasAny) return null;
   return (
   <section className="bg-surface-container-lowest rounded-3xl p-6 shadow-ambient border border-outline-variant/10">
-  <h3 className="font-headline text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-4">Permesso ore</h3>
+  <h3 className="font-headline text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-4">Hours Off</h3>
   <div className="grid grid-cols-2 gap-3">
   {mornings > 0 && (
   <div className="bg-amber-50 border border-amber-100 p-4 rounded-2xl flex flex-col gap-1">
