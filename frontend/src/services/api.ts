@@ -203,6 +203,7 @@ export interface SeedSummary {
   workingStatuses: number;
   rangeMe: string;
   rangeColleagues: string;
+  fullCapacityTestDate: string | null;
 }
 
 export function triggerSeed(fresh = false): Promise<{ ok: boolean; summary: SeedSummary }> {

@@ -48,6 +48,9 @@ export default function AdminBar() {
         {state.status === 'success' && (
           <span className="text-green-400">
             ✓ {state.summary.users} utenti · {state.summary.rooms} rooms · {state.summary.workingStatuses} status · {state.summary.rangeMe}
+            {state.summary.fullCapacityTestDate && (
+              <> · full capacity il {state.summary.fullCapacityTestDate} (per test waiting list)</>
+            )}
           </span>
         )}
         {state.status === 'error' && (

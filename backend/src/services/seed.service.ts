@@ -201,6 +201,7 @@ export interface SeedSummary {
   workingStatuses: number;
   rangeMe: string;
   rangeColleagues: string;
+  fullCapacityTestDate: string | null;
 }
 
 export async function runSeed(fresh = false): Promise<SeedSummary> {
@@ -260,6 +261,12 @@ export async function runSeed(fresh = false): Promise<SeedSummary> {
   })();
   const colleaguesDays = workingDaysInRange(colleaguesStartDate, meEndDate);
 
+  // Guarantee a fully-booked future day so the waiting-list flow can be tested:
+  // organic random office attendance never reaches room capacity on its own.
+  const openSpaceRooms = await Room.find({ type: 'open_space', isActive: true }).lean();
+  const totalOpenSpaceCapacity = openSpaceRooms.reduce((sum, r) => sum + (r.capacity ?? 0), 0);
+  const fullCapacityTestDate = colleaguesDays.find((d) => d > todayStr) ?? null;
+
   const meRecords = buildStatusForUser(
     meUser._id as Types.ObjectId,
     meDays,
@@ -268,6 +275,16 @@ export async function runSeed(fresh = false): Promise<SeedSummary> {
     42,
     todayStr,
   );
+  if (fullCapacityTestDate) {
+    const meTestRecord = meRecords.find((r) => r.date === fullCapacityTestDate);
+    if (meTestRecord) {
+      meTestRecord.status = 'pending';
+      meTestRecord.isConfirmed = false;
+      meTestRecord.confirmedAt = undefined;
+      delete meTestRecord.room;
+      delete meTestRecord.isUsingDesk;
+    }
+  }
   await WorkingStatus.deleteMany({ userId: meUser._id });
   await WorkingStatus.insertMany(meRecords);
 
@@ -283,6 +300,24 @@ export async function runSeed(fresh = false): Promise<SeedSummary> {
       i * 999 + 13,
       todayStr,
     );
+    if (fullCapacityTestDate) {
+      const testRecord = records.find((r) => r.date === fullCapacityTestDate);
+      if (testRecord) {
+        if (i < totalOpenSpaceCapacity) {
+          testRecord.status = 'in_office';
+          testRecord.room = OPEN_SPACE_ROOMS[i % OPEN_SPACE_ROOMS.length];
+          testRecord.isUsingDesk = true;
+          testRecord.isConfirmed = false;
+          testRecord.confirmedAt = undefined;
+        } else if (i < totalOpenSpaceCapacity + 2) {
+          testRecord.status = 'waiting_list';
+          testRecord.isConfirmed = false;
+          testRecord.confirmedAt = undefined;
+          delete testRecord.room;
+          delete testRecord.isUsingDesk;
+        }
+      }
+    }
     await WorkingStatus.deleteMany({ userId: u._id });
     await WorkingStatus.insertMany(records);
     totalColleagueRecords += records.length;
@@ -297,5 +332,6 @@ export async function runSeed(fresh = false): Promise<SeedSummary> {
     workingStatuses: meRecords.length + totalColleagueRecords,
     rangeMe: `${meStartDate} → ${meEndDate}`,
     rangeColleagues: `${colleaguesStartDate} → ${meEndDate}`,
+    fullCapacityTestDate,
   };
 }
