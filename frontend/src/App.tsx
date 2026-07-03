@@ -834,13 +834,11 @@ export default function App() {
  return days.map(day => {
  const isFutureDay = day.date > TODAY && !day.isPast;
 
- // Mock: determine if teammates are in office based on day hash
  const hash = day.date.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
 
- // Determine project teammates who are in office
- const officeProjectTeammates = projectTeammates.length > 0
- ? projectTeammates.filter((_, i) => (hash + i) % 2 === 0)
- : [];
+ // Determine project teammates who are in office, from real per-day presence data
+ const officeUserIds = new Set(day.officeUserIds || []);
+ const officeProjectTeammates = projectTeammates.filter(c => officeUserIds.has(c.id));
 
  const projectAvatars: ColleagueAvatarInfo[] = officeProjectTeammates.map(c => ({
  initials: c.initials,

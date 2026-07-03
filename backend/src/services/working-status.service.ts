@@ -83,10 +83,13 @@ export async function getStatusForUser(
       })
       .filter(Boolean);
 
-    const projectTeammatesCount = officeEntries.filter((ws) => {
-      const uid = (ws.userId as unknown as { _id: Types.ObjectId })._id.toString();
-      return teammateIds.has(uid);
-    }).length;
+    // All in-office user ids for the day, independent of the current teammates list, so the
+    // client can re-intersect with a freshly-edited teammates selection without a refetch.
+    const officeUserIds = officeEntries.map(
+      (ws) => (ws.userId as unknown as { _id: Types.ObjectId })._id.toString()
+    );
+
+    const projectTeammatesCount = officeUserIds.filter((uid) => teammateIds.has(uid)).length;
 
     const base = existing ?? { date, status: 'pending', isConfirmed: false };
 
@@ -96,6 +99,7 @@ export async function getStatusForUser(
       totalCapacity,
       colleagueAvatars,
       projectTeammatesCount,
+      officeUserIds,
     };
   });
 }
