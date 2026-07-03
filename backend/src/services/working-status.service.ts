@@ -1,8 +1,7 @@
 import { Types } from 'mongoose';
 import { WorkingStatus, IWorkingStatus, WorkingStatusValue } from '../models/working-status.model';
 import { User } from '../models/user.model';
-import { Room } from '../models/room.model';
-import { isCapacityAvailable, promoteFromWaitingList } from './capacity.service';
+import { isCapacityAvailable, promoteFromWaitingList, getTotalCapacity } from './capacity.service';
 import { sendSickLeaveConfirmation } from './email.service';
 
 // Returns true if date is today or tomorrow
@@ -43,7 +42,7 @@ export async function getStatusForUser(
   const startDate = workingDays[0];
   const endDate = workingDays[workingDays.length - 1];
 
-  const [userStatuses, allOfficeStatuses, rooms, user] = await Promise.all([
+  const [userStatuses, allOfficeStatuses, totalCapacity, user] = await Promise.all([
     WorkingStatus.find({ userId, date: { $gte: startDate, $lte: endDate } }).lean(),
     WorkingStatus.find({
       date: { $gte: startDate, $lte: endDate },
@@ -51,11 +50,10 @@ export async function getStatusForUser(
     })
       .populate('userId', 'avatar _id teammates')
       .lean(),
-    Room.find({}).lean(),
+    getTotalCapacity(month),
     User.findById(userId).lean(),
   ]);
 
-  const totalCapacity = rooms.reduce((sum, r) => sum + (r.capacity ?? 0), 0);
   const teammateIds = new Set((user?.teammates ?? []).map((t: Types.ObjectId) => t.toString()));
 
   const userStatusByDate = new Map(userStatuses.map((ws) => [ws.date, ws]));
@@ -111,7 +109,7 @@ export async function upsertStatus(
 
   const existing = await WorkingStatus.findOne({ userId, date });
 
-  if (existing?.isConfirmed && date !== getTodayStr()) {
+  if (existing?.isConfirmed) {
     const err = Object.assign(new Error('Status già confermato, non modificabile'), { statusCode: 409 });
     throw err;
   }
@@ -145,9 +143,7 @@ export async function upsertStatus(
         ...(payload.isUsingDesk !== undefined && { isUsingDesk: payload.isUsingDesk }),
         ...(payload.room !== undefined && { room: payload.room }),
         isLastMinuteUnbooking,
-        isConfirmed: false,
       },
-      $unset: { confirmedAt: '' },
     },
     { upsert: true, new: true, setDefaultsOnInsert: true }
   );

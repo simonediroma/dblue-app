@@ -66,7 +66,7 @@ export async function promoteFromWaitingList(date: string): Promise<void> {
 }
 
 export async function getPresenceBreakdown(date: string): Promise<PresenceBreakdown> {
-  const rooms = await Room.find({ isActive: true }).lean();
+  const rooms = await Room.find({ type: 'open_space', isActive: true }).lean();
 
   const roomOccupancies: RoomOccupancy[] = await Promise.all(
     rooms.map(async (room) => {
