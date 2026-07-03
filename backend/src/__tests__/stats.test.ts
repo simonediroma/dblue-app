@@ -2,6 +2,7 @@ import request from 'supertest';
 import { createApp } from '../app';
 import { connect, disconnect, clearDatabase } from './setup';
 import { createUser, authCookie } from './helpers';
+import { WorkingStatus } from '../models/working-status.model';
 
 const app = createApp();
 
@@ -32,6 +33,27 @@ describe('GET /stats/monthly', () => {
       .get(`/stats/monthly?month=${THIS_MONTH}`)
       .set('Cookie', authCookie(String(user._id)));
     expect(res.status).toBe(200);
+  });
+
+  it('only counts confirmed statuses in the distribution and presence days', async () => {
+    const user = await createUser();
+    const today = new Date().toISOString().slice(0, 10);
+
+    await WorkingStatus.create([
+      { userId: user._id, date: today, status: 'leave', isConfirmed: false },
+      { userId: user._id, date: `${THIS_MONTH}-02`, status: 'leave', isConfirmed: true },
+      { userId: user._id, date: `${THIS_MONTH}-03`, status: 'in_office', isConfirmed: false },
+      { userId: user._id, date: `${THIS_MONTH}-04`, status: 'in_office', isConfirmed: true },
+    ]);
+
+    const res = await request(app)
+      .get(`/stats/monthly?month=${THIS_MONTH}`)
+      .set('Cookie', authCookie(String(user._id)));
+
+    expect(res.status).toBe(200);
+    expect(res.body.presenceDaysConfirmed).toBe(1);
+    expect(res.body.distribution.inOffice).toBe(1);
+    expect(res.body.distribution.leave).toBe(1);
   });
 });
 

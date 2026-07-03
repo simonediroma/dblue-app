@@ -2,18 +2,25 @@
 > Gitignored. Aggiornato da Claude a fine sessione.
 
 **Ultima sessione:** 2026-07-03
-**Branch corrente:** `claude/capacity-plan-view-fix-7hs5z4` (pushato, PR da aprire)
-**PR in corso:** fix capacity plan view — totalCapacity mostrava 89 (tutte le stanze) invece di 23 (solo open_space)
+**Branch corrente:** `claude/my-stats-confirmation-logic-aph70v` (pushato, PR #48 aperta — main mergiato dentro per risolvere conflitti su questo file)
+**PR in corso:** #48 — fix My Stats: distribuzione statuses non filtrata per isConfirmed
 
 ---
 
 ## Prossima sessione — inizia da qui
 
+Fix "My Stats" confirmation logic (branch `claude/my-stats-confirmation-logic-aph70v`, PR #48):
+- **Bug:** in `backend/src/services/stats.service.ts` → `getMonthlyStats()`, l'oggetto `distribution` (inOffice/remote/mission/leave/sick) contava TUTTI gli status del mese, non solo quelli con `isConfirmed: true`. Solo `presenceDaysConfirmed` filtrava per `isConfirmed`. Risultato: nella pagina "My Stats" (sezione "Days Distribution (Confirmed)"), uno status appena impostato oggi (es. "On vacation"/leave, "On mission") appariva subito nel bar plot, prima della conferma reale (cron `autoConfirmStatuses` alle 23:59, o check-in per in_office/remote).
+- **Fix:** aggiunto filtro `&& ws.isConfirmed` a tutte e 5 le categorie di `distribution` in `stats.service.ts`. Questa funzione è condivisa anche da `Organisation.tsx` (vista colleghi per Director/Owner), quindi il fix copre entrambe le viste.
+- **Test aggiunto:** `backend/src/__tests__/stats.test.ts` → nuovo test verifica che status non confermati (oggi, `isConfirmed: false`) NON vengano contati in `distribution`/`presenceDaysConfirmed`, mentre quelli confermati sì. Non eseguibile in remoto (vedi nota MongoDB CDN sotto), ma build TypeScript passa senza errori (backend + frontend).
+- **Check-in (v1 del bug originale):** era già stato risolto in sessioni precedenti (commit `d5ade0d` fix normalizzazione case, `e1bc55e` fix permessi update dopo check-in) — utente ha confermato in v2 che il check-in ora funziona.
+- **Non ancora verificato:** comportamento a runtime (no Mongo locale in questo ambiente). Da testare manualmente o in CI con Mongo reale: impostare uno status oggi, verificare che NON appaia in "My Stats" finché non confermato (check-in o cron 23:59).
+
+**Completata (già mergiata su main, PR #49):**
 Fix capacity plan view (branch `claude/capacity-plan-view-fix-7hs5z4`):
-- **Bug:** ogni day card mostrava "89 posti disponibili" invece di 23 — `getStatusForUser` (working-status.service.ts) e `getPresenceBreakdown` (capacity.service.ts) sommavano la capacity di **tutte** le stanze (`Room.find({})` / `Room.find({isActive:true})`), incluse lab/admin/management, invece delle sole stanze `open_space` usate per il desk booking (Red+Green+Blue+Lab+Admin+Management = 89 nei dati di default).
-- **Fix:** entrambe le funzioni ora riusano `getTotalCapacity()` (già corretta, filtra `type: 'open_space', isActive: true`) invece di duplicare la somma su tutte le stanze. Nessuna modifica frontend necessaria — il bug era solo nel calcolo backend del denominatore `totalCapacity` restituito da `/presence` e propagato via WebSocket (`change-stream.service.ts` → `broadcastToDate`).
+- **Bug:** ogni day card mostrava "89 posti disponibili" invece di 23 — `getStatusForUser` (working-status.service.ts) e `getPresenceBreakdown` (capacity.service.ts) sommavano la capacity di **tutte** le stanze (`Room.find({})` / `Room.find({isActive:true})`), incluse lab/admin/management, invece delle sole stanze `open_space` usate per il desk booking.
+- **Fix:** entrambe le funzioni ora riusano `getTotalCapacity()` (già corretta, filtra `type: 'open_space', isActive: true`) invece di duplicare la somma su tutte le stanze.
 - **File modificati:** `backend/src/services/capacity.service.ts`, `backend/src/services/working-status.service.ts`
-- **Da fare:** aprire PR verso main; verificare in produzione che il numero mostrato torni a corrispondere ai posti open_space reali configurati (es. 23 se le stanze di produzione hanno capacity totale open_space = 23, diversa dal seed di default che dà 60).
 
 **Pendente da sessioni precedenti (PR #42):**
 Fix retrofit PR #42:

@@ -50,11 +50,13 @@ export async function getMonthlyStats(userId: string, month: string): Promise<Mo
   const presenceDaysTarget = user?.contract?.presenceDaysTarget ?? 10;
 
   const distribution = {
-    inOffice: statuses.filter((ws) => ws.status === 'in_office').length,
-    remote: statuses.filter((ws) => ws.status === 'remote').length,
-    mission: statuses.filter((ws) => ws.status === 'mission').length,
-    leave: statuses.filter((ws) => ws.status === 'leave' || ws.status === 'parental_leave').length,
-    sick: statuses.filter((ws) => ws.status === 'sick').length,
+    inOffice: statuses.filter((ws) => ws.status === 'in_office' && ws.isConfirmed).length,
+    remote: statuses.filter((ws) => ws.status === 'remote' && ws.isConfirmed).length,
+    mission: statuses.filter((ws) => ws.status === 'mission' && ws.isConfirmed).length,
+    leave: statuses.filter(
+      (ws) => (ws.status === 'leave' || ws.status === 'parental_leave') && ws.isConfirmed
+    ).length,
+    sick: statuses.filter((ws) => ws.status === 'sick' && ws.isConfirmed).length,
   };
 
   const unbooking = {
