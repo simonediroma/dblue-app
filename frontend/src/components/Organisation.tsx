@@ -143,9 +143,8 @@ export default function Organisation({ days: _days = [], activeMonth }: Organisa
  </button>
  </div>
  </div>
- {view === 'aggregated' && (
  <div className="flex items-center gap-2 -mt-2">
- <span className="font-sans text-on-surface-variant text-sm">Overview of</span>
+ <span className="font-sans text-on-surface-variant text-sm">{view === 'aggregated' ? 'Overview of' : 'Viewing'}</span>
  <div className="relative">
  <button onClick={() => setIsMonthDropdownOpen(!isMonthDropdownOpen)}
  className="flex items-center gap-1 px-3 py-1 bg-surface-container-low rounded-xl border border-outline-variant/10 text-primary font-bold text-sm transition-all hover:bg-surface-container-high"
@@ -179,7 +178,6 @@ export default function Organisation({ days: _days = [], activeMonth }: Organisa
  </AnimatePresence>
  </div>
  </div>
- )}
  </section>
 
  <AnimatePresence mode="wait">
@@ -378,7 +376,7 @@ export default function Organisation({ days: _days = [], activeMonth }: Organisa
  <div className="grid grid-cols-2 gap-4">
  <div className="bg-surface-container-lowest rounded-[24px] p-5 shadow-ambient border border-outline-variant/10 flex flex-col gap-2">
  <span className="text-xs font-bold text-on-surface-variant uppercase tracking-widest opacity-50">Office days</span>
- <span className="text-3xl font-headline font-black text-on-surface">{colleagueStats.presenceDaysConfirmed}<span className="text-base text-on-surface-variant/40 font-bold ml-1">/{colleagueStats.presenceDaysTarget}</span></span>
+ <span className="text-3xl font-headline font-black text-on-surface">{colleagueStats.distribution.inOffice}<span className="text-base text-on-surface-variant/40 font-bold ml-1">/{colleagueStats.presenceDaysTarget}</span></span>
  <span className="text-xs text-on-surface-variant/50">target days this month</span>
  </div>
  <div className="bg-surface-container-lowest rounded-[24px] p-5 shadow-ambient border border-outline-variant/10 flex flex-col gap-2">
