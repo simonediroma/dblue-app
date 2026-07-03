@@ -1,14 +1,21 @@
 # Stato Corrente
 > Gitignored. Aggiornato da Claude a fine sessione.
 
-**Ultima sessione:** 2026-07-01
-**Branch corrente:** `claude/retrofitting-area-start-fix-u7f2h7` (pushato, PR #42 aperta)
-**PR in corso:** #42 — fix retrofit: card mese storico non cliccabili + endpoint corretto
+**Ultima sessione:** 2026-07-03
+**Branch corrente:** `claude/capacity-plan-view-fix-7hs5z4` (pushato, PR da aprire)
+**PR in corso:** fix capacity plan view — totalCapacity mostrava 89 (tutte le stanze) invece di 23 (solo open_space)
 
 ---
 
 ## Prossima sessione — inizia da qui
 
+Fix capacity plan view (branch `claude/capacity-plan-view-fix-7hs5z4`):
+- **Bug:** ogni day card mostrava "89 posti disponibili" invece di 23 — `getStatusForUser` (working-status.service.ts) e `getPresenceBreakdown` (capacity.service.ts) sommavano la capacity di **tutte** le stanze (`Room.find({})` / `Room.find({isActive:true})`), incluse lab/admin/management, invece delle sole stanze `open_space` usate per il desk booking (Red+Green+Blue+Lab+Admin+Management = 89 nei dati di default).
+- **Fix:** entrambe le funzioni ora riusano `getTotalCapacity()` (già corretta, filtra `type: 'open_space', isActive: true`) invece di duplicare la somma su tutte le stanze. Nessuna modifica frontend necessaria — il bug era solo nel calcolo backend del denominatore `totalCapacity` restituito da `/presence` e propagato via WebSocket (`change-stream.service.ts` → `broadcastToDate`).
+- **File modificati:** `backend/src/services/capacity.service.ts`, `backend/src/services/working-status.service.ts`
+- **Da fare:** aprire PR verso main; verificare in produzione che il numero mostrato torni a corrispondere ai posti open_space reali configurati (es. 23 se le stanze di produzione hanno capacity totale open_space = 23, diversa dal seed di default che dà 60).
+
+**Pendente da sessioni precedenti (PR #42):**
 Fix retrofit PR #42:
 - **Bug originale:** card dei mesi passati non erano cliccabili (mancava `onClick` nel rendering `isHistoricalView`)
 - **Fix 1 (commit 1):** aggiunto `onClick` ai card storici; `handleUpdateStatus` chiama API diretta invece di `hookUpdateStatus` per non inquinare `days` state; reload `historicalDays` dopo ogni aggiornamento; fix `isPast` in `handleUpdateOffTime`
