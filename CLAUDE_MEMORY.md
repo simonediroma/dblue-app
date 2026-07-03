@@ -1,19 +1,20 @@
 # Stato Corrente
 > Gitignored. Aggiornato da Claude a fine sessione.
 
-**Ultima sessione:** 2026-07-01
-**Branch corrente:** `claude/retrofitting-area-start-fix-u7f2h7` (pushato, PR #42 aperta)
-**PR in corso:** #42 — fix retrofit: card mese storico non cliccabili + endpoint corretto
+**Ultima sessione:** 2026-07-03
+**Branch corrente:** `claude/my-stats-confirmation-logic-aph70v` (pushato)
+**PR in corso:** TBD — fix My Stats: distribuzione statuses non filtrata per isConfirmed
 
 ---
 
 ## Prossima sessione — inizia da qui
 
-Fix retrofit PR #42:
-- **Bug originale:** card dei mesi passati non erano cliccabili (mancava `onClick` nel rendering `isHistoricalView`)
-- **Fix 1 (commit 1):** aggiunto `onClick` ai card storici; `handleUpdateStatus` chiama API diretta invece di `hookUpdateStatus` per non inquinare `days` state; reload `historicalDays` dopo ogni aggiornamento; fix `isPast` in `handleUpdateOffTime`
-- **Fix 2 (commit 2):** aggiunta `retrofitStatus()` in `api.ts` → chiama `POST /presence/:date/retrofit` (endpoint corretto per spec); gestione errori 400/409 con notifica visibile all'utente
-- **Spec retrofit:** tutti gli utenti possono retrofittare il proprio status del mese precedente; Director/Owner possono retrofittare status di altri utenti via `/admin/retrofit/:userId/:date`
+Fix "My Stats" confirmation logic (branch `claude/my-stats-confirmation-logic-aph70v`):
+- **Bug:** in `backend/src/services/stats.service.ts` → `getMonthlyStats()`, l'oggetto `distribution` (inOffice/remote/mission/leave/sick) contava TUTTI gli status del mese, non solo quelli con `isConfirmed: true`. Solo `presenceDaysConfirmed` filtrava per `isConfirmed`. Risultato: nella pagina "My Stats" (sezione "Days Distribution (Confirmed)"), uno status appena impostato oggi (es. "On vacation"/leave, "On mission") appariva subito nel bar plot, prima della conferma reale (cron `autoConfirmStatuses` alle 23:59, o check-in per in_office/remote).
+- **Fix:** aggiunto filtro `&& ws.isConfirmed` a tutte e 5 le categorie di `distribution` in `stats.service.ts`. Questa funzione è condivisa anche da `Organisation.tsx` (vista colleghi per Director/Owner), quindi il fix copre entrambe le viste.
+- **Test aggiunto:** `backend/src/__tests__/stats.test.ts` → nuovo test verifica che status non confermati (oggi, `isConfirmed: false`) NON vengano contati in `distribution`/`presenceDaysConfirmed`, mentre quelli confermati sì. Non eseguibile in remoto (vedi nota MongoDB CDN sotto), ma build TypeScript passa senza errori (backend + frontend).
+- **Check-in (v1 del bug originale):** era già stato risolto in sessioni precedenti (commit `d5ade0d` fix normalizzazione case, `e1bc55e` fix permessi update dopo check-in) — utente ha confermato in v2 che il check-in ora funziona.
+- **Non ancora verificato:** comportamento a runtime (no Mongo locale in questo ambiente). Da testare manualmente o in CI con Mongo reale: impostare uno status oggi, verificare che NON appaia in "My Stats" finché non confermato (check-in o cron 23:59).
 
 **Pendente da sessioni precedenti:**
 - Branch `claude/mpck-interface-audit-30cwoz` con mock audit Phase 1+2 — da aprire PR separata verso main.
