@@ -187,11 +187,12 @@ export default function DayCard({ day, onClick, onDoubleClick, onCheckIn, isSimp
  <div className="flex -space-x-1.5 sm:-space-x-2">
  {(() => {
  let avatarsToDisplay: Array<{initials: string, color: string}> = [];
- 
+
  const limit = 10;
- 
+
  if (projectTeammates.length > 0) {
- avatarsToDisplay = projectTeammates.map(c => ({ initials: c.initials, color: c.color }));
+ const officeInitials = new Set((day.colleagueAvatars || []).map(a => a.initials));
+ avatarsToDisplay = projectTeammates.filter(c => officeInitials.has(c.initials)).map(c => ({ initials: c.initials, color: c.color }));
  } else {
  avatarsToDisplay = [...(day.colleagueAvatars || [])];
  }
@@ -326,9 +327,10 @@ export default function DayCard({ day, onClick, onDoubleClick, onCheckIn, isSimp
  <div className="flex -space-x-2 sm:space-x-[-7px]">
  {(() => {
  let avatarsToDisplay: Array<{initials: string, color: string}> = [];
- 
+
  if (projectTeammates.length > 0) {
- avatarsToDisplay = projectTeammates.map(c => ({ initials: c.initials, color: c.color }));
+ const officeInitials = new Set((day.colleagueAvatars || []).map(a => a.initials));
+ avatarsToDisplay = projectTeammates.filter(c => officeInitials.has(c.initials)).map(c => ({ initials: c.initials, color: c.color }));
  } else {
  avatarsToDisplay = [...(day.colleagueAvatars || [])];
  }
