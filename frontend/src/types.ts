@@ -48,6 +48,7 @@ export interface DayPresence {
   totalCapacity?: number;
   projectTeammatesCount?: number;
   colleagueAvatars?: ColleagueAvatarInfo[];
+  officeUserIds?: string[];
   isHighlighted?: boolean;
   isCheckedIn?: boolean;
   room?: string;
