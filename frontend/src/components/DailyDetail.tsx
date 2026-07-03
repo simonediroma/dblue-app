@@ -1530,7 +1530,7 @@ export default function DailyDetail({
  >
  Retrofit Working Status
  </button>
- ) : (isCurrentDay || !day.isCheckedIn) && !isMandatory && (
+ ) : !day.isCheckedIn && !isMandatory && (
  <button onClick={() => setStep('PLANNING')}
  className="p-2 text-primary hover:bg-primary/5 rounded-full transition-colors shrink-0"
  >
