@@ -1,7 +1,7 @@
 import { Types } from 'mongoose';
 import { WorkingStatus, IWorkingStatus, WorkingStatusValue } from '../models/working-status.model';
 import { User } from '../models/user.model';
-import { isCapacityAvailable, promoteFromWaitingList, getTotalCapacity } from './capacity.service';
+import { isCapacityAvailable, promoteFromWaitingList, getTotalCapacity, getBookedCount } from './capacity.service';
 import { sendSickLeaveConfirmation } from './email.service';
 
 // Returns true if date is today or tomorrow
@@ -100,11 +100,16 @@ export async function getStatusForUser(
   });
 }
 
+export interface WorkingStatusWithCapacity extends Record<string, unknown> {
+  bookedCount: number;
+  totalCapacity: number;
+}
+
 export async function upsertStatus(
   userId: Types.ObjectId,
   date: string,
   payload: { status: string; isUsingDesk?: boolean; room?: string }
-): Promise<IWorkingStatus> {
+): Promise<WorkingStatusWithCapacity> {
   payload = { ...payload, status: payload.status.toLowerCase() };
 
   const existing = await WorkingStatus.findOne({ userId, date });
@@ -169,14 +174,19 @@ export async function upsertStatus(
       .catch((err) => console.error('sick email lookup error:', err));
   }
 
-  return result!;
+  const [bookedCount, totalCapacity] = await Promise.all([
+    getBookedCount(date),
+    getTotalCapacity(date),
+  ]);
+
+  return { ...result!.toObject(), bookedCount, totalCapacity };
 }
 
 export async function bulkUpsertStatus(
   userId: Types.ObjectId,
   updates: Array<{ date: string; status: string; isUsingDesk?: boolean; room?: string }>
-): Promise<{ succeeded: IWorkingStatus[]; failed: Array<{ date: string; error: string }> }> {
-  const succeeded: IWorkingStatus[] = [];
+): Promise<{ succeeded: WorkingStatusWithCapacity[]; failed: Array<{ date: string; error: string }> }> {
+  const succeeded: WorkingStatusWithCapacity[] = [];
   const failed: Array<{ date: string; error: string }> = [];
 
   for (const update of updates) {
