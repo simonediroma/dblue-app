@@ -9,3 +9,6 @@ dist/
 
 # PDF generati dai documenti di analisi (artefatti, non versionati)
 docs/*.pdf
+
+# Stato di sessione Claude (locale, causa conflitti se tracciato tra branch)
+CLAUDE_MEMORY.md
