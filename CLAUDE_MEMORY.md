@@ -2,18 +2,20 @@
 > Gitignored. Aggiornato da Claude a fine sessione.
 
 **Ultima sessione:** 2026-07-03
-**Branch corrente:** `claude/capacity-plan-view-fix-7hs5z4` (pushato, PR da aprire)
-**PR in corso:** fix capacity plan view — totalCapacity mostrava 89 (tutte le stanze) invece di 23 (solo open_space)
+**Branch corrente:** `claude/plan-view-capacity-counter-fix` (pushato, PR da aprire)
+**PR in corso:** fix contatore capacity che si azzera dopo aver impostato "in office" su un giorno
 
 ---
 
 ## Prossima sessione — inizia da qui
 
-Fix capacity plan view (branch `claude/capacity-plan-view-fix-7hs5z4`):
-- **Bug:** ogni day card mostrava "89 posti disponibili" invece di 23 — `getStatusForUser` (working-status.service.ts) e `getPresenceBreakdown` (capacity.service.ts) sommavano la capacity di **tutte** le stanze (`Room.find({})` / `Room.find({isActive:true})`), incluse lab/admin/management, invece delle sole stanze `open_space` usate per il desk booking (Red+Green+Blue+Lab+Admin+Management = 89 nei dati di default).
-- **Fix:** entrambe le funzioni ora riusano `getTotalCapacity()` (già corretta, filtra `type: 'open_space', isActive: true`) invece di duplicare la somma su tutte le stanze. Nessuna modifica frontend necessaria — il bug era solo nel calcolo backend del denominatore `totalCapacity` restituito da `/presence` e propagato via WebSocket (`change-stream.service.ts` → `broadcastToDate`).
-- **File modificati:** `backend/src/services/capacity.service.ts`, `backend/src/services/working-status.service.ts`
-- **Da fare:** aprire PR verso main; verificare in produzione che il numero mostrato torni a corrispondere ai posti open_space reali configurati (es. 23 se le stanze di produzione hanno capacity totale open_space = 23, diversa dal seed di default che dà 60).
+Fix contatore capacity post-update (branch `claude/plan-view-capacity-counter-fix`, PR successiva alla #49 — capacity plan view fix, mergiata):
+- **Bug:** dopo aver impostato lo status "in office" su un giorno (add o edit), il contatore x/23 nella Plan View saliva di 1 per un istante (update ottimistico) e poi collassava a un numero vuoto ("/").
+- **Causa:** `POST /presence` (route → `upsertStatus` in `working-status.service.ts`) restituiva il documento Mongoose grezzo di `WorkingStatus`, privo dei campi `bookedCount`/`totalCapacity`. Il frontend (`usePresence.ts` → `updateStatus`) fa un update ottimistico che imposta questi campi, ma poi sostituisce l'intero oggetto giorno con la risposta del server via `enrichDay(updated)`, azzerando bookedCount/totalCapacity a `undefined`. La Plan View (pastDays/currentDay/futureDays in `App.tsx`, righe ~695-698) legge questi campi direttamente dallo stato grezzo `days`, senza fallback — a differenza di `processedDays` (usato da Stats/Organisation) che ha un fallback `|| 23`.
+- **Fix:** `upsertStatus` ora ricalcola `bookedCount` (`getBookedCount`) e `totalCapacity` (`getTotalCapacity`, già filtrata su `open_space`) dopo la scrittura e li include nella risposta. Aggiornato anche il tipo di ritorno di `bulkUpsertStatus` (`WorkingStatusWithCapacity[]`) per coerenza, anche se il bug bulk era già mascherato da un fallback lato frontend.
+- **File modificati:** `backend/src/services/working-status.service.ts`
+- **Nota collaterale non risolta (fuori scope):** `isPast` non viene mai popolato nella risposta di `GET /presence` né altrove nel frontend prima di finire in `days` — quindi `pastDays` in App.tsx (riga 696, view non storica) è sempre vuoto. Sembra intenzionale (i giorni passati si vedono solo via `isHistoricalView`/`historicalDays`), ma da verificare se mai diventa un problema.
+- **Da fare:** aprire PR verso main; test backend non eseguibili in questo ambiente (MongoDB CDN bloccato) — solo `tsc --noEmit` verificato (passa pulito).
 
 **Pendente da sessioni precedenti (PR #42):**
 Fix retrofit PR #42:
