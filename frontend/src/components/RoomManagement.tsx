@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Plus, Trash2, Edit2, Check, ChevronLeft } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -94,7 +95,7 @@ export default function RoomManagement({ onBack, onRoomsChanged }: RoomManagemen
     }
   };
 
-  return (
+  return createPortal(
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="fixed inset-0 bg-surface z-[200] flex flex-col font-sans">
       <header className="px-6 py-4 bg-surface-container-lowest border-b border-outline-variant/10 flex items-center gap-4 shadow-sm">
         <button onClick={onBack} className="p-2 hover:bg-surface-container rounded-full transition-colors shrink-0">
@@ -228,6 +229,7 @@ export default function RoomManagement({ onBack, onRoomsChanged }: RoomManagemen
           </AnimatePresence>
         </div>
       </main>
-    </motion.div>
+    </motion.div>,
+    document.body
   );
 }
