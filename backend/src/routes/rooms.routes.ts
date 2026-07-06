@@ -4,6 +4,7 @@ import { requireRole } from '../middleware/rbac.middleware';
 import { Room, IRoom } from '../models/room.model';
 import { WorkingStatus } from '../models/working-status.model';
 import { IUser } from '../models/user.model';
+import { reallocateSeededBookings } from '../services/reallocation.service';
 
 const router = Router();
 
@@ -61,6 +62,13 @@ router.patch('/:id', requireAuth, requireRole('owner'), async (req: Request, res
     res.status(404).json({ error: 'Room non trovata' });
     return;
   }
+
+  if (capacity !== undefined && updated.type === 'open_space') {
+    reallocateSeededBookings().catch((err) =>
+      console.error('reallocateSeededBookings error:', err)
+    );
+  }
+
   res.json(updated);
 });
 
