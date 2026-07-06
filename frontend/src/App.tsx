@@ -1431,7 +1431,7 @@ export default function App() {
  )}
  </AnimatePresence>
  </Layout>
- <AdminBar />
+ <AdminBar onRoomsChanged={setRooms}/>
  </>
  );
 }

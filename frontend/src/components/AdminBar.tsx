@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { triggerSeed } from '../services/api';
-import type { SeedSummary } from '../services/api';
+import type { SeedSummary, Room } from '../services/api';
+import RoomManagement from './RoomManagement';
 
 type SeedState =
   | { status: 'idle' }
@@ -9,9 +10,14 @@ type SeedState =
   | { status: 'success'; summary: SeedSummary }
   | { status: 'error'; message: string };
 
-export default function AdminBar() {
+interface AdminBarProps {
+  onRoomsChanged?: (rooms: Room[]) => void;
+}
+
+export default function AdminBar({ onRoomsChanged }: AdminBarProps) {
   const { user } = useAuth();
   const [state, setState] = useState<SeedState>({ status: 'idle' });
+  const [showRoomManagement, setShowRoomManagement] = useState(false);
 
   if (!user || (user.role !== 'owner' && user.role !== 'director')) return null;
 
@@ -45,6 +51,15 @@ export default function AdminBar() {
           {state.status === 'loading' ? '...' : 'Seed DB (upsert)'}
         </button>
 
+        {user.role === 'owner' && (
+          <button
+            onClick={() => setShowRoomManagement(true)}
+            className="px-3 py-1 rounded bg-teal-700 hover:bg-teal-600 text-white font-medium transition-colors"
+          >
+            Gestisci Stanze
+          </button>
+        )}
+
         {state.status === 'success' && (
           <span className="text-green-400">
             ✓ {state.summary.users} utenti · {state.summary.rooms} rooms · {state.summary.workingStatuses} status · {state.summary.rangeMe}
@@ -65,6 +80,13 @@ export default function AdminBar() {
         >
           ✕
         </button>
+      )}
+
+      {showRoomManagement && (
+        <RoomManagement
+          onBack={() => setShowRoomManagement(false)}
+          onRoomsChanged={onRoomsChanged}
+        />
       )}
     </div>
   );

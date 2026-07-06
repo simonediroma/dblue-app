@@ -24,6 +24,7 @@ export interface Room {
   name: string;
   capacity: number;
   type: 'open_space' | 'lab' | 'admin' | 'management';
+  color?: string;
 }
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
@@ -149,6 +150,24 @@ export function checkIn(date: string, room?: string, isUsingDesk?: boolean): Pro
 
 export function getRooms(): Promise<Room[]> {
   return request<Room[]>('/rooms');
+}
+
+export function createRoom(payload: { name: string; capacity: number; type: Room['type']; color?: string }): Promise<Room> {
+  return request<Room>('/rooms', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateRoom(id: string, payload: Partial<Pick<Room, 'name' | 'capacity' | 'color'>>): Promise<Room> {
+  return request<Room>(`/rooms/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteRoom(id: string): Promise<Room> {
+  return request<Room>(`/rooms/${id}`, { method: 'DELETE' });
 }
 
 export function updateOffTime(date: string, offTime: { type: string; hours?: number } | null): Promise<DayPresence> {
