@@ -19,20 +19,20 @@ router.get('/', requireAuth, async (req: Request, res: Response): Promise<void> 
   const user = req.user as IUser;
   const allowedTypes = ROOM_TYPES_BY_ROLE[user.role];
   const rooms = await Room.find({ isActive: true, type: { $in: allowedTypes } }).select(
-    'id name capacity type'
+    'id name capacity type color'
   );
   res.json(rooms);
 });
 
 router.post('/', requireAuth, requireRole('owner'), async (req: Request, res: Response): Promise<void> => {
   const user = req.user as IUser;
-  const { name, capacity, type } = req.body as Pick<IRoom, 'name' | 'capacity' | 'type'>;
-  const room = await Room.create({ name, capacity, type, createdBy: user._id });
+  const { name, capacity, type, color } = req.body as Pick<IRoom, 'name' | 'capacity' | 'type' | 'color'>;
+  const room = await Room.create({ name, capacity, type, color, createdBy: user._id });
   res.status(201).json(room);
 });
 
 router.patch('/:id', requireAuth, requireRole('owner'), async (req: Request, res: Response): Promise<void> => {
-  const { name, capacity, isActive } = req.body as Partial<Pick<IRoom, 'name' | 'capacity' | 'isActive'>>;
+  const { name, capacity, color, isActive } = req.body as Partial<Pick<IRoom, 'name' | 'capacity' | 'color' | 'isActive'>>;
 
   if (isActive === false) {
     const room = await Room.findById(req.params.id).lean();
@@ -53,6 +53,7 @@ router.patch('/:id', requireAuth, requireRole('owner'), async (req: Request, res
   const patch: Partial<IRoom> = {};
   if (name !== undefined) patch.name = name;
   if (capacity !== undefined) patch.capacity = capacity;
+  if (color !== undefined) patch.color = color;
   if (isActive !== undefined) patch.isActive = isActive;
 
   const updated = await Room.findByIdAndUpdate(req.params.id, patch, { new: true });
