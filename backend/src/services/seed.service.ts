@@ -129,6 +129,7 @@ interface StatusRecord {
   isUsingDesk?: boolean;
   isRetrofit: boolean;
   isLastMinuteUnbooking: boolean;
+  isSeeded: boolean;
 }
 
 function buildStatusForUser(
@@ -184,6 +185,7 @@ function buildStatusForUser(
       confirmedAt: isPast ? new Date(date + 'T18:00:00Z') : undefined,
       isRetrofit: false,
       isLastMinuteUnbooking: lastMinuteDays.has(date),
+      isSeeded: true,
     };
     if (room) rec.room = room;
     if (isUsingDesk) rec.isUsingDesk = true;

@@ -25,6 +25,7 @@ export interface IWorkingStatus extends Document {
   };
   isRetrofit: boolean;
   isLastMinuteUnbooking: boolean;
+  isSeeded: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -53,11 +54,13 @@ const workingStatusSchema = new Schema<IWorkingStatus>(
     offTime: { type: offTimeSchema },
     isRetrofit: { type: Boolean, default: false },
     isLastMinuteUnbooking: { type: Boolean, default: false },
+    isSeeded: { type: Boolean, default: false },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
 workingStatusSchema.index({ userId: 1, date: 1 }, { unique: true });
 workingStatusSchema.index({ date: 1, status: 1 });
+workingStatusSchema.index({ isSeeded: 1, date: 1 });
 
 export const WorkingStatus = mongoose.model<IWorkingStatus>('WorkingStatus', workingStatusSchema);
