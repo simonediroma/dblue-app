@@ -22,6 +22,10 @@ const BOOKED_STATUSES: WorkingStatusValue[] = ['in_office', 'office_no_desk'];
 // Simple in-memory cache for total capacity (changes rarely)
 let capacityCache: { value: number; expiresAt: number } | null = null;
 
+export function invalidateCapacityCache(): void {
+  capacityCache = null;
+}
+
 export async function getTotalCapacity(_date: string): Promise<number> {
   const now = Date.now();
   if (capacityCache && now < capacityCache.expiresAt) {

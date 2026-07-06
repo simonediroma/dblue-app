@@ -5,6 +5,7 @@ import { Room, IRoom } from '../models/room.model';
 import { WorkingStatus } from '../models/working-status.model';
 import { IUser } from '../models/user.model';
 import { reallocateSeededBookings } from '../services/reallocation.service';
+import { invalidateCapacityCache } from '../services/capacity.service';
 
 const router = Router();
 
@@ -29,6 +30,7 @@ router.post('/', requireAuth, requireRole('owner'), async (req: Request, res: Re
   const user = req.user as IUser;
   const { name, capacity, type, color } = req.body as Pick<IRoom, 'name' | 'capacity' | 'type' | 'color'>;
   const room = await Room.create({ name, capacity, type, color, createdBy: user._id });
+  invalidateCapacityCache();
   res.status(201).json(room);
 });
 
@@ -62,6 +64,7 @@ router.patch('/:id', requireAuth, requireRole('owner'), async (req: Request, res
     res.status(404).json({ error: 'Room non trovata' });
     return;
   }
+  invalidateCapacityCache();
 
   if (capacity !== undefined && updated.type === 'open_space') {
     reallocateSeededBookings().catch((err) =>
@@ -91,6 +94,7 @@ router.delete('/:id', requireAuth, requireRole('owner'), async (req: Request, re
     res.status(404).json({ error: 'Room non trovata' });
     return;
   }
+  invalidateCapacityCache();
   res.json(updated);
 });
 
