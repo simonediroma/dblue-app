@@ -581,11 +581,11 @@ export default function DailyDetail({
  <motion.div initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} onClick={() => setShowUnbookingModal(false)}
  className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[200]"
  />
- <motion.div initial={{opacity: 0, scale: 0.9, y: 20}} animate={{opacity: 1, scale: 1, y: 0}} exit={{opacity: 0, scale: 0.9, y: 20}} className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-48px)] max-w-sm bg-surface-container-lowest rounded-[32px] p-8 z-[201] shadow-2xl overflow-hidden">
+ <motion.div data-testid="daily-detail-unbooking-warning" initial={{opacity: 0, scale: 0.9, y: 20}} animate={{opacity: 1, scale: 1, y: 0}} exit={{opacity: 0, scale: 0.9, y: 20}} className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-48px)] max-w-sm bg-surface-container-lowest rounded-[32px] p-8 z-[201] shadow-2xl overflow-hidden">
  <div className="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center mb-6 mx-auto">
  <AlertTriangle className="w-8 h-8 text-red-600"/>
  </div>
- 
+
  <h3 className="font-headline text-xl font-bold text-on-surface text-center mb-3">Last-minute change</h3>
  <p className="font-sans text-sm text-on-surface-variant text-center mb-8 px-2 leading-relaxed">
  If you change the status for <span className="font-bold text-on-surface">today</span> you will do a last-minute unbooking.
@@ -638,7 +638,7 @@ export default function DailyDetail({
  </div>
 
  <div className="space-y-4">
- <button onClick={() => onUpdateOffTime(day.date, { type: OffTimeType.MORNING })}
+ <button data-testid="offtime-morning" onClick={() => onUpdateOffTime(day.date, { type: OffTimeType.MORNING })}
  className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-[28px] p-6 text-left shadow-sm hover:shadow-md hover:border-primary/30 transition-all group active:scale-[0.98] flex items-center gap-5"
  >
  <div className="w-14 h-14 rounded-full bg-orange-500/10 flex items-center justify-center shrink-0">
@@ -650,7 +650,7 @@ export default function DailyDetail({
  </div>
  </button>
 
- <button onClick={() => onUpdateOffTime(day.date, { type: OffTimeType.AFTERNOON })}
+ <button data-testid="offtime-afternoon" onClick={() => onUpdateOffTime(day.date, { type: OffTimeType.AFTERNOON })}
  className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-[28px] p-6 text-left shadow-sm hover:shadow-md hover:border-primary/30 transition-all group active:scale-[0.98] flex items-center gap-5"
  >
  <div className="w-14 h-14 rounded-full bg-indigo-500/10 flex items-center justify-center shrink-0">
@@ -666,7 +666,7 @@ export default function DailyDetail({
  <h3 className="text-on-surface-variant text-sm font-bold uppercase tracking-widest mb-4 pl-2 opacity-60 font-sans">Manual Input</h3>
  
  <div className="relative group">
- <select onChange={(e) => {
+ <select data-testid="offtime-custom-select" onChange={(e) => {
  const val = parseInt(e.target.value);
  if (val > 0) {
  onUpdateOffTime(day.date, { type: OffTimeType.CUSTOM, hours: val });
@@ -686,7 +686,7 @@ export default function DailyDetail({
  </div>
 
  {day.offTime && (
- <button onClick={() => onUpdateOffTime(day.date, undefined)}
+ <button data-testid="offtime-remove" onClick={() => onUpdateOffTime(day.date, undefined)}
  className="w-full mt-8 text-red-500 font-bold py-4 hover:bg-red-50 rounded-2xl transition-colors"
  >
  Remove time off
@@ -740,7 +740,7 @@ export default function DailyDetail({
  const isSelectedRoom = room.name === day.room;
 
  return (
- <button key={room.id} onClick={() => handleRoomSelect(room.name, true)}
+ <button key={room.id} data-testid="room-option" onClick={() => handleRoomSelect(room.name, true)}
  className={`w-full bg-surface-container-lowest rounded-2xl p-5 flex items-center justify-between transition-all duration-200 border ${
  isCurrentRoom && hasActivityPlanned
  ? 'border-orange-500 ring-1 ring-orange-500/20 shadow-orange-500/10'
@@ -757,7 +757,7 @@ export default function DailyDetail({
  {room.name}
  </span>
  {isSelectedRoom && (
- <span className="text-[10px] font-bold bg-green-500/10 text-green-600 px-2 py-0.5 rounded-full uppercase tracking-wider">Planned</span>
+ <span data-testid="room-planned-badge" className="text-[10px] font-bold bg-green-500/10 text-green-600 px-2 py-0.5 rounded-full uppercase tracking-wider">Planned</span>
  )}
  </div>
  {isCurrentRoom && hasActivityPlanned && (
@@ -1298,7 +1298,7 @@ export default function DailyDetail({
  const extRoomColor = roomTypeColor[room.type] ?? roomFallbackColors[roomIdx % roomFallbackColors.length];
 
  return (
- <button key={room.id} onClick={() => updateRoomConfig(dateStr, room.name, true)}
+ <button key={room.id} data-testid="extend-room-option" onClick={() => updateRoomConfig(dateStr, room.name, true)}
  className={`
  flex flex-col gap-0.5 px-2.5 py-2.5 rounded-xl border text-left transition-all
  ${isActive ? 'bg-primary/5 border-primary shadow-sm' : 'bg-surface-container-lowest border-outline-variant/30 hover:border-primary/40'}
@@ -1349,11 +1349,11 @@ export default function DailyDetail({
  <motion.div initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} onClick={() => setShowUnbookingModal(false)}
  className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[200]"
  />
- <motion.div initial={{opacity: 0, scale: 0.9, y: 20}} animate={{opacity: 1, scale: 1, y: 0}} exit={{opacity: 0, scale: 0.9, y: 20}} className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-48px)] max-w-sm bg-surface-container-lowest rounded-[32px] p-8 z-[201] shadow-2xl overflow-hidden">
+ <motion.div data-testid="daily-detail-unbooking-warning" initial={{opacity: 0, scale: 0.9, y: 20}} animate={{opacity: 1, scale: 1, y: 0}} exit={{opacity: 0, scale: 0.9, y: 20}} className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-48px)] max-w-sm bg-surface-container-lowest rounded-[32px] p-8 z-[201] shadow-2xl overflow-hidden">
  <div className="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center mb-6 mx-auto">
  <AlertTriangle className="w-8 h-8 text-red-600"/>
  </div>
- 
+
  <h3 className="font-headline text-xl font-bold text-on-surface text-center mb-3">Last-minute change</h3>
  <p className="font-sans text-sm text-on-surface-variant text-center mb-8 px-2 leading-relaxed">
  If you change the status for <span className="font-bold text-on-surface">{day.date === todayStr && unbookingWarningDays.includes(day.date) ? 'today' : unbookingWarningDays.map(d => formatAppDate(d, 'short')).join(', ')}</span> you will do a last-minute unbooking.
@@ -1894,7 +1894,7 @@ function ColleagueItem({ name, role, status, initials, color, workspaceIcon, has
  const WorkspaceIconComp = workspaceIcon === 'desk' ? Monitor : Headset;
 
  return (
- <div className={`flex items-center justify-between p-3 sm:p-4 hover:bg-surface-container transition-colors border-b border-outline-variant/5 last:border-b-0`}>
+ <div data-testid="colleague-item" className={`flex items-center justify-between p-3 sm:p-4 hover:bg-surface-container transition-colors border-b border-outline-variant/5 last:border-b-0`}>
  <div className="flex items-center gap-2 sm:gap-3">
  <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold text-white border border-outline-variant/10 shadow-sm ${color || 'bg-surface-container-low'}`}>
  {initials || name.substring(0, 2).toUpperCase()}

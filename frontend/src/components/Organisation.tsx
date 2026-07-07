@@ -131,12 +131,12 @@ export default function Organisation({ days: _days = [], activeMonth }: Organisa
  Org. stats
  </h1>
  <div className="flex p-1 bg-surface-container-low rounded-2xl border border-outline-variant/10 shrink-0 shadow-sm">
- <button onClick={() => setView('aggregated')}
+ <button data-testid="org-view-aggregated" onClick={() => setView('aggregated')}
  className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${view === 'aggregated' ? 'bg-surface-container-lowest shadow-sm text-primary' : 'text-on-surface-variant/60 hover:text-on-surface'}`}
  >
  Aggregated
  </button>
- <button onClick={() => setView('individual')}
+ <button data-testid="org-view-individual" onClick={() => setView('individual')}
  className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${view === 'individual' ? 'bg-surface-container-lowest shadow-sm text-primary' : 'text-on-surface-variant/60 hover:text-on-surface'}`}
  >
  Individual
@@ -147,7 +147,7 @@ export default function Organisation({ days: _days = [], activeMonth }: Organisa
  <div className="flex items-center gap-2 -mt-2">
  <span className="font-sans text-on-surface-variant text-sm">Overview of</span>
  <div className="relative">
- <button onClick={() => setIsMonthDropdownOpen(!isMonthDropdownOpen)}
+ <button data-testid="org-month-select" onClick={() => setIsMonthDropdownOpen(!isMonthDropdownOpen)}
  className="flex items-center gap-1 px-3 py-1 bg-surface-container-low rounded-xl border border-outline-variant/10 text-primary font-bold text-sm transition-all hover:bg-surface-container-high"
  >
  {selectedMonth}
@@ -292,7 +292,7 @@ export default function Organisation({ days: _days = [], activeMonth }: Organisa
  <h3 className="text-xs font-bold text-on-surface-variant uppercase tracking-widest opacity-50">Filter by Employee</h3>
  </div>
  <div className="relative">
- <button onClick={() => setIsColleagueDropdownOpen(!isColleagueDropdownOpen)}
+ <button data-testid="org-colleague-select" onClick={() => setIsColleagueDropdownOpen(!isColleagueDropdownOpen)}
  className="w-full flex items-center justify-between px-6 py-4 bg-surface-container-low rounded-[24px] border border-outline-variant/10 text-on-surface font-bold transition-all hover:bg-surface-container-high group"
  >
  <div className="flex items-center gap-3">

@@ -104,7 +104,7 @@ export default function DayCard({ day, onClick, onDoubleClick, onCheckIn, isSimp
 
  if (day.isHighlighted) {
  return (
- <div data-testid="day-card" ref={containerRef} className={`w-full relative group rounded-[24px] sm:rounded-[28px] overflow-hidden dynamic-border-card mb-2 sm:mb-4 ${marginClass} ${isClosed ? 'opacity-40 pointer-events-none' : 'cursor-pointer'} animate-card-entrance ${isVisible ? 'is-visible' : ''} ${shouldWillChange ? 'will-change' : ''}`} style={{...cardStyle, '--angle-start-delay': `${cardStartTime - 100}ms` } as any} onClick={onClick} onDoubleClick={(!isClosed && !isOfficeClosed) ? onDoubleClick : undefined}>
+ <div data-testid="day-card" data-date={day.date} ref={containerRef} className={`w-full relative group rounded-[24px] sm:rounded-[28px] overflow-hidden dynamic-border-card mb-2 sm:mb-4 ${marginClass} ${isClosed ? 'opacity-40 pointer-events-none' : 'cursor-pointer'} animate-card-entrance ${isVisible ? 'is-visible' : ''} ${shouldWillChange ? 'will-change' : ''}`} style={{...cardStyle, '--angle-start-delay': `${cardStartTime - 100}ms` } as any} onClick={onClick} onDoubleClick={(!isClosed && !isOfficeClosed) ? onDoubleClick : undefined}>
  {showWeekSeparator && (
  <div className="absolute -top-7 sm:-top-8 left-1 right-0 flex items-center gap-3 z-20 pointer-events-none">
  <span className="font-sans text-[10px] sm:text-[11px] font-bold text-[#AEBECF] tracking-wider uppercase">New week</span>
@@ -124,7 +124,7 @@ export default function DayCard({ day, onClick, onDoubleClick, onCheckIn, isSimp
  <div className="flex items-center gap-3">
  <div className="flex items-center gap-2 sm:gap-3">
  {day.status === WorkStatus.PENDING && !isClosed && !day.isPast ? (
- <button className={`font-headline text-[12px] sm:text-[14px] bg-surface-container-lowest border border-outline-variant/30 text-on-surface font-extrabold px-5 sm:px-7 py-2 sm:py-2.5 rounded-full shadow-sm transition-all hover:shadow-md active:scale-95 animate-content-scale-in`} style={{animationDelay: `${cardStartTime + 80}ms`}}>
+ <button data-testid="daycard-set-status-btn" className={`font-headline text-[12px] sm:text-[14px] bg-surface-container-lowest border border-outline-variant/30 text-on-surface font-extrabold px-5 sm:px-7 py-2 sm:py-2.5 rounded-full shadow-sm transition-all hover:shadow-md active:scale-95 animate-content-scale-in`} style={{animationDelay: `${cardStartTime + 80}ms`}}>
  Set
  </button>
  ) : !isClosed ? (
@@ -198,7 +198,7 @@ export default function DayCard({ day, onClick, onDoubleClick, onCheckIn, isSimp
  }
 
  return avatarsToDisplay.slice(0, limit).map((Colleague, i) => (
- <div key={i} className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 border-surface-container-lowest shadow-sm flex items-center justify-center text-[8px] sm:text-[9px] font-bold text-white ${Colleague.color} ${day.isPast ? 'grayscale opacity-70' : ''} animate-content-fade-in`} style={{animationDelay: `${cardStartTime + 100 + (i * 25)}ms`}}>
+ <div key={i} data-testid="daycard-teammate-avatar" className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 border-surface-container-lowest shadow-sm flex items-center justify-center text-[8px] sm:text-[9px] font-bold text-white ${Colleague.color} ${day.isPast ? 'grayscale opacity-70' : ''} animate-content-fade-in`} style={{animationDelay: `${cardStartTime + 100 + (i * 25)}ms`}}>
  {Colleague.initials}
  </div>
  ));
@@ -206,7 +206,7 @@ export default function DayCard({ day, onClick, onDoubleClick, onCheckIn, isSimp
  </div>
  {!day.isPast && !isOfficeClosed && (
  <div className="flex flex-col items-start gap-1 animate-content-fade-in" style={{animationDelay: `${cardStartTime + 220}ms`}}>
- <span className={`font-headline text-[10px] sm:text-[12px] tracking-tight font-extrabold ${isFull ? 'text-red-500' : 'text-on-surface'}`}>
+ <span data-testid="daycard-occupancy" className={`font-headline text-[10px] sm:text-[12px] tracking-tight font-extrabold ${isFull ? 'text-red-500' : 'text-on-surface'}`}>
  {day.bookedCount}/{day.totalCapacity}
  </span>
  <div className="w-10 sm:w-12 h-[1px] bg-surface-container-low rounded-full overflow-hidden">
@@ -242,7 +242,7 @@ export default function DayCard({ day, onClick, onDoubleClick, onCheckIn, isSimp
  }
 
  return (
- <div data-testid="day-card" ref={containerRef} className={`bg-surface-container-lowest rounded-xl sm:rounded-2xl p-3 sm:p-4 flex flex-col justify-between h-28 sm:h-36 shadow-ambient hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 border border-transparent hover:border-outline-variant/30 relative ${marginClass} ${isClosed ? 'opacity-40 pointer-events-none' : 'cursor-pointer'} animate-card-entrance ${isVisible ? 'is-visible' : ''} ${shouldWillChange ? 'will-change' : ''}`} style={{...cardStyle, animationDelay: `${cardStartTime}ms`}} onClick={onClick} onDoubleClick={(!isClosed && !isOfficeClosed) ? onDoubleClick : undefined}>
+ <div data-testid="day-card" data-date={day.date} ref={containerRef} className={`bg-surface-container-lowest rounded-xl sm:rounded-2xl p-3 sm:p-4 flex flex-col justify-between h-28 sm:h-36 shadow-ambient hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 border border-transparent hover:border-outline-variant/30 relative ${marginClass} ${isClosed ? 'opacity-40 pointer-events-none' : 'cursor-pointer'} animate-card-entrance ${isVisible ? 'is-visible' : ''} ${shouldWillChange ? 'will-change' : ''}`} style={{...cardStyle, animationDelay: `${cardStartTime}ms`}} onClick={onClick} onDoubleClick={(!isClosed && !isOfficeClosed) ? onDoubleClick : undefined}>
  {showWeekSeparator && (
  <div className="absolute -top-6 left-1 right-0 flex items-center gap-3 z-0 pointer-events-none">
  <span className="font-sans text-[10px] sm:text-[11px] font-bold text-[#AEBECF] tracking-wider uppercase shrink-0">New week</span>
@@ -279,7 +279,7 @@ export default function DayCard({ day, onClick, onDoubleClick, onCheckIn, isSimp
  <Clock className="w-3 h-3 sm:w-4 sm:h-4"/>}
  </div>
  )}
- <button className="bg-surface-container-lowest border border-outline-variant/30 text-on-surface font-extrabold px-4 sm:px-5 py-2 sm:py-2.5 rounded-full shadow-sm transition-all hover:shadow-md active:scale-95 text-[10px] sm:text-[12px] uppercase">
+ <button data-testid="daycard-set-status-btn" className="bg-surface-container-lowest border border-outline-variant/30 text-on-surface font-extrabold px-4 sm:px-5 py-2 sm:py-2.5 rounded-full shadow-sm transition-all hover:shadow-md active:scale-95 text-[10px] sm:text-[12px] uppercase">
  Set
  </button>
  </div>
@@ -336,7 +336,7 @@ export default function DayCard({ day, onClick, onDoubleClick, onCheckIn, isSimp
  }
 
  return avatarsToDisplay.slice(0, 5).map((Colleague, i) => (
- <div key={i} className={`w-[20px] h-[20px] sm:w-[26px] sm:h-[26px] rounded-full border-2 border-surface-container-lowest overflow-hidden flex-shrink-0 flex items-center justify-center text-[7px] sm:text-[9px] font-bold text-white shadow-sm ${Colleague.color} ${day.isPast ? 'grayscale opacity-70' : ''} animate-content-fade-in`} style={{animationDelay: `${cardStartTime + 100 + (i * 25)}ms`}}>
+ <div key={i} data-testid="daycard-teammate-avatar" className={`w-[20px] h-[20px] sm:w-[26px] sm:h-[26px] rounded-full border-2 border-surface-container-lowest overflow-hidden flex-shrink-0 flex items-center justify-center text-[7px] sm:text-[9px] font-bold text-white shadow-sm ${Colleague.color} ${day.isPast ? 'grayscale opacity-70' : ''} animate-content-fade-in`} style={{animationDelay: `${cardStartTime + 100 + (i * 25)}ms`}}>
  {Colleague.initials}
  </div>
  ));
@@ -345,7 +345,7 @@ export default function DayCard({ day, onClick, onDoubleClick, onCheckIn, isSimp
  
  {!day.isPast && !isOfficeClosed && (
  <div className="flex flex-col items-end gap-0.5 sm:gap-1 flex-shrink-0 pl-1 animate-content-fade-in" style={{animationDelay: `${cardStartTime + 220}ms`}}>
- <span className={`font-sans text-[11px] sm:text-[13px] font-bold leading-none ${isFull ? 'text-red-500' : 'text-on-surface'}`}>
+ <span data-testid="daycard-occupancy" className={`font-sans text-[11px] sm:text-[13px] font-bold leading-none ${isFull ? 'text-red-500' : 'text-on-surface'}`}>
  {day.bookedCount}/{day.totalCapacity}
  </span>
  <div className="w-8 sm:w-11 h-[2px] sm:h-[3px] bg-[#F1F1F1] rounded-full overflow-hidden">

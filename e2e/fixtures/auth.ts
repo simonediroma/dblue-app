@@ -31,3 +31,34 @@ export async function logout(page: Page) {
   await page.getByRole('button', { name: /logout|sign out/i }).first().click();
   await page.waitForSelector('[data-testid="login-page"]', { timeout: 10000 });
 }
+
+// --- Additive: full DEV_ACCOUNTS role coverage for the CSV-coverage spec files ---
+// (backend/src/routes/auth.routes.ts DEV_ACCOUNTS — same fixed 6 accounts, one shared password)
+
+export type DevRole = 'owner' | 'employee' | 'lab_responsible' | 'admin_member' | 'director';
+
+const ROLE_EMAILS: Record<DevRole, string> = {
+  owner: DEV_LOGIN_USER,
+  employee: 'mario.rossi@dblue.it',
+  lab_responsible: 'sara.ferrari@dblue.it',
+  admin_member: 'luca.esposito@dblue.it',
+  director: 'giulia.bianchi@dblue.it',
+};
+
+export async function loginAs(page: Page, role: DevRole) {
+  await page.goto('/');
+  await page.waitForSelector('[data-testid="login-page"]', { timeout: 10000 });
+  await page.fill('input[type="email"]', ROLE_EMAILS[role]);
+  await page.fill('input[type="password"]', DEV_LOGIN_PASS);
+  await page.click('button[type="submit"]');
+  await page.waitForSelector('[data-testid="plan-page"]', { timeout: 15000 });
+}
+
+export const loginAsOwner = (page: Page) => loginAs(page, 'owner');
+export const loginAsLabResponsible = (page: Page) => loginAs(page, 'lab_responsible');
+export const loginAsAdminMember = (page: Page) => loginAs(page, 'admin_member');
+// NOTE: loginAsDirector (above) actually logs in dev@dblue.it, whose real backend
+// role is 'owner' — a pre-existing naming quirk, left untouched. This helper logs
+// in the *real* director-role account (giulia.bianchi@dblue.it) for tests that need
+// actual director-role RBAC (e.g. H-39, H-46).
+export const loginAsDirectorRole = (page: Page) => loginAs(page, 'director');

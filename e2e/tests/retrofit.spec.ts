@@ -290,3 +290,151 @@ test.describe('Retrofit — current month cards are NOT retrofitted', () => {
     await expect(dailyDetail.getByText(/are you sure you want to retrofit/i)).not.toBeVisible();
   });
 });
+
+// ---------------------------------------------------------------------------------
+// CSV coverage — Retrofitting (H-34 -> H-39)
+// Hits the real backend/DB (Railway dev environment) — no page.route() mocking like the
+// blocks above. See e2e/README.md.
+// ---------------------------------------------------------------------------------
+import type { Page } from '@playwright/test';
+import {
+  loginAsOwner as csvLoginAsOwner,
+  loginAsEmployee as csvLoginAsEmployee,
+  loginAsDirectorRole as csvLoginAsDirectorRole,
+} from '../fixtures/auth';
+import { prevMonthTestDate } from '../fixtures/dates';
+import { simulateConfirm } from '../fixtures/testAdmin';
+import {
+  openDayCard as csvOpenDayCard,
+  goToPlanningStep as csvGoToPlanningStep,
+  selectStatus as csvSelectStatus,
+  confirmRetrofit as csvConfirmRetrofit,
+  StatusKey,
+} from '../fixtures/dailyDetail';
+
+const CSV_API_BASE = process.env.API_BASE_URL ?? 'http://localhost:4000';
+
+function csvPrevMonthLabel(): string {
+  const d = new Date();
+  d.setMonth(d.getMonth() - 1);
+  return d.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+}
+
+async function csvNavigateToPrevMonth(page: Page) {
+  await page.click('[data-testid="month-selector-button"]');
+  await expect(page.getByText('Select Month')).toBeVisible({ timeout: 3000 });
+  await page.getByTestId('month-option').filter({ hasText: csvPrevMonthLabel() }).click();
+  await page.waitForSelector('[data-testid="day-card"]', { timeout: 5000 });
+}
+
+async function csvRetrofitStatus(page: Page, date: string, status: StatusKey) {
+  await csvNavigateToPrevMonth(page);
+  await csvOpenDayCard(page, date);
+  await csvGoToPlanningStep(page);
+  await csvSelectStatus(page, status);
+  await csvConfirmRetrofit(page);
+}
+
+test.describe('CSV coverage — Retrofitting', () => {
+  test.beforeEach(async ({ page }) => {
+    await csvLoginAsOwner(page);
+  });
+
+  test('[H-34] retrofit a past day — On a Mission', async ({ page }) => {
+    const date = prevMonthTestDate('H-34');
+    await csvRetrofitStatus(page, date, 'MISSION');
+
+    const res = await page.request.get(`${CSV_API_BASE}/presence?month=${date.slice(0, 7)}`);
+    const days = (await res.json()) as Array<{ date: string; status: string; isRetrofit: boolean }>;
+    const entry = days.find((d) => d.date === date);
+    expect(entry?.status).toBe('mission');
+    expect(entry?.isRetrofit).toBe(true);
+  });
+
+  test('[H-35] retrofit a past day — On Leave', async ({ page }) => {
+    const date = prevMonthTestDate('H-35');
+    await csvRetrofitStatus(page, date, 'LEAVE');
+
+    const res = await page.request.get(`${CSV_API_BASE}/presence?month=${date.slice(0, 7)}`);
+    const days = (await res.json()) as Array<{ date: string; status: string; isRetrofit: boolean }>;
+    const entry = days.find((d) => d.date === date);
+    expect(entry?.status).toBe('leave');
+    expect(entry?.isRetrofit).toBe(true);
+  });
+
+  test('[H-36] retrofit a past day — On Sick Leave', async ({ page }) => {
+    const date = prevMonthTestDate('H-36');
+    await csvRetrofitStatus(page, date, 'SICK');
+
+    const res = await page.request.get(`${CSV_API_BASE}/presence?month=${date.slice(0, 7)}`);
+    const days = (await res.json()) as Array<{ date: string; status: string; isRetrofit: boolean }>;
+    const entry = days.find((d) => d.date === date);
+    expect(entry?.status).toBe('sick');
+    expect(entry?.isRetrofit).toBe(true);
+  });
+
+  test('[H-37] retrofit — add Permesso hours to a past day', async ({ page }) => {
+    const date = prevMonthTestDate('H-37');
+    await csvNavigateToPrevMonth(page);
+    await csvOpenDayCard(page, date);
+    await csvGoToPlanningStep(page);
+    await page.locator('[data-testid="daily-detail"]').getByRole('button', { name: /retrofit hours off/i }).click();
+    await expect(page.locator('[data-testid="daily-detail"]').getByText(/select how much time/i)).toBeVisible({ timeout: 5000 });
+    await page.locator('[data-testid="offtime-morning"]').click();
+    await page.waitForTimeout(500);
+
+    const res = await page.request.get(`${CSV_API_BASE}/presence?month=${date.slice(0, 7)}`);
+    const days = (await res.json()) as Array<{ date: string; offTime?: { type: string } }>;
+    const entry = days.find((d) => d.date === date);
+    expect(entry?.offTime?.type).toBe('morning');
+  });
+
+  test('[H-38] retrofit — non-payroll statuses (In Office / Remote) are blocked', async ({ page }) => {
+    const date = prevMonthTestDate('H-38');
+    await csvNavigateToPrevMonth(page);
+    await csvOpenDayCard(page, date);
+    await csvGoToPlanningStep(page);
+
+    // UI: neither option should be offered for a past day.
+    const detail = page.locator('[data-testid="daily-detail"]');
+    await expect(detail.getByText(/^in office$/i)).not.toBeVisible();
+    await expect(detail.getByText(/^remote working$/i)).not.toBeVisible();
+
+    // Backend: a direct retrofit call for a non-payroll status must be rejected.
+    const res = await page.request.post(`${CSV_API_BASE}/presence/${date}/retrofit`, {
+      data: { status: 'in_office' },
+    });
+    expect(res.status()).toBe(400);
+  });
+
+  test('[H-39] retrofit — visible to other users (colleague and Director/Owner)', async ({ page, browser }) => {
+    const date = prevMonthTestDate('H-39');
+
+    const employeeContext = await browser.newContext();
+    const employeePage = await employeeContext.newPage();
+    await csvLoginAsEmployee(employeePage);
+    await csvRetrofitStatus(employeePage, date, 'MISSION');
+    const meRes = await employeePage.request.get(`${CSV_API_BASE}/auth/me`);
+    const me = (await meRes.json()) as { id: string };
+    await employeeContext.close();
+
+    // Retrofit doesn't itself mark the record confirmed — simulate the eventual cron
+    // confirmation so the propagation check isn't confounded by that separate gap.
+    await simulateConfirm(me.id, date);
+
+    await csvLoginAsDirectorRole(page);
+    const month = date.slice(0, 7);
+    const statsRes = await page.request.get(`${CSV_API_BASE}/admin/stats/${me.id}/monthly?month=${month}`);
+    expect(statsRes.status()).toBe(200);
+    const stats = (await statsRes.json()) as { distribution: { mission: number } };
+    expect(stats.distribution.mission).toBeGreaterThanOrEqual(1);
+
+    // Light UI check: the Director can reach the same employee's data via Organisation.
+    await page.click('[data-testid="nav-organisation"]');
+    await page.click('[data-testid="org-view-individual"]');
+    await page.click('[data-testid="org-colleague-select"]');
+    await page.getByPlaceholder(/search/i).fill('Mario');
+    await page.getByText('Mario Rossi').first().click();
+    await expect(page.getByText('Mario Rossi').first()).toBeVisible();
+  });
+});
