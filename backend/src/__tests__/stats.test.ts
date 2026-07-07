@@ -35,25 +35,62 @@ describe('GET /stats/monthly', () => {
     expect(res.status).toBe(200);
   });
 
-  it('only counts confirmed statuses in the distribution and presence days', async () => {
-    const user = await createUser();
-    const today = new Date().toISOString().slice(0, 10);
+  describe('with a fixed system date (2026-07-15)', () => {
+    const MONTH = '2026-07';
 
-    await WorkingStatus.create([
-      { userId: user._id, date: today, status: 'leave', isConfirmed: false },
-      { userId: user._id, date: `${THIS_MONTH}-02`, status: 'leave', isConfirmed: true },
-      { userId: user._id, date: `${THIS_MONTH}-03`, status: 'in_office', isConfirmed: false },
-      { userId: user._id, date: `${THIS_MONTH}-04`, status: 'in_office', isConfirmed: true },
-    ]);
+    beforeEach(() => {
+      jest.useFakeTimers({
+        doNotFake: [
+          'hrtime', 'nextTick', 'performance', 'queueMicrotask',
+          'requestAnimationFrame', 'requestIdleCallback',
+          'setImmediate', 'clearImmediate', 'setInterval', 'clearInterval',
+          'setTimeout', 'clearTimeout',
+        ],
+      });
+      jest.setSystemTime(new Date('2026-07-15T12:00:00.000Z'));
+    });
 
-    const res = await request(app)
-      .get(`/stats/monthly?month=${THIS_MONTH}`)
-      .set('Cookie', authCookie(String(user._id)));
+    afterEach(() => {
+      jest.useRealTimers();
+    });
 
-    expect(res.status).toBe(200);
-    expect(res.body.presenceDaysConfirmed).toBe(1);
-    expect(res.body.distribution.inOffice).toBe(1);
-    expect(res.body.distribution.leave).toBe(1);
+    it('only counts confirmed statuses in the distribution and presence days', async () => {
+      const user = await createUser();
+
+      await WorkingStatus.create([
+        { userId: user._id, date: '2026-07-15', status: 'leave', isConfirmed: false },
+        { userId: user._id, date: '2026-07-14', status: 'leave', isConfirmed: true },
+        { userId: user._id, date: '2026-07-13', status: 'in_office', isConfirmed: false },
+        { userId: user._id, date: '2026-07-12', status: 'in_office', isConfirmed: true },
+      ]);
+
+      const res = await request(app)
+        .get(`/stats/monthly?month=${MONTH}`)
+        .set('Cookie', authCookie(String(user._id)));
+
+      expect(res.status).toBe(200);
+      expect(res.body.presenceDaysConfirmed).toBe(1);
+      expect(res.body.distribution.inOffice).toBe(1);
+      expect(res.body.distribution.leave).toBe(1);
+    });
+
+    it('excludes future-dated statuses even if isConfirmed is (incorrectly) already true', async () => {
+      const user = await createUser();
+
+      await WorkingStatus.create([
+        // simulates stale/bad data: a future sick day that somehow got isConfirmed:true,
+        // even though sick is never manually confirmed and the date hasn't happened yet
+        { userId: user._id, date: '2026-07-20', status: 'sick', isConfirmed: true },
+        { userId: user._id, date: '2026-07-10', status: 'sick', isConfirmed: true },
+      ]);
+
+      const res = await request(app)
+        .get(`/stats/monthly?month=${MONTH}`)
+        .set('Cookie', authCookie(String(user._id)));
+
+      expect(res.status).toBe(200);
+      expect(res.body.distribution.sick).toBe(1);
+    });
   });
 });
 

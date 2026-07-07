@@ -37,26 +37,33 @@ export interface AreaStats {
 
 export async function getMonthlyStats(userId: string, month: string): Promise<MonthlyStats> {
   const prefix = `${month}-`;
+  const todayStr = new Date().toISOString().slice(0, 10);
 
   const [statuses, user] = await Promise.all([
     WorkingStatus.find({ userId: new Types.ObjectId(userId), date: { $regex: `^${prefix}` } }).lean(),
     User.findById(userId).lean(),
   ]);
 
+  // A status can only be legitimately confirmed once its date has arrived
+  // (via check-in or the same-day auto-confirm cron), so any future-dated
+  // record is excluded regardless of its stored isConfirmed value.
+  const isCounted = (ws: { isConfirmed: boolean; date: string }): boolean =>
+    ws.isConfirmed && ws.date <= todayStr;
+
   const presenceDaysConfirmed = statuses.filter(
-    (ws) => ws.status === 'in_office' && ws.isConfirmed
+    (ws) => ws.status === 'in_office' && isCounted(ws)
   ).length;
 
   const presenceDaysTarget = user?.contract?.presenceDaysTarget ?? 10;
 
   const distribution = {
-    inOffice: statuses.filter((ws) => ws.status === 'in_office' && ws.isConfirmed).length,
-    remote: statuses.filter((ws) => ws.status === 'remote' && ws.isConfirmed).length,
-    mission: statuses.filter((ws) => ws.status === 'mission' && ws.isConfirmed).length,
+    inOffice: statuses.filter((ws) => ws.status === 'in_office' && isCounted(ws)).length,
+    remote: statuses.filter((ws) => ws.status === 'remote' && isCounted(ws)).length,
+    mission: statuses.filter((ws) => ws.status === 'mission' && isCounted(ws)).length,
     leave: statuses.filter(
-      (ws) => (ws.status === 'leave' || ws.status === 'parental_leave') && ws.isConfirmed
+      (ws) => (ws.status === 'leave' || ws.status === 'parental_leave') && isCounted(ws)
     ).length,
-    sick: statuses.filter((ws) => ws.status === 'sick' && ws.isConfirmed).length,
+    sick: statuses.filter((ws) => ws.status === 'sick' && isCounted(ws)).length,
   };
 
   const unbooking = {
@@ -112,6 +119,7 @@ export async function getAreaStats(month: string, requestingUser: IUser): Promis
   }
 
   const prefix = `${month}-`;
+  const todayStr = new Date().toISOString().slice(0, 10);
 
   const [allUsers, allStatuses] = await Promise.all([
     User.find({}).lean(),
@@ -130,7 +138,7 @@ export async function getAreaStats(month: string, requestingUser: IUser): Promis
 
   for (const ws of allStatuses) {
     const uid = ws.userId.toString();
-    if (ws.status === 'in_office' && ws.isConfirmed) {
+    if (ws.status === 'in_office' && ws.isConfirmed && ws.date <= todayStr) {
       confirmedByUser.set(uid, (confirmedByUser.get(uid) ?? 0) + 1);
     }
     if (ws.isLastMinuteUnbooking) totalLastMinute++;
