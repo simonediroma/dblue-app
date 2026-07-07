@@ -16,7 +16,12 @@ const STATUS_MAP: Record<string, WorkStatus> = {
 
 function normalizeDay(d: DayPresence): DayPresence {
   const mapped = STATUS_MAP[d.status?.toLowerCase?.()];
-  return mapped ? { ...d, status: mapped } : d;
+  const base = mapped ? { ...d, status: mapped } : d;
+  const raw = d as DayPresence & { isConfirmed?: boolean };
+  return {
+    ...base,
+    isCheckedIn: raw.isConfirmed ?? base.isCheckedIn,
+  };
 }
 
 export interface Room {
