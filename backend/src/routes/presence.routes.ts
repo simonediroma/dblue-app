@@ -7,6 +7,7 @@ import {
   updateOffTime,
   retrofitStatus,
   getColleaguePresences,
+  undoCheckIn,
 } from '../services/working-status.service';
 import { WorkingStatus } from '../models/working-status.model';
 import { IUser } from '../models/user.model';
@@ -146,6 +147,17 @@ router.post('/:date/checkin', async (req: Request, res: Response): Promise<void>
       { new: true }
     );
     res.json(updated);
+  } catch (err) {
+    handleError(res, err);
+  }
+});
+
+// DELETE /presence/:date/checkin
+router.delete('/:date/checkin', async (req: Request, res: Response): Promise<void> => {
+  const { date } = req.params;
+  try {
+    const result = await undoCheckIn(userId(req), date);
+    res.json(result);
   } catch (err) {
     handleError(res, err);
   }

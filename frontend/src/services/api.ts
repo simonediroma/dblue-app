@@ -153,6 +153,10 @@ export function checkIn(date: string, room?: string, isUsingDesk?: boolean): Pro
   }).then(normalizeDay);
 }
 
+export function undoCheckIn(date: string): Promise<DayPresence> {
+  return request<DayPresence>(`/presence/${date}/checkin`, { method: 'DELETE' }).then(normalizeDay);
+}
+
 export function getRooms(): Promise<Room[]> {
   return request<Room[]>('/rooms');
 }

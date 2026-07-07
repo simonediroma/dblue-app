@@ -1546,13 +1546,13 @@ export default function DailyDetail({
  </button>
  )}
  
- {(isCurrentDay || day.isPast) && (day.isCheckedIn || day.status === WorkStatus.REMOTE) && (
+ {(isCurrentDay || day.isPast) && day.isCheckedIn && (
  <div className="flex flex-col gap-2">
  <div className="w-full bg-green-500/10 text-green-500 py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 border border-green-500/10">
  <div className="bg-green-600 text-white p-0.5 rounded-full">
  <Check className="w-3 h-3"/>
  </div>
- {day.status === WorkStatus.REMOTE && !day.isCheckedIn ? 'Confirmed status' : 'Confirmed'}
+ Confirmed
  </div>
  {day.room && day.isCheckedIn && (
  <div className="text-center font-sans text-xs font-bold text-on-surface-variant/50">

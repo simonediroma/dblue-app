@@ -263,6 +263,32 @@ export async function retrofitStatus(
   return result!;
 }
 
+export async function undoCheckIn(
+  userId: Types.ObjectId,
+  date: string
+): Promise<IWorkingStatus> {
+  const ws = await WorkingStatus.findOne({ userId, date });
+  if (!ws || !ws.isConfirmed) {
+    const err = Object.assign(new Error('Nessun check-in da annullare'), { statusCode: 400 });
+    throw err;
+  }
+
+  if (ws.confirmedAt) {
+    const elapsedMs = Date.now() - new Date(ws.confirmedAt).getTime();
+    if (elapsedMs > 10_000) {
+      const err = Object.assign(new Error('Finestra di annullamento scaduta'), { statusCode: 409 });
+      throw err;
+    }
+  }
+
+  const result = await WorkingStatus.findByIdAndUpdate(
+    ws._id,
+    { $set: { isConfirmed: false }, $unset: { confirmedAt: '' } },
+    { new: true }
+  );
+  return result!;
+}
+
 export interface ColleaguePresenceItem {
   userId: string;
   name: string;
