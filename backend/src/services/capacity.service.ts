@@ -19,18 +19,13 @@ export interface PresenceBreakdown {
 
 const BOOKED_STATUSES: WorkingStatusValue[] = ['in_office', 'office_no_desk'];
 
-// Simple in-memory cache for total capacity (changes rarely)
-let capacityCache: { value: number; expiresAt: number } | null = null;
+// Total office desk capacity is a single, fixed number independent of how the
+// open_space rooms are individually sized — rooms are just labels for where
+// people sit, they don't each carve out their own slice of the cap.
+export const TOTAL_OFFICE_CAPACITY = 23;
 
 export async function getTotalCapacity(_date: string): Promise<number> {
-  const now = Date.now();
-  if (capacityCache && now < capacityCache.expiresAt) {
-    return capacityCache.value;
-  }
-  const rooms = await Room.find({ type: 'open_space', isActive: true }).lean();
-  const total = rooms.reduce((sum, r) => sum + (r.capacity ?? 0), 0);
-  capacityCache = { value: total, expiresAt: now + 60_000 };
-  return total;
+  return TOTAL_OFFICE_CAPACITY;
 }
 
 export async function getBookedCount(date: string): Promise<number> {
@@ -86,7 +81,6 @@ export async function getPresenceBreakdown(date: string): Promise<PresenceBreakd
   });
 
   const totalBooked = roomOccupancies.reduce((sum, r) => sum + r.booked, 0) + extras;
-  const totalCapacity = rooms.reduce((sum, r) => sum + (r.capacity ?? 0), 0);
 
-  return { date, rooms: roomOccupancies, extras, totalBooked, totalCapacity };
+  return { date, rooms: roomOccupancies, extras, totalBooked, totalCapacity: TOTAL_OFFICE_CAPACITY };
 }
