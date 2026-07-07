@@ -23,7 +23,7 @@ import { useAuth } from './context/AuthContext';
 import type { User } from './types/api';
 import { usePresence } from './hooks/usePresence';
 import { useColleagues, mapUserToColleague } from './hooks/useColleagues';
-import { getPresence, checkIn, getRooms, getUsers, updateTeammates, completeOnboarding, updatePreferences, retrofitStatus } from './services/api';
+import { getPresence, checkIn, undoCheckIn, getRooms, getUsers, updateTeammates, completeOnboarding, updatePreferences, retrofitStatus } from './services/api';
 import type { Room } from './services/api';
 import { useWebSocket } from './hooks/useWebSocket';
 
@@ -401,6 +401,7 @@ export default function App() {
  setDays(prev => prev.map(d => d.date === date ? { ...d, isCheckedIn: false } : d));
  setNotification(null);
  setNotificationCountdown(null);
+ undoCheckIn(date).catch((err) => console.error('undoCheckIn error:', err));
  }
  });
 
@@ -456,6 +457,7 @@ export default function App() {
  } : d));
  setNotification(null);
  setNotificationCountdown(null);
+ undoCheckIn(dateForRequest).catch((err) => console.error('undoCheckIn error:', err));
  }
  });
 
