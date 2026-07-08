@@ -8,16 +8,21 @@ import { openDayCard, goToPlanningStep, selectStatus, confirmRoom } from '../fix
  * CSV coverage — Capacity & Waiting List (H-40, H-40a, H-40b)
  * Hits the real backend/DB (Railway dev environment) — no API mocking. See e2e/README.md.
  *
- * The CSV assumes 23 real office seats; the actual seeded total (sum of open_space room
- * capacities) is different and must never be hardcoded — read it from GET /rooms.
+ * The CSV assumes 23 real office seats; the actual seeded total is different and must
+ * never be hardcoded — read it from GET /rooms.
+ *
+ * GET /rooms already returns exactly the rooms visible to the calling account's role
+ * (every open_space room, plus any other room whose visibleRoles includes that role —
+ * owner sees every room). So the total capacity for "whoever is logged into `page`"
+ * is simply the sum of what that call returns, not just the open_space subset.
  */
 
 const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:4000';
 
 async function getRealOfficeCapacity(page: import('@playwright/test').Page): Promise<number> {
   const res = await page.request.get(`${API_BASE}/rooms`);
-  const rooms = (await res.json()) as Array<{ type: string; capacity: number }>;
-  return rooms.filter((r) => r.type === 'open_space').reduce((sum, r) => sum + r.capacity, 0);
+  const rooms = (await res.json()) as Array<{ capacity: number }>;
+  return rooms.reduce((sum, r) => sum + r.capacity, 0);
 }
 
 test.describe('CSV coverage — Capacity & Waiting List', () => {

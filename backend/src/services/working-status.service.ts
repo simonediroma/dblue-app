@@ -1,7 +1,14 @@
 import { Types } from 'mongoose';
 import { WorkingStatus, IWorkingStatus, WorkingStatusValue } from '../models/working-status.model';
 import { User } from '../models/user.model';
-import { isCapacityAvailable, promoteFromWaitingList, getTotalCapacity, getBookedCount } from './capacity.service';
+import {
+  isCapacityAvailable,
+  promoteFromWaitingList,
+  getTotalCapacity,
+  getBookedCount,
+  getVisibleRooms,
+  Role,
+} from './capacity.service';
 import { sendSickLeaveConfirmation } from './email.service';
 
 // Returns true if date is today or tomorrow
@@ -42,7 +49,10 @@ export async function getStatusForUser(
   const startDate = workingDays[0];
   const endDate = workingDays[workingDays.length - 1];
 
-  const [userStatuses, allOfficeStatuses, totalCapacity, user] = await Promise.all([
+  const user = await User.findById(userId).lean();
+  const role: Role = user?.role ?? 'employee';
+
+  const [userStatuses, allOfficeStatuses, totalCapacity, visibleRooms] = await Promise.all([
     WorkingStatus.find({ userId, date: { $gte: startDate, $lte: endDate } }).lean(),
     WorkingStatus.find({
       date: { $gte: startDate, $lte: endDate },
@@ -50,17 +60,20 @@ export async function getStatusForUser(
     })
       .populate('userId', 'avatar _id teammates')
       .lean(),
-    getTotalCapacity(month),
-    User.findById(userId).lean(),
+    getTotalCapacity(role),
+    getVisibleRooms(role),
   ]);
 
+  const visibleRoomNames = new Set(visibleRooms.map((r) => r.name));
   const teammateIds = new Set((user?.teammates ?? []).map((t: Types.ObjectId) => t.toString()));
 
   const userStatusByDate = new Map(userStatuses.map((ws) => [ws.date, ws]));
 
-  // Group all office statuses by date
+  // Group all office statuses by date, restricted to rooms this user's role can see
+  // (unassigned/no-desk entries always count, they aren't tied to any specific room).
   const officeByDate = new Map<string, typeof allOfficeStatuses>();
   for (const ws of allOfficeStatuses) {
+    if (ws.room && !visibleRoomNames.has(ws.room)) continue;
     const arr = officeByDate.get(ws.date) ?? [];
     arr.push(ws);
     officeByDate.set(ws.date, arr);
@@ -116,7 +129,11 @@ export async function upsertStatus(
 ): Promise<WorkingStatusWithCapacity> {
   payload = { ...payload, status: payload.status.toLowerCase() };
 
-  const existing = await WorkingStatus.findOne({ userId, date });
+  const [existing, actingUser] = await Promise.all([
+    WorkingStatus.findOne({ userId, date }),
+    User.findById(userId).select('role email').lean(),
+  ]);
+  const role: Role = actingUser?.role ?? 'employee';
 
   if (existing?.isConfirmed) {
     const err = Object.assign(new Error('Status già confermato, non modificabile'), { statusCode: 409 });
@@ -138,7 +155,7 @@ export async function upsertStatus(
   // Capacity gate: if requesting in_office but office is full, downgrade to waiting_list
   let finalStatus = payload.status;
   if (payload.status === 'in_office') {
-    const available = await isCapacityAvailable(date);
+    const available = await isCapacityAvailable(date, role);
     if (!available) {
       finalStatus = 'waiting_list';
     }
@@ -165,22 +182,15 @@ export async function upsertStatus(
   }
 
   // Fire-and-forget sick leave confirmation email (only for today)
-  if (payload.status === 'sick' && date === getTodayStr()) {
-    User.findById(userId)
-      .lean()
-      .then((user) => {
-        if (user?.email) {
-          sendSickLeaveConfirmation(user.email, date).catch((err) =>
-            console.error('sendSickLeaveConfirmation error:', err)
-          );
-        }
-      })
-      .catch((err) => console.error('sick email lookup error:', err));
+  if (payload.status === 'sick' && date === getTodayStr() && actingUser?.email) {
+    sendSickLeaveConfirmation(actingUser.email, date).catch((err) =>
+      console.error('sendSickLeaveConfirmation error:', err)
+    );
   }
 
   const [bookedCount, totalCapacity] = await Promise.all([
-    getBookedCount(date),
-    getTotalCapacity(date),
+    getBookedCount(date, role),
+    getTotalCapacity(role),
   ]);
 
   return { ...result!.toObject(), bookedCount, totalCapacity };

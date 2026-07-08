@@ -1,6 +1,5 @@
 import { WorkingStatus, IWorkingStatus } from '../models/working-status.model';
 import { Room } from '../models/room.model';
-import { TOTAL_OFFICE_CAPACITY } from './capacity.service';
 
 function getTodayStr(): string {
   return new Date().toISOString().slice(0, 10);
@@ -45,13 +44,8 @@ export async function reallocateSeededBookings(): Promise<ReallocationSummary> {
     });
 
     let idx = 0;
-    let totalSeated = 0;
     for (const room of rooms) {
-      for (
-        let seat = 0;
-        seat < room.capacity && idx < records.length && totalSeated < TOTAL_OFFICE_CAPACITY;
-        seat++, idx++, totalSeated++
-      ) {
+      for (let seat = 0; seat < room.capacity && idx < records.length; seat++, idx++) {
         const rec = records[idx];
         if (rec.status !== 'in_office' || rec.room !== room.name || !rec.isUsingDesk) {
           rec.status = 'in_office';

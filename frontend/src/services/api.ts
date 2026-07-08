@@ -24,11 +24,16 @@ function normalizeDay(d: DayPresence): DayPresence {
   };
 }
 
+export type Role = User['role'];
+
 export interface Room {
   id: string;
   name: string;
   capacity: number;
   type: 'open_space' | 'lab' | 'admin' | 'management';
+  // Ignored for type 'open_space' (visible to everyone). For other types, which
+  // roles (besides owner, who always sees every room) can see/book this room.
+  visibleRoles?: Role[];
   color?: string;
 }
 
@@ -161,14 +166,14 @@ export function getRooms(): Promise<Room[]> {
   return request<Room[]>('/rooms');
 }
 
-export function createRoom(payload: { name: string; capacity: number; type: Room['type']; color?: string }): Promise<Room> {
+export function createRoom(payload: { name: string; capacity: number; type: Room['type']; color?: string; visibleRoles?: Role[] }): Promise<Room> {
   return request<Room>('/rooms', {
     method: 'POST',
     body: JSON.stringify(payload),
   });
 }
 
-export function updateRoom(id: string, payload: Partial<Pick<Room, 'name' | 'capacity' | 'color'>>): Promise<Room> {
+export function updateRoom(id: string, payload: Partial<Pick<Room, 'name' | 'capacity' | 'color' | 'visibleRoles'>>): Promise<Room> {
   return request<Room>(`/rooms/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(payload),
