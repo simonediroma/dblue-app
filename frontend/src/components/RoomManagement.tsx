@@ -4,13 +4,23 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, Plus, Trash2, Edit2, Check, ChevronLeft } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getRooms, createRoom, updateRoom, deleteRoom } from '../services/api';
-import type { Room } from '../services/api';
+import type { Room, Role } from '../services/api';
 
 const ROOM_TYPE_LABELS: Record<Room['type'], string> = {
   open_space: 'Open Space',
   lab: 'Lab',
   admin: 'Admin',
   management: 'Management',
+};
+
+// 'owner' is deliberately excluded — the owner always sees every room regardless.
+const SELECTABLE_ROLES: Role[] = ['employee', 'lab_responsible', 'admin_member', 'director'];
+const ROLE_LABELS: Record<Role, string> = {
+  employee: 'Employee',
+  lab_responsible: 'Lab Responsible',
+  admin_member: 'Admin Member',
+  director: 'Director',
+  owner: 'Owner',
 };
 
 const DEFAULT_COLOR = '#3b82f6';
@@ -28,6 +38,7 @@ export default function RoomManagement({ onBack, onRoomsChanged }: RoomManagemen
   const [editName, setEditName] = useState('');
   const [editCapacity, setEditCapacity] = useState(0);
   const [editColor, setEditColor] = useState(DEFAULT_COLOR);
+  const [editVisibleRoles, setEditVisibleRoles] = useState<Role[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [newType, setNewType] = useState<Room['type']>('open_space');
 
@@ -53,12 +64,13 @@ export default function RoomManagement({ onBack, onRoomsChanged }: RoomManagemen
     setEditName(room.name);
     setEditCapacity(room.capacity);
     setEditColor(room.color || DEFAULT_COLOR);
+    setEditVisibleRoles(room.visibleRoles ?? []);
   };
 
   const handleSave = async () => {
     if (!editingId) return;
     try {
-      await updateRoom(editingId, { name: editName, capacity: editCapacity, color: editColor });
+      await updateRoom(editingId, { name: editName, capacity: editCapacity, color: editColor, visibleRoles: editVisibleRoles });
       setEditingId(null);
       loadRooms();
     } catch (err) {
@@ -83,16 +95,23 @@ export default function RoomManagement({ onBack, onRoomsChanged }: RoomManagemen
     setEditCapacity(10);
     setEditColor(DEFAULT_COLOR);
     setNewType('open_space');
+    setEditVisibleRoles([]);
   };
 
   const handleCreate = async () => {
     try {
-      await createRoom({ name: editName, capacity: editCapacity, type: newType, color: editColor });
+      await createRoom({ name: editName, capacity: editCapacity, type: newType, color: editColor, visibleRoles: editVisibleRoles });
       setIsCreating(false);
       loadRooms();
     } catch (err) {
       setError((err as Error).message);
     }
+  };
+
+  const toggleRole = (role: Role) => {
+    setEditVisibleRoles((prev) =>
+      prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]
+    );
   };
 
   return createPortal(
@@ -157,6 +176,9 @@ export default function RoomManagement({ onBack, onRoomsChanged }: RoomManagemen
                     onChange={(e) => setEditColor(e.target.value)}
                   />
                 </div>
+                {newType !== 'open_space' && (
+                  <RoleVisibilityPicker selected={editVisibleRoles} onToggle={toggleRole} />
+                )}
                 <div className="flex justify-end gap-2">
                   <button onClick={() => setIsCreating(false)} className="px-3 py-1.5 text-xs font-bold text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors">
                     Annulla
@@ -199,11 +221,19 @@ export default function RoomManagement({ onBack, onRoomsChanged }: RoomManagemen
                           onChange={(e) => setEditColor(e.target.value)}
                         />
                       </div>
+                      {room.type !== 'open_space' && (
+                        <RoleVisibilityPicker selected={editVisibleRoles} onToggle={toggleRole} />
+                      )}
                     </div>
                   ) : (
                     <div>
                       <h3 className="font-bold text-on-surface">{room.name}</h3>
-                      <p className="text-xs text-on-surface-variant">{ROOM_TYPE_LABELS[room.type]} &middot; Capienza: {room.capacity}</p>
+                      <p className="text-xs text-on-surface-variant">
+                        {ROOM_TYPE_LABELS[room.type]} &middot; Capienza: {room.capacity}
+                        {room.type !== 'open_space' && (
+                          <> &middot; Visibile a: {room.visibleRoles?.length ? room.visibleRoles.map((r) => ROLE_LABELS[r]).join(', ') : 'solo Owner'}</>
+                        )}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -231,5 +261,19 @@ export default function RoomManagement({ onBack, onRoomsChanged }: RoomManagemen
       </main>
     </motion.div>,
     document.body
+  );
+}
+
+function RoleVisibilityPicker({ selected, onToggle }: { selected: Role[]; onToggle: (role: Role) => void }) {
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <span className="text-[10px] font-bold text-on-surface-variant uppercase">Visibile a:</span>
+      {SELECTABLE_ROLES.map((role) => (
+        <label key={role} className="flex items-center gap-1 text-xs font-bold text-on-surface cursor-pointer">
+          <input type="checkbox" checked={selected.includes(role)} onChange={() => onToggle(role)} />
+          {ROLE_LABELS[role]}
+        </label>
+      ))}
+    </div>
   );
 }

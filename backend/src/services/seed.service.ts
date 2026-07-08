@@ -2,7 +2,7 @@ import { Types } from 'mongoose';
 import { User } from '../models/user.model';
 import { Room, seedDefaultRooms } from '../models/room.model';
 import { WorkingStatus, WorkingStatusValue } from '../models/working-status.model';
-import { TOTAL_OFFICE_CAPACITY } from './capacity.service';
+import { getTotalCapacity } from './capacity.service';
 
 // ─── Seeded pseudo-random (riproducibile) ────────────────────────────────────
 
@@ -266,7 +266,10 @@ export async function runSeed(fresh = false): Promise<SeedSummary> {
 
   // Guarantee a fully-booked future day so the waiting-list flow can be tested:
   // organic random office attendance never reaches total office capacity on its own.
+  // Filling to the 'employee' baseline (open_space only, the smallest per-role total)
+  // guarantees it's always achievable regardless of the seeded colleague pool size.
   const fullCapacityTestDate = colleaguesDays.find((d) => d > todayStr) ?? null;
+  const fullCapacityTestSeats = await getTotalCapacity('employee');
 
   const meRecords = buildStatusForUser(
     meUser._id as Types.ObjectId,
@@ -304,13 +307,13 @@ export async function runSeed(fresh = false): Promise<SeedSummary> {
     if (fullCapacityTestDate) {
       const testRecord = records.find((r) => r.date === fullCapacityTestDate);
       if (testRecord) {
-        if (i < TOTAL_OFFICE_CAPACITY) {
+        if (i < fullCapacityTestSeats) {
           testRecord.status = 'in_office';
           testRecord.room = OPEN_SPACE_ROOMS[i % OPEN_SPACE_ROOMS.length];
           testRecord.isUsingDesk = true;
           testRecord.isConfirmed = false;
           testRecord.confirmedAt = undefined;
-        } else if (i < TOTAL_OFFICE_CAPACITY + 2) {
+        } else if (i < fullCapacityTestSeats + 2) {
           testRecord.status = 'waiting_list';
           testRecord.isConfirmed = false;
           testRecord.confirmedAt = undefined;
