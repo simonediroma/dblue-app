@@ -18,8 +18,12 @@ interface Row {
   area: string;
   status: TestResult['status'];
   errorMessage?: string;
+  errorDetail?: string;
+  location?: string;
   file: string;
 }
+
+const MAX_DETAIL_LENGTH = 4000;
 
 // eslint-disable-next-line no-control-regex
 const ANSI_PATTERN = /\x1b\[[0-9;]*m/g;
@@ -43,8 +47,28 @@ export default class CsvSummaryReporter implements Reporter {
   onTestEnd(test: TestCase, result: TestResult): void {
     const title = test.title;
     const match = title.match(/\[(H-\d+[a-z]?)\]/i);
-    const rawError = result.errors[0]?.message?.split('\n')[0];
-    const errorMessage = rawError ? stripAnsi(rawError).replace(/\|/g, '\\|') : undefined;
+    const error = result.errors[0];
+
+    const rawFirstLine = error?.message?.split('\n')[0];
+    const errorMessage = rawFirstLine ? stripAnsi(rawFirstLine).replace(/\|/g, '\\|') : undefined;
+
+    // Full message (includes the expected/received diff) + source snippet (the failing
+    // line with surrounding context) — this is the part meant to be read directly from
+    // the committed file to diagnose a failure without opening the HTML report/trace.
+    let errorDetail: string | undefined;
+    let location: string | undefined;
+    if (error) {
+      const parts = [error.message, error.snippet].filter((p): p is string => !!p).map(stripAnsi);
+      const joined = parts.join('\n\n').trim();
+      if (joined) {
+        errorDetail = joined.length > MAX_DETAIL_LENGTH
+          ? `${joined.slice(0, MAX_DETAIL_LENGTH)}\n… (truncated)`
+          : joined;
+      }
+      if (error.location) {
+        location = `${path.basename(error.location.file)}:${error.location.line}:${error.location.column}`;
+      }
+    }
 
     this.rows.push({
       hId: match ? match[1].toUpperCase() : null,
@@ -52,6 +76,8 @@ export default class CsvSummaryReporter implements Reporter {
       area: test.parent.title,
       status: result.status,
       errorMessage,
+      errorDetail,
+      location,
       file: path.basename(test.location.file),
     });
   }
@@ -112,6 +138,7 @@ export default class CsvSummaryReporter implements Reporter {
         lines.push(`| ${row.hId} | ${cleanTitle} | ${icon} ${row.status}${errSuffix} |`);
       }
       lines.push('');
+      lines.push(...this.renderErrorDetails(sorted, (row) => row.hId ?? row.title));
     }
 
     lines.push('## Altri test (regressione / smoke pre-esistenti)', '', '| File | Pass | Fail | Skip | Totale |', '|---|---|---|---|---|');
@@ -125,8 +152,27 @@ export default class CsvSummaryReporter implements Reporter {
       lines.push(`| ${file} | ${c.passed} | ${c.failed} | ${c.skipped} | ${c.total} |`);
     }
     lines.push('');
+    lines.push(...this.renderErrorDetails(otherRows, (row) => `${row.file} — ${row.title}`));
 
     return lines.join('\n');
+  }
+
+  // One <details> block per failed/timed-out test with captured error detail — full
+  // message (expected/received diff included) + source snippet, so a failure can be
+  // diagnosed directly from the committed file without opening the HTML report/trace.
+  // <details> is a plain HTML tag: GitHub renders it collapsed, but the raw text (and
+  // therefore every byte of the error) is still there for anyone/anything reading the
+  // file as plain text.
+  private renderErrorDetails(rows: Row[], label: (row: Row) => string): string[] {
+    const withDetail = rows.filter((r) => r.errorDetail);
+    if (withDetail.length === 0) return [];
+
+    const lines: string[] = [];
+    for (const row of withDetail) {
+      const heading = row.location ? `${label(row)} (${row.location})` : label(row);
+      lines.push('<details>', `<summary>${heading}</summary>`, '', '```', row.errorDetail!, '```', '', '</details>', '');
+    }
+    return lines;
   }
 
   private updateIndex(reportsDir: string, fileName: string, result: FullResult): void {
