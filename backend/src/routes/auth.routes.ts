@@ -69,7 +69,7 @@ router.get('/me', requireAuth, (req: Request, res: Response) => {
   });
 });
 
-const DEV_ACCOUNTS: { email: string; name: string; role: IUser['role'] }[] = [
+export const DEV_ACCOUNTS: { email: string; name: string; role: IUser['role'] }[] = [
   { email: 'dev@dblue.it',            name: 'Dev User',        role: 'owner' },
   { email: 'mario.rossi@dblue.it',    name: 'Mario Rossi',     role: 'employee' },
   { email: 'sara.ferrari@dblue.it',   name: 'Sara Ferrari',    role: 'lab_responsible' },

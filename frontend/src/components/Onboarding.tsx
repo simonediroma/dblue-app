@@ -91,7 +91,7 @@ export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
  {filteredColleagues.map((Colleague) => {
  const active = isSelected(Colleague);
  return (
- <button key={`${Colleague.name}-${Colleague.surname}`} onClick={() => toggleColleague(Colleague)}
+ <button key={`${Colleague.name}-${Colleague.surname}`} data-testid="onboarding-colleague-option" onClick={() => toggleColleague(Colleague)}
  className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all border ${
  active 
  ? 'bg-primary/5 border-primary shadow-sm' 
@@ -137,7 +137,7 @@ export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
  })}
  </div>
 
- <button disabled={selectedColleagues.length === 0} onClick={() => onComplete(selectedColleagues)}
+ <button disabled={selectedColleagues.length === 0} data-testid="onboarding-start-planning" onClick={() => onComplete(selectedColleagues)}
  className="w-full bg-primary text-white font-bold py-5 rounded-[24px] shadow-lg shadow-primary/20 disabled:opacity-30 disabled:pointer-events-none transition-all active:scale-[0.98]"
  >
  Start planning

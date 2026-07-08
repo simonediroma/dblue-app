@@ -56,3 +56,64 @@ test.describe('My Stats', () => {
     await expect(page.locator('svg').first()).toBeVisible({ timeout: 10000 });
   });
 });
+
+// ---------------------------------------------------------------------------------
+// CSV coverage — Stats Sanity Check (H-43)
+// Hits the real backend/DB (Railway dev environment) — no API mocking. See e2e/README.md.
+// ---------------------------------------------------------------------------------
+import type { Page } from '@playwright/test';
+import { loginAsOwner as csvLoginAsOwner } from '../fixtures/auth';
+import { futureTestDate as csvFutureTestDate, prevMonthTestDate as csvPrevMonthTestDate } from '../fixtures/dates';
+import { simulateConfirm as csvSimulateConfirm } from '../fixtures/testAdmin';
+import {
+  openDayCard as csvOpenDayCard3,
+  goToPlanningStep as csvGoToPlanningStep3,
+  selectStatus as csvSelectStatus3,
+  confirmRetrofit as csvConfirmRetrofit3,
+} from '../fixtures/dailyDetail';
+
+const CSV_STATS_API_BASE = process.env.API_BASE_URL ?? 'http://localhost:4000';
+
+async function csvGetMyMonthlyStats(page: Page, month: string) {
+  const res = await page.request.get(`${CSV_STATS_API_BASE}/stats/monthly?month=${month}`);
+  return res.json() as Promise<{ distribution: { mission: number; leave: number; sick: number } }>;
+}
+
+test.describe('CSV coverage — Stats Sanity Check', () => {
+  test('[H-43] only confirmed statuses feed into My Stats', async ({ page }) => {
+    await csvLoginAsOwner(page);
+
+    // (a) a future Mission day must never count — it can't be confirmed yet.
+    const futureDate = csvFutureTestDate('H-43-future');
+    const futureMonth = futureDate.slice(0, 7);
+    await csvOpenDayCard3(page, futureDate);
+    await csvGoToPlanningStep3(page);
+    await csvSelectStatus3(page, 'MISSION');
+
+    const statsBefore = await csvGetMyMonthlyStats(page, futureMonth);
+    expect(statsBefore.distribution.mission).toBe(0);
+
+    // (c) a past Mission day, once genuinely confirmed (simulating the nightly cron),
+    // must count. Uses retrofit (real) + simulateConfirm (time-passage simulation).
+    const pastDate = csvPrevMonthTestDate('H-43-past');
+    const pastMonth = pastDate.slice(0, 7);
+    await page.click('[data-testid="month-selector-button"]');
+    await expect(page.getByText('Select Month')).toBeVisible({ timeout: 3000 });
+    const prevLabel = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1)
+      .toLocaleString('en-US', { month: 'long', year: 'numeric' });
+    await page.getByTestId('month-option').filter({ hasText: prevLabel }).click();
+    await page.waitForSelector('[data-testid="day-card"]', { timeout: 5000 });
+
+    await csvOpenDayCard3(page, pastDate);
+    await csvGoToPlanningStep3(page);
+    await csvSelectStatus3(page, 'MISSION');
+    await csvConfirmRetrofit3(page);
+
+    const meRes = await page.request.get(`${CSV_STATS_API_BASE}/auth/me`);
+    const me = (await meRes.json()) as { id: string };
+    await csvSimulateConfirm(me.id, pastDate);
+
+    const statsAfterConfirm = await csvGetMyMonthlyStats(page, pastMonth);
+    expect(statsAfterConfirm.distribution.mission).toBeGreaterThanOrEqual(1);
+  });
+});

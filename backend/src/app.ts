@@ -7,6 +7,7 @@ import roomRoutes from './routes/rooms.routes';
 import presenceRoutes from './routes/presence.routes';
 import statsRoutes from './routes/stats.routes';
 import adminRoutes from './routes/admin.routes';
+import adminTestRoutes from './routes/admin-test.routes';
 
 export function createApp() {
   const app = express();
@@ -25,6 +26,7 @@ export function createApp() {
   app.use('/presence', presenceRoutes);
   app.use('/stats', statsRoutes);
   app.use('/admin', adminRoutes);
+  app.use('/admin/test', adminTestRoutes);
 
   return app;
 }

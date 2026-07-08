@@ -690,7 +690,7 @@ export default function Profile({
  ) : filteredColleaguesSelection.map((Colleague) => {
  const active = isTeammateSelected(Colleague);
  return (
- <button key={`${Colleague.name}-${Colleague.surname}`} onClick={() => toggleTeammate(Colleague)}
+ <button key={`${Colleague.name}-${Colleague.surname}`} data-testid="teammate-option" onClick={() => toggleTeammate(Colleague)}
  className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all border ${
  active 
  ? 'bg-primary/5 border-primary shadow-sm' 
@@ -735,7 +735,7 @@ export default function Profile({
  })}
  </div>
 
- <button onClick={() => {
+ <button data-testid="teammate-save" onClick={() => {
  onUpdateProjectTeammates(selectedTeammates);
  setActiveView('main');
  showConfirmation("Project teammates updated");
@@ -893,7 +893,7 @@ export default function Profile({
  <h3 className="font-headline text-lg text-on-surface-variant font-semibold">Project Teammates</h3>
  </div>
  <div className="flex flex-col gap-3">
- <button onClick={() => {
+ <button data-testid="profile-manage-teammates" onClick={() => {
  setSelectedTeammates(projectTeammates);
  setActiveView('teammates');
  }}
