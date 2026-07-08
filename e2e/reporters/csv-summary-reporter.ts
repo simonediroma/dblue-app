@@ -1,6 +1,7 @@
 import type { Reporter, TestCase, TestResult, FullResult } from '@playwright/test/reporter';
 import * as fs from 'fs';
 import * as path from 'path';
+import { regenerateReportsIndex } from '../scripts/regenerate-reports-index';
 
 /**
  * Writes a Markdown summary of the run to e2e/reports/<timestamp>.md, grouped by the
@@ -94,7 +95,7 @@ export default class CsvSummaryReporter implements Reporter {
     const fileName = `${timestamp}.md`;
 
     fs.writeFileSync(path.join(reportsDir, fileName), this.buildMarkdown(result, timestamp), 'utf-8');
-    this.updateIndex(reportsDir, fileName, result);
+    this.updateIndex(reportsDir);
   }
 
   private counts(rows: Row[]) {
@@ -175,15 +176,10 @@ export default class CsvSummaryReporter implements Reporter {
     return lines;
   }
 
-  private updateIndex(reportsDir: string, fileName: string, result: FullResult): void {
-    const indexPath = path.join(reportsDir, 'README.md');
-    const overall = this.counts(this.rows);
-    const summaryLine = `- [${fileName}](./${fileName}) — ${overall.passed} passed, ${overall.failed} failed, ${overall.skipped} skipped — run status: ${result.status}`;
-
-    const existing = fs.existsSync(indexPath) ? fs.readFileSync(indexPath, 'utf-8') : '';
-    const previousEntries = existing.split('\n').filter((l) => l.startsWith('- ['));
-    const header = '# E2E run reports\n\nGenerated automatically at the end of each `npx playwright test` run — newest first.\n\n';
-
-    fs.writeFileSync(indexPath, header + [summaryLine, ...previousEntries].join('\n') + '\n', 'utf-8');
+  private updateIndex(reportsDir: string): void {
+    // Rescans reportsDir from scratch instead of reading-then-prepending the previous
+    // README.md — stateless/idempotent, so it can never conflict with another run's
+    // commit to the same file (see e2e/scripts/regenerate-reports-index.js).
+    regenerateReportsIndex(reportsDir);
   }
 }

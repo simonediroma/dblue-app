@@ -6,7 +6,9 @@ const DEV_LOGIN_EMPLOYEE_USER = process.env.DEV_LOGIN_EMPLOYEE_USER ?? 'employee
 const DEV_LOGIN_EMPLOYEE_PASS = process.env.DEV_LOGIN_EMPLOYEE_PASS ?? 'changeme';
 
 export async function loginAsDirector(page: Page) {
-  await page.goto('/');
+  // ?dev=true forces the dev-login form to render even if the deployed frontend
+  // wasn't built with VITE_DEV_LOGIN_ENABLED=true — see frontend/src/pages/Login.tsx.
+  await page.goto('/?dev=true');
   await page.waitForSelector('[data-testid="login-page"]', { timeout: 10000 });
   await page.fill('input[type="email"]', DEV_LOGIN_USER);
   await page.fill('input[type="password"]', DEV_LOGIN_PASS);
@@ -16,7 +18,9 @@ export async function loginAsDirector(page: Page) {
 }
 
 export async function loginAsEmployee(page: Page) {
-  await page.goto('/');
+  // ?dev=true forces the dev-login form to render even if the deployed frontend
+  // wasn't built with VITE_DEV_LOGIN_ENABLED=true — see frontend/src/pages/Login.tsx.
+  await page.goto('/?dev=true');
   await page.waitForSelector('[data-testid="login-page"]', { timeout: 10000 });
   await page.fill('input[type="email"]', DEV_LOGIN_EMPLOYEE_USER);
   await page.fill('input[type="password"]', DEV_LOGIN_EMPLOYEE_PASS);
@@ -46,7 +50,9 @@ const ROLE_EMAILS: Record<DevRole, string> = {
 };
 
 export async function loginAs(page: Page, role: DevRole) {
-  await page.goto('/');
+  // ?dev=true forces the dev-login form to render even if the deployed frontend
+  // wasn't built with VITE_DEV_LOGIN_ENABLED=true — see frontend/src/pages/Login.tsx.
+  await page.goto('/?dev=true');
   await page.waitForSelector('[data-testid="login-page"]', { timeout: 10000 });
   await page.fill('input[type="email"]', ROLE_EMAILS[role]);
   await page.fill('input[type="password"]', DEV_LOGIN_PASS);

@@ -107,7 +107,7 @@ test.describe('CSV coverage — Teammates', () => {
   test('[H-01] add 5 real teammates from scratch from the Onboarding', async ({ page, request }) => {
     await resetOnboarding(EMPLOYEE_EMAIL);
 
-    await page.goto('/');
+    await page.goto('/?dev=true');
     await page.waitForSelector('[data-testid="login-page"]', { timeout: 10000 });
     await page.fill('input[type="email"]', EMPLOYEE_EMAIL);
     await page.fill('input[type="password"]', process.env.DEV_LOGIN_PASS ?? 'changeme');
@@ -131,7 +131,7 @@ test.describe('CSV coverage — Teammates', () => {
     await setGiuliaStatus(browser, remoteDate, 'REMOTE');
 
     await resetOnboarding(EMPLOYEE_EMAIL);
-    await page.goto('/');
+    await page.goto('/?dev=true');
     await page.waitForSelector('[data-testid="login-page"]', { timeout: 10000 });
     await page.fill('input[type="email"]', EMPLOYEE_EMAIL);
     await page.fill('input[type="password"]', process.env.DEV_LOGIN_PASS ?? 'changeme');

@@ -57,17 +57,60 @@ jobs:
       # when tests failed — that's the most useful case to have a summary for.
       # Pushes made with the default GITHUB_TOKEN do not re-trigger other workflow
       # runs, so this cannot create a push-triggered loop.
+      #
+      # Two-phase commit to avoid the reports/README.md merge conflict seen when this
+      # workflow and No Regression App Test commit close together in time: the new
+      # report file (unique timestamped name, never conflicts) is committed first, then
+      # the index is regenerated from scratch (stateless — see
+      # scripts/regenerate-reports-index.js) and committed separately after a rebase.
+      # A few retries cover the rare case where another run pushes in the window
+      # between our rebase and our push; if all retries are exhausted this step only
+      # warns, since the report is a nice-to-have and must not fail an otherwise-
+      # successful test run.
       - name: Commit test summary report
         if: always()
         run: |
           cd e2e
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add reports/
-          if git diff --cached --quiet; then
-            echo "No report changes to commit."
-          else
-            git commit -m "test: Basic App Test run summary $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            git pull --rebase origin "${{ github.ref_name }}"
-            git push origin HEAD:"${{ github.ref_name }}"
+
+          NEW_REPORT=$(git status --porcelain reports/ | grep '^??' | awk '{print $2}' | grep -v 'README.md' || true)
+          if [ -z "$NEW_REPORT" ]; then
+            echo "No new report file to commit."
+            exit 0
+          fi
+
+          git add "$NEW_REPORT"
+          git commit -m "test: Basic App Test run summary $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          # The reporter already overwrote reports/README.md on disk this run (stale,
+          # computed before any rebase); discard that uncommitted change so the working
+          # tree is clean for `git pull --rebase` — it gets regenerated fresh below.
+          git checkout -- reports/README.md 2>/dev/null || true
+
+          MAX_ATTEMPTS=5
+          ATTEMPT=1
+          PUSHED=false
+          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+            if git pull --rebase origin "${{ github.ref_name }}"; then
+              node scripts/regenerate-reports-index.js reports
+              git add reports/README.md
+              if ! git diff --cached --quiet; then
+                git commit -m "test: regenerate reports index"
+              fi
+              if git push origin HEAD:"${{ github.ref_name }}"; then
+                PUSHED=true
+                break
+              fi
+            else
+              git rebase --abort || true
+            fi
+            SLEEP=$((ATTEMPT * 3))
+            echo "Push attempt $ATTEMPT failed, retrying in ${SLEEP}s..."
+            sleep "$SLEEP"
+            ATTEMPT=$((ATTEMPT + 1))
+          done
+
+          if [ "$PUSHED" != "true" ]; then
+            echo "::warning::Could not push the e2e run summary report after $MAX_ATTEMPTS attempts (non-fatal, test results above are still valid)."
           fi
