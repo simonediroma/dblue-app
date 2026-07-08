@@ -13,7 +13,10 @@ permissions:
 jobs:
   e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Bumped from 20: the shared no-regression-app-test.yml value was cut too tight
+    # for a real (non-mocked) run against Railway and got cancelled mid-suite before
+    # any report could be written — same risk applies here, kept some headroom.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 

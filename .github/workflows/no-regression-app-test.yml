@@ -12,7 +12,10 @@ permissions:
 jobs:
   e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # 52 real tests, serial (workers: 1) against the real Railway environment — ~30s
+    # each observed in practice, so 20 was too tight and got cancelled mid-run before
+    # any report could be written. Generous margin here on purpose.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
