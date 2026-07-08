@@ -95,6 +95,22 @@ so `--grep "H-09"` always selects exactly one test.
   `confirmRoom`, `confirmRetrofit`: the common DailyDetail navigation steps.
 - `fixtures/testAdmin.ts` — thin client for the test-only endpoints above.
 
+## Run summary report
+
+Every `npx playwright test` run (in addition to the usual HTML report in
+`playwright-report/`, gitignored) writes a Markdown summary to
+`e2e/reports/<timestamp>.md` via the custom `reporters/csv-summary-reporter.ts`
+reporter — one table per CSV Area, one row per `[H-XX]` test, plus an aggregate table
+for the pre-existing regression/smoke files. `e2e/reports/README.md` is an index of
+every past run, newest first.
+
+Unlike the HTML report, `reports/` **is committed to the repo** (not gitignored) so the
+result history survives past the CI artifact's 7-day retention. In CI, the
+"Commit test summary report" step in `.github/workflows/e2e.yml` pushes the new report
+back to the branch automatically after every run — including failed runs, since that's
+the most useful case to have a record of. Locally, the file is just written to your
+working tree like any other change; commit it yourself if you want to keep it.
+
 ## Why some of these tests are expected to fail
 
 Many CSV rows describe bugs that are still present. A CSV-coverage test asserts the
