@@ -6,13 +6,17 @@ const DEV_LOGIN_PASS = process.env.DEV_LOGIN_PASS ?? 'changeme';
 
 test.describe('Authentication', () => {
   test('login page is visible', async ({ page }) => {
-    await page.goto('/');
+    // ?dev=true forces the dev-login form to render even if the deployed frontend
+    // wasn't built with VITE_DEV_LOGIN_ENABLED=true — see frontend/src/pages/Login.tsx.
+    await page.goto('/?dev=true');
     await expect(page.locator('[data-testid="login-page"]')).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Presence App')).toBeVisible();
   });
 
   test('dev-login form is shown when VITE_DEV_LOGIN_ENABLED=true', async ({ page }) => {
-    await page.goto('/');
+    // ?dev=true forces the dev-login form to render even if the deployed frontend
+    // wasn't built with VITE_DEV_LOGIN_ENABLED=true — see frontend/src/pages/Login.tsx.
+    await page.goto('/?dev=true');
     await page.waitForSelector('[data-testid="login-page"]');
     // The form should be visible (requires VITE_DEV_LOGIN_ENABLED=true on the frontend build)
     await expect(page.locator('input[type="email"]')).toBeVisible();
@@ -26,7 +30,9 @@ test.describe('Authentication', () => {
   });
 
   test('wrong credentials show an error', async ({ page }) => {
-    await page.goto('/');
+    // ?dev=true forces the dev-login form to render even if the deployed frontend
+    // wasn't built with VITE_DEV_LOGIN_ENABLED=true — see frontend/src/pages/Login.tsx.
+    await page.goto('/?dev=true');
     await page.waitForSelector('[data-testid="login-page"]');
     await page.fill('input[type="email"]', DEV_LOGIN_USER);
     await page.fill('input[type="password"]', 'wrong-password');
@@ -44,7 +50,9 @@ test.describe('Authentication', () => {
   test('accessing root without auth shows login page', async ({ page }) => {
     // Clear cookies to simulate unauthenticated state
     await page.context().clearCookies();
-    await page.goto('/');
+    // ?dev=true forces the dev-login form to render even if the deployed frontend
+    // wasn't built with VITE_DEV_LOGIN_ENABLED=true — see frontend/src/pages/Login.tsx.
+    await page.goto('/?dev=true');
     await expect(page.locator('[data-testid="login-page"]')).toBeVisible({ timeout: 10000 });
   });
 });

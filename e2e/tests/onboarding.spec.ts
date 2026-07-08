@@ -25,7 +25,9 @@ test.describe('Onboarding flow', () => {
   test('onboarding screen appears on first login', async ({ page }) => {
     // This test uses the director dev user — onboarding may already be completed.
     // To reliably test this, a fresh user is needed. This verifies the component renders.
-    await page.goto('/');
+    // ?dev=true forces the dev-login form to render even if the deployed frontend
+    // wasn't built with VITE_DEV_LOGIN_ENABLED=true — see frontend/src/pages/Login.tsx.
+    await page.goto('/?dev=true');
     await page.waitForSelector('[data-testid="login-page"]');
     await page.fill('input[type="email"]', DEV_LOGIN_USER);
     await page.fill('input[type="password"]', DEV_LOGIN_PASS);
@@ -41,7 +43,9 @@ test.describe('Onboarding flow', () => {
   });
 
   test('onboarding step 1 shows intro text and next button', async ({ page }) => {
-    await page.goto('/');
+    // ?dev=true forces the dev-login form to render even if the deployed frontend
+    // wasn't built with VITE_DEV_LOGIN_ENABLED=true — see frontend/src/pages/Login.tsx.
+    await page.goto('/?dev=true');
     await page.waitForSelector('[data-testid="login-page"]');
     await page.fill('input[type="email"]', DEV_LOGIN_USER);
     await page.fill('input[type="password"]', DEV_LOGIN_PASS);
@@ -67,7 +71,9 @@ test.describe('Onboarding flow', () => {
   });
 
   test('onboarding step 2 allows selecting up to 5 teammates', async ({ page }) => {
-    await page.goto('/');
+    // ?dev=true forces the dev-login form to render even if the deployed frontend
+    // wasn't built with VITE_DEV_LOGIN_ENABLED=true — see frontend/src/pages/Login.tsx.
+    await page.goto('/?dev=true');
     await page.waitForSelector('[data-testid="login-page"]');
     await page.fill('input[type="email"]', DEV_LOGIN_USER);
     await page.fill('input[type="password"]', DEV_LOGIN_PASS);
@@ -93,7 +99,9 @@ test.describe('Onboarding flow', () => {
   });
 
   test('after completing onboarding, plan page is shown and onboarding does not reappear', async ({ page }) => {
-    await page.goto('/');
+    // ?dev=true forces the dev-login form to render even if the deployed frontend
+    // wasn't built with VITE_DEV_LOGIN_ENABLED=true — see frontend/src/pages/Login.tsx.
+    await page.goto('/?dev=true');
     await page.waitForSelector('[data-testid="login-page"]');
     await page.fill('input[type="email"]', DEV_LOGIN_USER);
     await page.fill('input[type="password"]', DEV_LOGIN_PASS);
