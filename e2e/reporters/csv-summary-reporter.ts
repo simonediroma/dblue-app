@@ -57,6 +57,10 @@ export default class CsvSummaryReporter implements Reporter {
   }
 
   onEnd(result: FullResult): void {
+    // `playwright test --list` (and any other zero-test invocation) still calls onEnd —
+    // skip writing so it never pollutes the committed report history with an empty run.
+    if (this.rows.length === 0) return;
+
     const reportsDir = path.resolve(__dirname, '..', 'reports');
     fs.mkdirSync(reportsDir, { recursive: true });
 

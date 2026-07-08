@@ -106,10 +106,24 @@ every past run, newest first.
 
 Unlike the HTML report, `reports/` **is committed to the repo** (not gitignored) so the
 result history survives past the CI artifact's 7-day retention. In CI, the
-"Commit test summary report" step in `.github/workflows/e2e.yml` pushes the new report
+"Commit test summary report" step in each workflow (see below) pushes the new report
 back to the branch automatically after every run — including failed runs, since that's
 the most useful case to have a record of. Locally, the file is just written to your
 working tree like any other change; commit it yourself if you want to keep it.
+
+## CI workflows
+
+The two kinds of coverage described above run as two separate, manually-triggered
+GitHub Actions workflows (`workflow_dispatch` only — neither runs automatically on
+push/merge, since both hit the shared Railway dev environment other people also use):
+
+| Workflow | File | Runs |
+|---|---|---|
+| **Basic App Test** | `.github/workflows/basic-app-test.yml` | `npm run test:basic` — the 11 pre-existing regression/smoke files |
+| **No Regression App Test** | `.github/workflows/no-regression-app-test.yml` | `npm run test:csv` — the 52 CSV-mapped tests |
+
+Both scripts are just `playwright test --grep`/`--grep-invert "CSV coverage"` under the
+hood — see `e2e/package.json`.
 
 ## Why some of these tests are expected to fail
 
