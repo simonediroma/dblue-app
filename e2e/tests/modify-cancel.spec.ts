@@ -32,8 +32,9 @@ async function confirmAppLevelWarningIfPresent(page: import('@playwright/test').
 
 test.describe('CSV coverage — Modify/Cancel', () => {
   test('[H-26] edit any future day across status combinations', async ({ page }) => {
-    await loginAsOwner(page);
     const date = futureTestDate('H-26');
+    await resetStatus('dev@dblue.it', date);
+    await loginAsOwner(page);
 
     await openDayCard(page, date);
     await goToPlanningStep(page);
