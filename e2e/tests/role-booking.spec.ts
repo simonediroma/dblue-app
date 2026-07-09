@@ -27,9 +27,9 @@ test.describe('CSV coverage — Role-Specific Booking', () => {
   );
 
   test('[H-45] Admin Member books the Admin Room', async ({ page }) => {
-    await loginAsAdminMember(page);
     const date = futureTestDate('H-45');
     await resetStatus(ROLE_EMAILS.admin_member, date);
+    await loginAsAdminMember(page);
 
     await openDayCard(page, date);
     await goToPlanningStep(page);
@@ -58,9 +58,9 @@ test.describe('CSV coverage — Role-Specific Booking', () => {
   });
 
   test('[H-46] Director books the Management Room', async ({ page }) => {
-    await loginAsDirectorRole(page);
     const date = futureTestDate('H-46');
     await resetStatus(ROLE_EMAILS.director, date);
+    await loginAsDirectorRole(page);
 
     await openDayCard(page, date);
     await goToPlanningStep(page);

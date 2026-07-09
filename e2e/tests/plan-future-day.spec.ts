@@ -10,12 +10,9 @@ import { openDayCard, goToPlanningStep, selectStatus, confirmRoom } from '../fix
  */
 
 test.describe('CSV coverage — Plan a Future Day', () => {
-  test.beforeEach(async ({ page }) => {
-    await loginAsOwner(page);
-  });
-
   test('[H-09] future day with no status shows the "Set status" empty state', async ({ page }) => {
     const date = futureTestDate('H-09');
+    await loginAsOwner(page);
     await openDayCard(page, date);
     const detail = page.locator('[data-testid="daily-detail"]');
 
@@ -31,6 +28,7 @@ test.describe('CSV coverage — Plan a Future Day', () => {
   test('[H-10] plan a future day — In Office', async ({ page }) => {
     const date = futureTestDate('H-10');
     await resetStatus('dev@dblue.it', date);
+    await loginAsOwner(page);
 
     await openDayCard(page, date);
     await goToPlanningStep(page);
@@ -60,6 +58,7 @@ test.describe('CSV coverage — Plan a Future Day', () => {
   test('[H-11] plan a future day — Remote Working', async ({ page }) => {
     const date = futureTestDate('H-11');
     await resetStatus('dev@dblue.it', date);
+    await loginAsOwner(page);
     await openDayCard(page, date);
     await goToPlanningStep(page);
     await selectStatus(page, 'REMOTE');
@@ -71,6 +70,7 @@ test.describe('CSV coverage — Plan a Future Day', () => {
   test('[H-12] plan a future day — On a Mission', async ({ page }) => {
     const date = futureTestDate('H-12');
     await resetStatus('dev@dblue.it', date);
+    await loginAsOwner(page);
     await openDayCard(page, date);
     await goToPlanningStep(page);
     await selectStatus(page, 'MISSION');
@@ -82,6 +82,7 @@ test.describe('CSV coverage — Plan a Future Day', () => {
   test('[H-13] plan a future day — On Leave', async ({ page }) => {
     const date = futureTestDate('H-13');
     await resetStatus('dev@dblue.it', date);
+    await loginAsOwner(page);
     await openDayCard(page, date);
     await goToPlanningStep(page);
     await selectStatus(page, 'LEAVE');
@@ -95,6 +96,7 @@ test.describe('CSV coverage — Plan a Future Day', () => {
     // Reset first: other CSV-coverage spec files may also use the owner account's "today".
     const today = todayStr();
     await resetStatus('dev@dblue.it', today);
+    await loginAsOwner(page);
     await openDayCard(page, today);
     await goToPlanningStep(page);
     await selectStatus(page, 'SICK');

@@ -34,9 +34,9 @@ async function getPresenceEntry(page: Page, date: string) {
 
 test.describe('CSV coverage — Permesso', () => {
   test('[H-31] request leave hours alongside a normal day (custom amount)', async ({ page }) => {
-    await loginAsOwner(page);
     const date = futureTestDate('H-31');
     await resetStatus(OWNER_EMAIL, date);
+    await loginAsOwner(page);
 
     await openDayCard(page, date);
     await goToPlanningStep(page);
@@ -62,9 +62,9 @@ test.describe('CSV coverage — Permesso', () => {
   });
 
   test('[H-32] request leave hours for half a day in the morning', async ({ page }) => {
-    await loginAsOwner(page);
     const date = futureTestDate('H-32');
     await resetStatus(OWNER_EMAIL, date);
+    await loginAsOwner(page);
 
     await openDayCard(page, date);
     await goToPlanningStep(page);
@@ -87,9 +87,9 @@ test.describe('CSV coverage — Permesso', () => {
   });
 
   test('[H-33] request leave hours for half a day in the afternoon', async ({ page }) => {
-    await loginAsOwner(page);
     const date = futureTestDate('H-33');
     await resetStatus(OWNER_EMAIL, date);
+    await loginAsOwner(page);
 
     await openDayCard(page, date);
     await goToPlanningStep(page);
