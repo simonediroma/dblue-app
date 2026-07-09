@@ -420,7 +420,7 @@ export default function DailyDetail({
 
  if (step === 'PLANNING') {
  return (
- <div className="fixed inset-0 bg-surface z-[110] flex flex-col overflow-y-auto pb-10 font-sans">
+ <div data-testid="daily-detail" className="fixed inset-0 bg-surface z-[110] flex flex-col overflow-y-auto pb-10 font-sans">
  <ModalHeader title={day.isPast ? "retrofit" : "planning"}/>
 
  <main className="pt-24 px-6 max-w-xl mx-auto w-full">
@@ -625,7 +625,7 @@ export default function DailyDetail({
 
  if (step === 'HOURS_OFF') {
  return (
- <div className="fixed inset-0 bg-surface z-[125] flex flex-col overflow-y-auto pb-10 font-sans">
+ <div data-testid="daily-detail" className="fixed inset-0 bg-surface z-[125] flex flex-col overflow-y-auto pb-10 font-sans">
  <ModalHeader title="Time Off"/>
 
  <main className="pt-24 px-6 max-w-xl mx-auto w-full">
@@ -702,7 +702,7 @@ export default function DailyDetail({
  const formattedDate = formatAppDate(day.date, 'long').toUpperCase();
 
  return (
- <div className="fixed inset-0 bg-surface z-[120] flex flex-col overflow-y-auto font-sans">
+ <div data-testid="daily-detail" className="fixed inset-0 bg-surface z-[120] flex flex-col overflow-y-auto font-sans">
  <ModalHeader title="Workspace Use"/>
 
  <div className={`pt-24 max-w-xl mx-auto w-full text-center px-6 pb-20`}>
@@ -1398,7 +1398,7 @@ export default function DailyDetail({
  const monthDisplay = months[parseAppDate(day.date).getMonth()];
  
  return (
- <div className="fixed inset-0 bg-surface z-[130] flex flex-col font-sans overflow-hidden">
+ <div data-testid="daily-detail" className="fixed inset-0 bg-surface z-[130] flex flex-col font-sans overflow-hidden">
  <ModalHeader title={`All colleagues' plans for ${dayDisplay} ${monthDisplay}`}/>
 
  <main className="pt-24 px-6 max-w-xl mx-auto w-full pb-10 overflow-y-auto h-full">
@@ -1415,7 +1415,7 @@ export default function DailyDetail({
  );
  }
  return (
- <div className="fixed inset-0 bg-surface z-[100] flex flex-col overflow-y-auto pb-10 font-sans">
+ <div data-testid="daily-detail" className="fixed inset-0 bg-surface z-[100] flex flex-col overflow-y-auto pb-10 font-sans">
  <ModalHeader title=""/>
 
  <header className="pt-24 pb-6 px-6 relative">
