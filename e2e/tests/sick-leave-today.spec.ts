@@ -21,7 +21,7 @@ test.describe('CSV coverage — Sick Leave (Current Day)', () => {
     // this is also the sub-case the CSV flags as missing an alert.
     await openDayCard(page, today);
     await goToPlanningStep(page);
-    await selectStatus(page, 'IN_OFFICE');
+    await selectStatus(page, 'IN_OFFICE', today);
     await confirmRoom(page, /./);
 
     const start = Date.now();

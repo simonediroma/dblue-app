@@ -229,7 +229,7 @@ const CSV_OWNER_EMAIL = 'dev@dblue.it';
 async function csvSetStatusAndOpenExtend(page: Page, date: string, status: StatusKey) {
   await csvOpenDayCard(page, date);
   await csvGoToPlanningStep(page);
-  await csvSelectStatus(page, status);
+  await csvSelectStatus(page, status, date);
   if (status === 'IN_OFFICE') await csvConfirmRoom(page, /./);
 
   await csvOpenDayCard(page, date);

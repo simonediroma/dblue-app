@@ -40,7 +40,7 @@ test.describe('CSV coverage — Permesso', () => {
 
     await openDayCard(page, date);
     await goToPlanningStep(page);
-    await selectStatus(page, 'IN_OFFICE');
+    await selectStatus(page, 'IN_OFFICE', date);
     await confirmRoom(page, /./);
 
     await openDayCard(page, date);
@@ -68,7 +68,7 @@ test.describe('CSV coverage — Permesso', () => {
 
     await openDayCard(page, date);
     await goToPlanningStep(page);
-    await selectStatus(page, 'IN_OFFICE');
+    await selectStatus(page, 'IN_OFFICE', date);
     await confirmRoom(page, /./);
 
     await openDayCard(page, date);
@@ -93,7 +93,7 @@ test.describe('CSV coverage — Permesso', () => {
 
     await openDayCard(page, date);
     await goToPlanningStep(page);
-    await selectStatus(page, 'IN_OFFICE');
+    await selectStatus(page, 'IN_OFFICE', date);
     await confirmRoom(page, /./);
 
     await openDayCard(page, date);

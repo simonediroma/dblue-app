@@ -12,6 +12,18 @@ by side in `tests/`:
   `page.route()` mocking — because the CSV exists specifically to catch real
   backend+frontend integration bugs that a mocked response would hide.
 
+  **One deliberate, narrow exception**: `selectStatus(page, 'IN_OFFICE', date)` in
+  `fixtures/dailyDetail.ts`. On the shared dev environment the office can genuinely be
+  at capacity for a given date (real bookings from other tests/testers), which would
+  otherwise make the test skip instead of exercising the IN_OFFICE flow at all. When
+  that happens, it patches just that one date's `bookedCount` to 0 in the `/presence`
+  response (every other day's real data is untouched) and reloads, so the test still
+  runs. This is always clearly flagged — via a `mocked-fallback` test annotation, shown
+  in both the Playwright HTML report and the committed CSV summary report (🧪 marker) —
+  so a passing/failing result is never silently attributed to real data when it wasn't.
+  Tests that deliberately exercise the real full-office/waiting-list path itself
+  (`capacity.spec.ts` H-40) don't pass a `date` and keep the original skip behavior.
+
 ## Environment
 
 **There is no local dev environment for this suite.** It runs against the shared

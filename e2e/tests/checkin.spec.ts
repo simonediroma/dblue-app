@@ -339,7 +339,7 @@ test.describe('CSV coverage — Confirm/Check-In', () => {
     await csvOpenDayCard2(page, today);
     if (!(await csvCanPlanToday(page))) { test.skip(); return; }
     await csvGoToPlanningStep2(page);
-    await csvSelectStatus2(page, 'IN_OFFICE');
+    await csvSelectStatus2(page, 'IN_OFFICE', today);
     await csvConfirmRoom2(page, /./);
 
     const card = page.locator(`[data-testid="day-card"][data-date="${today}"]`);
@@ -467,7 +467,7 @@ test.describe('CSV coverage — Confirm/Check-In', () => {
     await csvOpenDayCard2(page, today);
     if (await csvCanPlanToday(page)) {
       await csvGoToPlanningStep2(page);
-      await csvSelectStatus2(page, 'IN_OFFICE');
+      await csvSelectStatus2(page, 'IN_OFFICE', today);
       await csvConfirmRoom2(page, /./);
 
       await csvOpenDayCard2(page, today);

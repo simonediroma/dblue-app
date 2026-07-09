@@ -59,7 +59,12 @@ export type StatusKey = keyof typeof STATUS_LABELS;
 // Click a status option in the PLANNING step. For IN_OFFICE this opens the WORKSPACE
 // (room selection) step; for a past day this opens the retrofit confirmation dialog
 // instead of applying immediately — use confirmRetrofit() afterward.
-export async function selectStatus(page: Page, status: StatusKey) {
+//
+// `date` is optional and only used for the IN_OFFICE mocked-data fallback below — pass
+// it whenever the test's intent is "book a normal In Office day" (not itself testing
+// full-office/waiting-list behavior, e.g. capacity.spec.ts's H-40, which must keep the
+// plain skip so it can exercise the real full-office path).
+export async function selectStatus(page: Page, status: StatusKey, date?: string) {
   const detail = page.locator('[data-testid="daily-detail"]');
   if (status === 'IN_OFFICE') {
     const plainInOffice = detail.getByText(STATUS_LABELS.IN_OFFICE);
@@ -68,13 +73,54 @@ export async function selectStatus(page: Page, status: StatusKey) {
       // accounts on this shared dev environment) — the app correctly swaps the plain
       // "In Office" option for "Waiting List" / "In Office / Not using a desk"
       // instead, so there's nothing matching STATUS_LABELS.IN_OFFICE to click.
-      test.skip();
+      if (!date) {
+        test.skip();
+        return;
+      }
+      await installOfficeCapacityFallbackAndRetry(page, date, plainInOffice);
       return;
     }
     await plainInOffice.click();
     return;
   }
   await detail.getByText(STATUS_LABELS[status]).click();
+}
+
+// Mocked-data fallback: instead of skipping when the real office is full for `date`,
+// patch just that one day's bookedCount to 0 in the /presence response (every other
+// day's real data is untouched), reload so usePresence's one-shot fetch picks it up,
+// and retry entering PLANNING + selecting IN_OFFICE. Clearly flagged via a test
+// annotation so the CSV summary report and HTML report both surface that this specific
+// run used mocked data rather than a real booking.
+//
+// `plainInOffice` is a live Locator (not a DOM snapshot), so it stays valid to
+// re-evaluate against the page after the reload below — no need to re-create it.
+async function installOfficeCapacityFallbackAndRetry(
+  page: Page,
+  date: string,
+  plainInOffice: ReturnType<Page['locator']>,
+) {
+  const month = date.slice(0, 7);
+  await page.route(`**/presence?month=${month}`, async (route) => {
+    const response = await route.fetch();
+    const json = await response.json();
+    const day = Array.isArray(json) ? json.find((d: { date: string }) => d.date === date) : undefined;
+    if (day) day.bookedCount = 0;
+    await route.fulfill({ response, json });
+  }, { times: 1 });
+
+  test.info().annotations.push({
+    type: 'mocked-fallback',
+    description: `Office was at capacity for ${date} on the shared dev environment — bookedCount was patched via page.route() (only for this date; every other day's real data is untouched) so the IN_OFFICE flow could still be exercised instead of skipping.`,
+  });
+
+  await page.reload();
+  await waitForSplashGone(page);
+  await openDayCard(page, date);
+  await goToPlanningStep(page);
+
+  await expect(plainInOffice).toBeVisible({ timeout: 5000 });
+  await plainInOffice.click();
 }
 
 export async function confirmRoom(page: Page, roomName: string | RegExp) {

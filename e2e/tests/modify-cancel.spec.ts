@@ -38,7 +38,7 @@ test.describe('CSV coverage — Modify/Cancel', () => {
 
     await openDayCard(page, date);
     await goToPlanningStep(page);
-    await selectStatus(page, 'IN_OFFICE');
+    await selectStatus(page, 'IN_OFFICE', date);
     await confirmRoom(page, /./);
 
     await openDayCard(page, date);
@@ -67,7 +67,7 @@ test.describe('CSV coverage — Modify/Cancel', () => {
 
     await openDayCard(page, today);
     await goToPlanningStep(page);
-    await selectStatus(page, 'IN_OFFICE');
+    await selectStatus(page, 'IN_OFFICE', today);
     await confirmRoom(page, /./);
 
     await openDayCard(page, today);
@@ -91,7 +91,7 @@ test.describe('CSV coverage — Modify/Cancel', () => {
 
     await openDayCard(page, today);
     await goToPlanningStep(page);
-    await selectStatus(page, 'IN_OFFICE');
+    await selectStatus(page, 'IN_OFFICE', today);
     await confirmRoom(page, /./);
 
     await openDayCard(page, today);
@@ -121,7 +121,7 @@ test.describe('CSV coverage — Modify/Cancel', () => {
 
     await openDayCard(page, date);
     await goToPlanningStep(page);
-    await selectStatus(page, 'IN_OFFICE');
+    await selectStatus(page, 'IN_OFFICE', date);
     await confirmRoom(page, /./);
 
     const card = page.locator(`[data-testid="day-card"][data-date="${date}"]`);
@@ -147,7 +147,7 @@ test.describe('CSV coverage — Modify/Cancel', () => {
 
     await openDayCard(page, today);
     await goToPlanningStep(page);
-    await selectStatus(page, 'IN_OFFICE');
+    await selectStatus(page, 'IN_OFFICE', today);
     await confirmRoom(page, /./);
 
     await openDayCard(page, today);

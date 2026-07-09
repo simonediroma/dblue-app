@@ -33,7 +33,7 @@ test.describe('CSV coverage — Role-Specific Booking', () => {
 
     await openDayCard(page, date);
     await goToPlanningStep(page);
-    await selectStatus(page, 'IN_OFFICE');
+    await selectStatus(page, 'IN_OFFICE', date);
 
     const detail = page.locator('[data-testid="daily-detail"]');
     const adminRoomOption = detail.locator('[data-testid="room-option"]').filter({ hasText: /admin room/i });
@@ -64,7 +64,7 @@ test.describe('CSV coverage — Role-Specific Booking', () => {
 
     await openDayCard(page, date);
     await goToPlanningStep(page);
-    await selectStatus(page, 'IN_OFFICE');
+    await selectStatus(page, 'IN_OFFICE', date);
 
     const detail = page.locator('[data-testid="daily-detail"]');
     const managementRoomOption = detail.locator('[data-testid="room-option"]').filter({ hasText: /management room/i });

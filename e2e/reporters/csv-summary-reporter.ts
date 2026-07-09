@@ -22,6 +22,7 @@ interface Row {
   errorDetail?: string;
   location?: string;
   file: string;
+  mockedFallback?: string;
 }
 
 const MAX_DETAIL_LENGTH = 4000;
@@ -71,6 +72,8 @@ export default class CsvSummaryReporter implements Reporter {
       }
     }
 
+    const mockedFallback = test.annotations.find((a) => a.type === 'mocked-fallback')?.description;
+
     this.rows.push({
       hId: match ? match[1].toUpperCase() : null,
       title,
@@ -80,6 +83,7 @@ export default class CsvSummaryReporter implements Reporter {
       errorDetail,
       location,
       file: path.basename(test.location.file),
+      mockedFallback,
     });
   }
 
@@ -136,7 +140,8 @@ export default class CsvSummaryReporter implements Reporter {
         const icon = STATUS_ICON[row.status] ?? row.status;
         const cleanTitle = row.title.replace(/^\[H-\d+[a-z]?\]\s*/i, '').replace(/\|/g, '\\|');
         const errSuffix = row.errorMessage ? ` — ${row.errorMessage}` : '';
-        lines.push(`| ${row.hId} | ${cleanTitle} | ${icon} ${row.status}${errSuffix} |`);
+        const fallbackSuffix = row.mockedFallback ? ' 🧪 _mocked fallback_' : '';
+        lines.push(`| ${row.hId} | ${cleanTitle} | ${icon} ${row.status}${errSuffix}${fallbackSuffix} |`);
       }
       lines.push('');
       lines.push(...this.renderErrorDetails(sorted, (row) => row.hId ?? row.title));
@@ -158,20 +163,28 @@ export default class CsvSummaryReporter implements Reporter {
     return lines.join('\n');
   }
 
-  // One <details> block per failed/timed-out test with captured error detail — full
-  // message (expected/received diff included) + source snippet, so a failure can be
-  // diagnosed directly from the committed file without opening the HTML report/trace.
-  // <details> is a plain HTML tag: GitHub renders it collapsed, but the raw text (and
-  // therefore every byte of the error) is still there for anyone/anything reading the
-  // file as plain text.
+  // One <details> block per test with captured error detail and/or a mocked-fallback
+  // annotation — full message (expected/received diff included) + source snippet for
+  // failures, so a failure can be diagnosed directly from the committed file without
+  // opening the HTML report/trace; the fallback note for tests (passed or not) that ran
+  // against mocked office-capacity data instead of skipping. <details> is a plain HTML
+  // tag: GitHub renders it collapsed, but the raw text is still there for anyone/anything
+  // reading the file as plain text.
   private renderErrorDetails(rows: Row[], label: (row: Row) => string): string[] {
-    const withDetail = rows.filter((r) => r.errorDetail);
+    const withDetail = rows.filter((r) => r.errorDetail || r.mockedFallback);
     if (withDetail.length === 0) return [];
 
     const lines: string[] = [];
     for (const row of withDetail) {
       const heading = row.location ? `${label(row)} (${row.location})` : label(row);
-      lines.push('<details>', `<summary>${heading}</summary>`, '', '```', row.errorDetail!, '```', '', '</details>', '');
+      lines.push('<details>', `<summary>${heading}</summary>`, '');
+      if (row.mockedFallback) {
+        lines.push(`🧪 **Mocked fallback used:** ${row.mockedFallback}`, '');
+      }
+      if (row.errorDetail) {
+        lines.push('```', row.errorDetail, '```', '');
+      }
+      lines.push('</details>', '');
     }
     return lines;
   }
