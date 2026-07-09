@@ -68,12 +68,16 @@ jobs:
       # not fail an otherwise-successful test run.
       - name: Commit test summary report
         if: always()
+        # Deliberately stays at repo root for the whole step (no `cd e2e`): `git
+        # status --porcelain` always returns paths relative to the repo root
+        # regardless of cwd, so `cd e2e` here previously made `git add` resolve
+        # that root-relative path against cwd=e2e/ too, doubling the prefix to
+        # e2e/e2e/reports/... and failing with "did not match any files".
         run: |
-          cd e2e
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          NEW_REPORT=$(git status --porcelain reports/ | grep '^??' | awk '{print $2}' | grep -v 'README.md' || true)
+          NEW_REPORT=$(git status --porcelain e2e/reports/ | grep '^??' | awk '{print $2}' | grep -v 'README.md' || true)
           if [ -z "$NEW_REPORT" ]; then
             echo "No new report file to commit."
             exit 0
@@ -82,18 +86,19 @@ jobs:
           git add "$NEW_REPORT"
           git commit -m "test: No Regression App Test run summary $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-          # The reporter already overwrote reports/README.md on disk this run (stale,
-          # computed before any rebase); discard that uncommitted change so the working
-          # tree is clean for `git pull --rebase` — it gets regenerated fresh below.
-          git checkout -- reports/README.md 2>/dev/null || true
+          # The reporter already overwrote e2e/reports/README.md on disk this run
+          # (stale, computed before any rebase); discard that uncommitted change so
+          # the working tree is clean for `git pull --rebase` — it gets regenerated
+          # fresh below.
+          git checkout -- e2e/reports/README.md 2>/dev/null || true
 
           MAX_ATTEMPTS=5
           ATTEMPT=1
           PUSHED=false
           while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
             if git pull --rebase origin "${{ github.ref_name }}"; then
-              node scripts/regenerate-reports-index.js reports
-              git add reports/README.md
+              node e2e/scripts/regenerate-reports-index.js e2e/reports
+              git add e2e/reports/README.md
               if ! git diff --cached --quiet; then
                 git commit -m "test: regenerate reports index"
               fi

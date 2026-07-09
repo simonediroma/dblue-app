@@ -3,7 +3,20 @@ import { Page, expect } from '@playwright/test';
 // Shared DailyDetail navigation helpers for the new CSV-coverage spec files.
 // Existing spec files keep their own local navigation logic — not touched here.
 
+// The app shows a full-page splash overlay (fixed inset-0 z-[9999]) for a fixed
+// 2s (longer if the user fetch is still loading) on every App mount, including
+// after a page.reload(). It sits on top of the already-mounted plan page, so it
+// silently intercepts clicks aimed at day cards — either exhausting Playwright's
+// click retries (test timeout) or letting two retries land close enough together
+// that the app's own click/double-click debounce (App.tsx handleDayClick) treats
+// them as a double-click and cancels the single-click open. Waiting for it to be
+// gone before interacting with day cards avoids both failure modes.
+export async function waitForSplashGone(page: Page) {
+  await page.locator('[data-testid="splash-screen"]').waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {});
+}
+
 export async function openDayCard(page: Page, date: string) {
+  await waitForSplashGone(page);
   const card = page.locator(`[data-testid="day-card"][data-date="${date}"]`);
   await card.scrollIntoViewIfNeeded();
   await expect(card).toBeVisible({ timeout: 10000 });

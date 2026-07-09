@@ -2,7 +2,7 @@ import { motion } from 'motion/react';
 
 const SplashScreen = () => {
   return (
-    <motion.div initial={{opacity: 1}} exit={{opacity: 0}} transition={{duration: 0.8, ease: "easeInOut"}} className="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center p-6">
+    <motion.div data-testid="splash-screen" initial={{opacity: 1}} exit={{opacity: 0}} transition={{duration: 0.8, ease: "easeInOut"}} className="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center p-6">
       <div className="flex flex-col items-center gap-2 max-w-sm w-full">
         {/* Secondary text */}
         <span className="text-[10px] sm:text-[12px] font-bold text-on-surface-variant/40 uppercase tracking-[0.3em] font-sans">
