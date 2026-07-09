@@ -1,4 +1,5 @@
 import { Page } from '@playwright/test';
+import { waitForSplashGone } from './dailyDetail';
 
 const DEV_LOGIN_USER = process.env.DEV_LOGIN_USER ?? 'dev@dblue.it';
 const DEV_LOGIN_PASS = process.env.DEV_LOGIN_PASS ?? 'changeme';
@@ -15,6 +16,7 @@ export async function loginAsDirector(page: Page) {
   await page.click('button[type="submit"]');
   // Wait for redirect to plan page (splash screen may show first)
   await page.waitForSelector('[data-testid="plan-page"]', { timeout: 15000 });
+  await waitForSplashGone(page);
 }
 
 export async function loginAsEmployee(page: Page) {
@@ -26,6 +28,7 @@ export async function loginAsEmployee(page: Page) {
   await page.fill('input[type="password"]', DEV_LOGIN_EMPLOYEE_PASS);
   await page.click('button[type="submit"]');
   await page.waitForSelector('[data-testid="plan-page"]', { timeout: 15000 });
+  await waitForSplashGone(page);
 }
 
 export async function logout(page: Page) {
@@ -58,6 +61,7 @@ export async function loginAs(page: Page, role: DevRole) {
   await page.fill('input[type="password"]', DEV_LOGIN_PASS);
   await page.click('button[type="submit"]');
   await page.waitForSelector('[data-testid="plan-page"]', { timeout: 15000 });
+  await waitForSplashGone(page);
 }
 
 export const loginAsOwner = (page: Page) => loginAs(page, 'owner');
