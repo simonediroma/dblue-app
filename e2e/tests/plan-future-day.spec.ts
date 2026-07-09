@@ -59,6 +59,7 @@ test.describe('CSV coverage — Plan a Future Day', () => {
 
   test('[H-11] plan a future day — Remote Working', async ({ page }) => {
     const date = futureTestDate('H-11');
+    await resetStatus('dev@dblue.it', date);
     await openDayCard(page, date);
     await goToPlanningStep(page);
     await selectStatus(page, 'REMOTE');
@@ -69,6 +70,7 @@ test.describe('CSV coverage — Plan a Future Day', () => {
 
   test('[H-12] plan a future day — On a Mission', async ({ page }) => {
     const date = futureTestDate('H-12');
+    await resetStatus('dev@dblue.it', date);
     await openDayCard(page, date);
     await goToPlanningStep(page);
     await selectStatus(page, 'MISSION');
@@ -79,6 +81,7 @@ test.describe('CSV coverage — Plan a Future Day', () => {
 
   test('[H-13] plan a future day — On Leave', async ({ page }) => {
     const date = futureTestDate('H-13');
+    await resetStatus('dev@dblue.it', date);
     await openDayCard(page, date);
     await goToPlanningStep(page);
     await selectStatus(page, 'LEAVE');

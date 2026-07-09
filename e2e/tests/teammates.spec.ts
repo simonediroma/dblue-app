@@ -1,6 +1,6 @@
 import { test, expect, Page, APIRequestContext, Browser } from '@playwright/test';
-import { loginAsOwner, loginAsDirectorRole } from '../fixtures/auth';
-import { resetOnboarding } from '../fixtures/testAdmin';
+import { loginAsOwner, loginAsDirectorRole, ROLE_EMAILS } from '../fixtures/auth';
+import { resetOnboarding, resetStatus } from '../fixtures/testAdmin';
 import { futureTestDate } from '../fixtures/dates';
 import { openDayCard, goToPlanningStep, selectStatus, confirmRoom } from '../fixtures/dailyDetail';
 
@@ -94,6 +94,7 @@ async function saveTeammates(page: Page) {
 // another account's Plan view / DailyDetail. Uses its own browser context so it never
 // collides with whatever account the test's main `page` is (or will be) logged in as.
 async function setGiuliaStatus(browser: Browser, date: string, status: 'IN_OFFICE' | 'REMOTE') {
+  await resetStatus(ROLE_EMAILS.director, date);
   const context = await browser.newContext();
   const page = await context.newPage();
   await loginAsDirectorRole(page);
