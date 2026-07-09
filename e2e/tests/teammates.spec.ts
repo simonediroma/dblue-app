@@ -100,7 +100,7 @@ async function setGiuliaStatus(browser: Browser, date: string, status: 'IN_OFFIC
   await loginAsDirectorRole(page);
   await openDayCard(page, date);
   await goToPlanningStep(page);
-  await selectStatus(page, status);
+  await selectStatus(page, status, date);
   if (status === 'IN_OFFICE') {
     await confirmRoom(page, /./);
   }

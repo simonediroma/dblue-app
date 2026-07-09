@@ -16,7 +16,7 @@ async function setColleagueStatus(browser: Browser, role: DevRole, date: string,
   await loginAs(page, role);
   await openDayCard(page, date);
   await goToPlanningStep(page);
-  await selectStatus(page, status);
+  await selectStatus(page, status, date);
   if (status === 'IN_OFFICE') await confirmRoom(page, /./);
   await context.close();
 }

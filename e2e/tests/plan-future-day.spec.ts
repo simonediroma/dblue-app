@@ -32,7 +32,7 @@ test.describe('CSV coverage — Plan a Future Day', () => {
 
     await openDayCard(page, date);
     await goToPlanningStep(page);
-    await selectStatus(page, 'IN_OFFICE');
+    await selectStatus(page, 'IN_OFFICE', date);
     await confirmRoom(page, /./);
 
     // Status saves — day now shows In Office with a room, both on Plan and Daily view.
@@ -51,7 +51,7 @@ test.describe('CSV coverage — Plan a Future Day', () => {
 
     await openDayCard(page, date);
     await goToPlanningStep(page);
-    await selectStatus(page, 'IN_OFFICE');
+    await selectStatus(page, 'IN_OFFICE', date);
     await expect(page.locator('[data-testid="room-planned-badge"]')).not.toBeVisible();
   });
 
