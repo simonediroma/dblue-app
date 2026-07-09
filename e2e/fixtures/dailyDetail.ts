@@ -102,12 +102,22 @@ async function installOfficeCapacityFallbackAndRetry(
 ) {
   const month = date.slice(0, 7);
   await page.route(`**/presence?month=${month}`, async (route) => {
+    // The app sends Authorization: Bearer + credentials: 'include' cross-origin, which
+    // triggers a CORS preflight (OPTIONS) request to this exact same URL before the real
+    // GET. page.route() matches by URL regardless of method, so an unfiltered handler (or
+    // one limited to `{ times: 1 }`) can end up patching the preflight's empty body instead
+    // of the real response — letting the actual (still-full) GET through unmocked. Only
+    // touch GET; let everything else (OPTIONS, and any other method) pass through as-is.
+    if (route.request().method() !== 'GET') {
+      await route.continue();
+      return;
+    }
     const response = await route.fetch();
     const json = await response.json();
     const day = Array.isArray(json) ? json.find((d: { date: string }) => d.date === date) : undefined;
     if (day) day.bookedCount = 0;
     await route.fulfill({ response, json });
-  }, { times: 1 });
+  });
 
   test.info().annotations.push({
     type: 'mocked-fallback',
