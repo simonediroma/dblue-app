@@ -253,13 +253,10 @@ async function csvConfirmExtend(page: Page) {
 }
 
 test.describe('CSV coverage — Bulk Planning', () => {
-  test.beforeEach(async ({ page }) => {
-    await csvLoginAsOwner(page);
-  });
-
   test('[H-15] plan a full week of office presence (bulk)', async ({ page }) => {
     const date = csvFutureTestDate('H-15');
     await csvResetStatus(CSV_OWNER_EMAIL, date);
+    await csvLoginAsOwner(page);
     await csvSetStatusAndOpenExtend(page, date, 'IN_OFFICE');
     const selected = await csvSelectExtendChips(page, 4);
     if (selected === 0) { test.skip(); return; }
@@ -274,6 +271,7 @@ test.describe('CSV coverage — Bulk Planning', () => {
   test('[H-16] book a specific room for an entire week', async ({ page }) => {
     const date = csvFutureTestDate('H-16');
     await csvResetStatus(CSV_OWNER_EMAIL, date);
+    await csvLoginAsOwner(page);
     await csvSetStatusAndOpenExtend(page, date, 'IN_OFFICE');
 
     // Assign a room per extended day via the "Room Assignment FOR NEW DAYS" section.
@@ -293,6 +291,7 @@ test.describe('CSV coverage — Bulk Planning', () => {
   test('[H-17] plan to be remote for two weeks consecutively', async ({ page }) => {
     const date = csvFutureTestDate('H-17');
     await csvResetStatus(CSV_OWNER_EMAIL, date);
+    await csvLoginAsOwner(page);
     await csvSetStatusAndOpenExtend(page, date, 'REMOTE');
     const selected = await csvSelectExtendChips(page, 10);
     if (selected === 0) { test.skip(); return; }
@@ -302,6 +301,7 @@ test.describe('CSV coverage — Bulk Planning', () => {
   test('[H-18] plan a 4 days mission next week', async ({ page }) => {
     const date = csvFutureTestDate('H-18');
     await csvResetStatus(CSV_OWNER_EMAIL, date);
+    await csvLoginAsOwner(page);
     await csvSetStatusAndOpenExtend(page, date, 'MISSION');
     const selected = await csvSelectExtendChips(page, 4);
     if (selected === 0) { test.skip(); return; }
@@ -315,6 +315,7 @@ test.describe('CSV coverage — Bulk Planning', () => {
     // real, current constraint of the code, not a misunderstanding by the tester.
     const date = csvFutureTestDate('H-19');
     await csvResetStatus(CSV_OWNER_EMAIL, date);
+    await csvLoginAsOwner(page);
     await csvOpenDayCard(page, date);
     await csvGoToPlanningStep(page);
     await csvSelectStatus(page, 'LEAVE');
@@ -357,6 +358,7 @@ test.describe('CSV coverage — Bulk Planning', () => {
   test('[H-20] cannot extend past the 30-day rolling window', async ({ page }) => {
     const date = csvFutureTestDate('H-20', 3);
     await csvResetStatus(CSV_OWNER_EMAIL, date);
+    await csvLoginAsOwner(page);
     await csvOpenDayCard(page, date);
     await csvGoToPlanningStep(page);
     await csvSelectStatus(page, 'REMOTE');
