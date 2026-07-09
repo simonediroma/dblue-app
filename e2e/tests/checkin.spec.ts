@@ -430,6 +430,12 @@ test.describe('CSV coverage — Confirm/Check-In', () => {
     await morningBtn.click();
     await expect(page.getByText(/successfully checked in/i)).toBeVisible({ timeout: 5000 });
 
+    // The daily-detail panel (opened above to reach "Say Good Morning") is a
+    // full-screen overlay that would otherwise intercept the click below — the
+    // "Undo" toast is rendered outside of it, at the App level. Close it first.
+    await page.locator('[data-testid="daily-detail"]').getByRole('button', { name: /back/i }).click();
+    await expect(page.locator('[data-testid="daily-detail"]')).not.toBeVisible({ timeout: 5000 });
+
     // Click Undo promptly (7s UI window, 10s real backend window).
     await page.getByRole('button', { name: /^undo/i }).click();
 

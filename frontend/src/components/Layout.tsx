@@ -22,28 +22,28 @@ export default function Layout({ children, activeTab, onTabChange, isSimplifiedV
 
  {/* Desktop Nav - Centered on LG, Right on MD */}
  <div className="hidden md:flex lg:absolute lg:left-1/2 lg:-translate-x-1/2 items-center gap-4 lg:gap-8">
- <button onClick={() => onTabChange('plan')}
+ <button data-testid="nav-plan-desktop" onClick={() => onTabChange('plan')}
  className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${activeTab === 'plan' ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-surface-container'}`}
  >
  <CalendarDays className={`w-5 h-5 ${activeTab === 'plan' ? 'fill-current' : ''}`}/>
  <span className="font-headline text-sm font-bold tracking-wide uppercase">Plan</span>
  </button>
  {!isSimplifiedView && (
- <button onClick={() => onTabChange('stats')}
+ <button data-testid="nav-stats-desktop" onClick={() => onTabChange('stats')}
  className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${activeTab === 'stats' ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-surface-container'}`}
  >
  <BarChart3 className={`w-5 h-5 ${activeTab === 'stats' ? 'fill-current' : ''}`}/>
  <span className="font-headline text-sm font-bold tracking-wide uppercase">My stats</span>
  </button>
  )}
- <button onClick={() => onTabChange('profile')}
+ <button data-testid="nav-profile-desktop" onClick={() => onTabChange('profile')}
  className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${activeTab === 'profile' ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-surface-container'}`}
  >
  <User className={`w-5 h-5 ${activeTab === 'profile' ? 'fill-current' : ''}`}/>
  <span className="font-headline text-sm font-bold tracking-wide uppercase">Profile</span>
  </button>
  {isDirector && (
- <button onClick={() => onTabChange('organisation')}
+ <button data-testid="nav-organisation-desktop" onClick={() => onTabChange('organisation')}
  className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${activeTab === 'organisation' ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-surface-container'}`}
  >
  <Landmark className={`w-5 h-5 ${activeTab === 'organisation' ? 'fill-current' : ''}`}/>

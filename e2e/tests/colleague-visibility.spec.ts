@@ -1,6 +1,7 @@
 import { test, expect, Browser, Page } from '@playwright/test';
-import { loginAsOwner, loginAs, DevRole } from '../fixtures/auth';
+import { loginAsOwner, loginAs, DevRole, ROLE_EMAILS } from '../fixtures/auth';
 import { futureTestDate } from '../fixtures/dates';
+import { resetStatus } from '../fixtures/testAdmin';
 import { openDayCard, goToPlanningStep, selectStatus, confirmRoom, StatusKey } from '../fixtures/dailyDetail';
 
 /**
@@ -9,6 +10,7 @@ import { openDayCard, goToPlanningStep, selectStatus, confirmRoom, StatusKey } f
  */
 
 async function setColleagueStatus(browser: Browser, role: DevRole, date: string, status: StatusKey) {
+  await resetStatus(ROLE_EMAILS[role], date);
   const context = await browser.newContext();
   const page = await context.newPage();
   await loginAs(page, role);
@@ -20,7 +22,10 @@ async function setColleagueStatus(browser: Browser, role: DevRole, date: string,
 }
 
 async function openProfileTeammatesEditor(page: Page) {
-  await page.click('[data-testid="nav-profile"]');
+  // Playwright's default desktop viewport (1280x720) is above Tailwind's `md`
+  // breakpoint, so the mobile-only bottom nav (data-testid="nav-profile") is
+  // display:none — the desktop nav (nav-profile-desktop) is what's actually visible.
+  await page.click('[data-testid="nav-profile-desktop"]');
   await page.waitForSelector('[data-testid="profile-page"]');
   await page.click('[data-testid="profile-manage-teammates"]');
   await expect(page.getByPlaceholder('Search by name...')).toBeVisible({ timeout: 5000 });

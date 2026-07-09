@@ -1,7 +1,10 @@
 import { test, expect, Page } from '@playwright/test';
 import { loginAsOwner } from '../fixtures/auth';
 import { futureTestDate } from '../fixtures/dates';
+import { resetStatus } from '../fixtures/testAdmin';
 import { openDayCard, goToPlanningStep, selectStatus, confirmRoom } from '../fixtures/dailyDetail';
+
+const OWNER_EMAIL = 'dev@dblue.it';
 
 /**
  * CSV coverage — Permesso / leave hours (H-31 -> H-33)
@@ -33,6 +36,7 @@ test.describe('CSV coverage — Permesso', () => {
   test('[H-31] request leave hours alongside a normal day (custom amount)', async ({ page }) => {
     await loginAsOwner(page);
     const date = futureTestDate('H-31');
+    await resetStatus(OWNER_EMAIL, date);
 
     await openDayCard(page, date);
     await goToPlanningStep(page);
@@ -60,6 +64,7 @@ test.describe('CSV coverage — Permesso', () => {
   test('[H-32] request leave hours for half a day in the morning', async ({ page }) => {
     await loginAsOwner(page);
     const date = futureTestDate('H-32');
+    await resetStatus(OWNER_EMAIL, date);
 
     await openDayCard(page, date);
     await goToPlanningStep(page);
@@ -84,6 +89,7 @@ test.describe('CSV coverage — Permesso', () => {
   test('[H-33] request leave hours for half a day in the afternoon', async ({ page }) => {
     await loginAsOwner(page);
     const date = futureTestDate('H-33');
+    await resetStatus(OWNER_EMAIL, date);
 
     await openDayCard(page, date);
     await goToPlanningStep(page);
