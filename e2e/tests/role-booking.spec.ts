@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
-import { loginAsAdminMember, loginAsDirectorRole, loginAsEmployee, loginAsLabResponsible } from '../fixtures/auth';
+import { loginAsAdminMember, loginAsDirectorRole, loginAsEmployee, loginAsLabResponsible, ROLE_EMAILS } from '../fixtures/auth';
 import { futureTestDate } from '../fixtures/dates';
+import { resetStatus } from '../fixtures/testAdmin';
 import { openDayCard, goToPlanningStep, selectStatus } from '../fixtures/dailyDetail';
 
 /**
@@ -28,6 +29,7 @@ test.describe('CSV coverage — Role-Specific Booking', () => {
   test('[H-45] Admin Member books the Admin Room', async ({ page }) => {
     await loginAsAdminMember(page);
     const date = futureTestDate('H-45');
+    await resetStatus(ROLE_EMAILS.admin_member, date);
 
     await openDayCard(page, date);
     await goToPlanningStep(page);
@@ -58,6 +60,7 @@ test.describe('CSV coverage — Role-Specific Booking', () => {
   test('[H-46] Director books the Management Room', async ({ page }) => {
     await loginAsDirectorRole(page);
     const date = futureTestDate('H-46');
+    await resetStatus(ROLE_EMAILS.director, date);
 
     await openDayCard(page, date);
     await goToPlanningStep(page);

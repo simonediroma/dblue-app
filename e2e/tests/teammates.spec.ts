@@ -52,7 +52,10 @@ async function selectOnboardingTeammates(page: Page, names: string[]) {
 // --- Profile teammates editor helpers ---
 
 async function openProfileTeammatesEditor(page: Page) {
-  await page.click('[data-testid="nav-profile"]');
+  // Playwright's default desktop viewport (1280x720) is above Tailwind's `md`
+  // breakpoint, so the mobile-only bottom nav (data-testid="nav-profile") is
+  // display:none — the desktop nav (nav-profile-desktop) is what's actually visible.
+  await page.click('[data-testid="nav-profile-desktop"]');
   await page.waitForSelector('[data-testid="profile-page"]');
   await page.click('[data-testid="profile-manage-teammates"]');
   await expect(page.getByPlaceholder('Search by name...')).toBeVisible({ timeout: 5000 });

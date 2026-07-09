@@ -114,8 +114,9 @@ test.describe('CSV coverage — Modify/Cancel', () => {
   });
 
   test('[H-29] cancelling an office day frees the desk', async ({ page }) => {
-    await loginAsEmployee(page);
     const date = futureTestDate('H-29');
+    await resetStatus('mario.rossi@dblue.it', date);
+    await loginAsEmployee(page);
 
     await openDayCard(page, date);
     await goToPlanningStep(page);

@@ -44,7 +44,7 @@ export async function logout(page: Page) {
 
 export type DevRole = 'owner' | 'employee' | 'lab_responsible' | 'admin_member' | 'director';
 
-const ROLE_EMAILS: Record<DevRole, string> = {
+export const ROLE_EMAILS: Record<DevRole, string> = {
   owner: DEV_LOGIN_USER,
   employee: 'mario.rossi@dblue.it',
   lab_responsible: 'sara.ferrari@dblue.it',

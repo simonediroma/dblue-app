@@ -1,4 +1,4 @@
-import { Page, expect } from '@playwright/test';
+import { Page, expect, test } from '@playwright/test';
 
 // Shared DailyDetail navigation helpers for the new CSV-coverage spec files.
 // Existing spec files keep their own local navigation logic — not touched here.
@@ -61,6 +61,19 @@ export type StatusKey = keyof typeof STATUS_LABELS;
 // instead of applying immediately — use confirmRetrofit() afterward.
 export async function selectStatus(page: Page, status: StatusKey) {
   const detail = page.locator('[data-testid="daily-detail"]');
+  if (status === 'IN_OFFICE') {
+    const plainInOffice = detail.getByText(STATUS_LABELS.IN_OFFICE);
+    if (!(await plainInOffice.isVisible().catch(() => false))) {
+      // Office is already at capacity for this date (real bookings from other
+      // accounts on this shared dev environment) — the app correctly swaps the plain
+      // "In Office" option for "Waiting List" / "In Office / Not using a desk"
+      // instead, so there's nothing matching STATUS_LABELS.IN_OFFICE to click.
+      test.skip();
+      return;
+    }
+    await plainInOffice.click();
+    return;
+  }
   await detail.getByText(STATUS_LABELS[status]).click();
 }
 

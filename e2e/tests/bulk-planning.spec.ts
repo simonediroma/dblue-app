@@ -215,6 +215,7 @@ test.describe('Bulk planning — Extend to other days', () => {
 // ---------------------------------------------------------------------------------
 import { loginAsOwner as csvLoginAsOwner } from '../fixtures/auth';
 import { futureTestDate as csvFutureTestDate, todayStr as csvTodayStr } from '../fixtures/dates';
+import { resetStatus as csvResetStatus } from '../fixtures/testAdmin';
 import {
   openDayCard as csvOpenDayCard,
   goToPlanningStep as csvGoToPlanningStep,
@@ -222,6 +223,8 @@ import {
   confirmRoom as csvConfirmRoom,
   StatusKey,
 } from '../fixtures/dailyDetail';
+
+const CSV_OWNER_EMAIL = 'dev@dblue.it';
 
 async function csvSetStatusAndOpenExtend(page: Page, date: string, status: StatusKey) {
   await csvOpenDayCard(page, date);
@@ -256,6 +259,7 @@ test.describe('CSV coverage — Bulk Planning', () => {
 
   test('[H-15] plan a full week of office presence (bulk)', async ({ page }) => {
     const date = csvFutureTestDate('H-15');
+    await csvResetStatus(CSV_OWNER_EMAIL, date);
     await csvSetStatusAndOpenExtend(page, date, 'IN_OFFICE');
     const selected = await csvSelectExtendChips(page, 4);
     if (selected === 0) { test.skip(); return; }
@@ -269,6 +273,7 @@ test.describe('CSV coverage — Bulk Planning', () => {
 
   test('[H-16] book a specific room for an entire week', async ({ page }) => {
     const date = csvFutureTestDate('H-16');
+    await csvResetStatus(CSV_OWNER_EMAIL, date);
     await csvSetStatusAndOpenExtend(page, date, 'IN_OFFICE');
 
     // Assign a room per extended day via the "Room Assignment FOR NEW DAYS" section.
@@ -287,6 +292,7 @@ test.describe('CSV coverage — Bulk Planning', () => {
 
   test('[H-17] plan to be remote for two weeks consecutively', async ({ page }) => {
     const date = csvFutureTestDate('H-17');
+    await csvResetStatus(CSV_OWNER_EMAIL, date);
     await csvSetStatusAndOpenExtend(page, date, 'REMOTE');
     const selected = await csvSelectExtendChips(page, 10);
     if (selected === 0) { test.skip(); return; }
@@ -295,6 +301,7 @@ test.describe('CSV coverage — Bulk Planning', () => {
 
   test('[H-18] plan a 4 days mission next week', async ({ page }) => {
     const date = csvFutureTestDate('H-18');
+    await csvResetStatus(CSV_OWNER_EMAIL, date);
     await csvSetStatusAndOpenExtend(page, date, 'MISSION');
     const selected = await csvSelectExtendChips(page, 4);
     if (selected === 0) { test.skip(); return; }
@@ -307,6 +314,7 @@ test.describe('CSV coverage — Bulk Planning', () => {
     // confusion ("functionality is inside vacation days instead of sick leave") is a
     // real, current constraint of the code, not a misunderstanding by the tester.
     const date = csvFutureTestDate('H-19');
+    await csvResetStatus(CSV_OWNER_EMAIL, date);
     await csvOpenDayCard(page, date);
     await csvGoToPlanningStep(page);
     await csvSelectStatus(page, 'LEAVE');
@@ -348,6 +356,7 @@ test.describe('CSV coverage — Bulk Planning', () => {
 
   test('[H-20] cannot extend past the 30-day rolling window', async ({ page }) => {
     const date = csvFutureTestDate('H-20', 3);
+    await csvResetStatus(CSV_OWNER_EMAIL, date);
     await csvOpenDayCard(page, date);
     await csvGoToPlanningStep(page);
     await csvSelectStatus(page, 'REMOTE');

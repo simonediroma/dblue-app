@@ -30,6 +30,7 @@ test.describe('CSV coverage — Plan a Future Day', () => {
 
   test('[H-10] plan a future day — In Office', async ({ page }) => {
     const date = futureTestDate('H-10');
+    await resetStatus('dev@dblue.it', date);
 
     await openDayCard(page, date);
     await goToPlanningStep(page);
