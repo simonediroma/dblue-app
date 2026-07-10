@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { loginAsOwner, loginAsEmployee } from '../fixtures/auth';
+import { loginAsOwner, loginAsEmployee, getAuthHeaders } from '../fixtures/auth';
 import { futureTestDate } from '../fixtures/dates';
 import { fillCapacity, clearCapacity, resetStatus } from '../fixtures/testAdmin';
 import { openDayCard, goToPlanningStep, selectStatus, confirmRoom } from '../fixtures/dailyDetail';
@@ -21,7 +21,7 @@ import { flushOfficeCapacityQueue } from '../fixtures/officeCapacityQueue';
 const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:4000';
 
 async function getRealOfficeCapacity(page: import('@playwright/test').Page): Promise<number> {
-  const res = await page.request.get(`${API_BASE}/rooms`);
+  const res = await page.request.get(`${API_BASE}/rooms`, { headers: await getAuthHeaders(page) });
   const rooms = (await res.json()) as Array<{ capacity: number }>;
   return rooms.reduce((sum, r) => sum + r.capacity, 0);
 }
@@ -33,7 +33,7 @@ test.describe('CSV coverage — Capacity & Waiting List', () => {
     await loginAsOwner(page);
     const realCapacity = await getRealOfficeCapacity(page);
 
-    const usersRes = await page.request.get(`${API_BASE}/admin/users`);
+    const usersRes = await page.request.get(`${API_BASE}/admin/users`, { headers: await getAuthHeaders(page) });
     const users = (await usersRes.json()) as unknown[];
     expect(realCapacity).toBeLessThan(users.length);
 
@@ -104,10 +104,11 @@ test.describe('CSV coverage — Capacity & Waiting List', () => {
       await selectStatus(employeePage, 'IN_OFFICE');
       await confirmRoom(employeePage, /./);
 
-      const meRes = await employeePage.request.get(`${API_BASE}/auth/me`);
+      const employeeAuthHeaders = await getAuthHeaders(employeePage);
+      const meRes = await employeePage.request.get(`${API_BASE}/auth/me`, { headers: employeeAuthHeaders });
       const me = (await meRes.json()) as { id: string };
       const month = date.slice(0, 7);
-      const presenceRes = await employeePage.request.get(`${API_BASE}/presence?month=${month}`);
+      const presenceRes = await employeePage.request.get(`${API_BASE}/presence?month=${month}`, { headers: employeeAuthHeaders });
       const days = (await presenceRes.json()) as Array<{ date: string; status: string }>;
       void me;
       const entry = days.find((d) => d.date === date);

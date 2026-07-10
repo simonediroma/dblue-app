@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { loginAsOwner, loginAsEmployee } from '../fixtures/auth';
+import { loginAsOwner, loginAsEmployee, getAuthHeaders } from '../fixtures/auth';
 import { futureTestDate, todayStr } from '../fixtures/dates';
 import { resetStatus } from '../fixtures/testAdmin';
 import {
@@ -108,10 +108,11 @@ test.describe('CSV coverage — Modify/Cancel', () => {
     await openDayCard(page, today);
     await expect(page.locator('[data-testid="daily-detail"]').getByText(/remote/i).first()).toBeVisible({ timeout: 5000 });
 
-    const meRes = await page.request.get(`${API_BASE}/auth/me`);
+    const modifyCancelAuthHeaders = await getAuthHeaders(page);
+    const meRes = await page.request.get(`${API_BASE}/auth/me`, { headers: modifyCancelAuthHeaders });
     const me = (await meRes.json()) as { id: string };
     const month = today.slice(0, 7);
-    const statsRes = await page.request.get(`${API_BASE}/admin/stats/${me.id}/monthly?month=${month}`);
+    const statsRes = await page.request.get(`${API_BASE}/admin/stats/${me.id}/monthly?month=${month}`, { headers: modifyCancelAuthHeaders });
     expect(statsRes.status()).toBe(200);
     const stats = (await statsRes.json()) as { unbooking: { lastMinute: number } };
     expect(stats.unbooking.lastMinute).toBeGreaterThanOrEqual(1);

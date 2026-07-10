@@ -72,3 +72,14 @@ export const loginAsAdminMember = (page: Page) => loginAs(page, 'admin_member');
 // in the *real* director-role account (giulia.bianchi@dblue.it) for tests that need
 // actual director-role RBAC (e.g. H-39, H-46).
 export const loginAsDirectorRole = (page: Page) => loginAs(page, 'director');
+
+// Raw page.request.* calls in CSV-coverage tests don't automatically carry the app's
+// auth: the frontend stores its JWT in localStorage (frontend/src/services/api.ts,
+// TOKEN_KEY = 'auth_token') and attaches it as an Authorization header on every
+// app-initiated fetch — it's never set as a cookie, so page.request (which only
+// inherits cookies from the browser context) sends these requests unauthenticated
+// unless the header is added explicitly.
+export async function getAuthHeaders(page: Page): Promise<Record<string, string>> {
+  const token = await page.evaluate(() => localStorage.getItem('auth_token'));
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}

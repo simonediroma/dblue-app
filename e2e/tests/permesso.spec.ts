@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { loginAsOwner } from '../fixtures/auth';
+import { loginAsOwner, getAuthHeaders } from '../fixtures/auth';
 import { futureTestDate } from '../fixtures/dates';
 import { resetStatus } from '../fixtures/testAdmin';
 import { openDayCard, goToPlanningStep, selectStatus, confirmRoom } from '../fixtures/dailyDetail';
@@ -28,7 +28,7 @@ async function openHoursOffStep(page: Page) {
 
 async function getPresenceEntry(page: Page, date: string) {
   const month = date.slice(0, 7);
-  const res = await page.request.get(`${API_BASE}/presence?month=${month}`);
+  const res = await page.request.get(`${API_BASE}/presence?month=${month}`, { headers: await getAuthHeaders(page) });
   const days = (await res.json()) as Array<{ date: string; status: string; offTime?: { type: string; hours?: number } }>;
   return days.find((d) => d.date === date);
 }
