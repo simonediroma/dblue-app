@@ -53,7 +53,7 @@ test.describe('CSV coverage — Sick Leave (Current Day)', () => {
     await expect(detail.getByText(/say good morning/i)).not.toBeVisible();
 
     // (b) the day should lock from further edits — no edit affordance...
-    await expect(detail.locator('button:has(svg.lucide-edit-2)')).not.toBeVisible();
+    await expect(detail.locator('button:has(svg.lucide-pen)')).not.toBeVisible();
 
     // ...and the backend should reject a further status change (409).
     const res = await page.request.post(`${API_BASE}/presence`, { data: { date: today, status: 'remote' } });
