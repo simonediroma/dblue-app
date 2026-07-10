@@ -42,14 +42,16 @@ by side in `tests/`:
   (`capacity.spec.ts` H-40) don't pass a `date` and keep the original skip behavior.
 
   **The real bookings removed by (1) are restored**, putting the dev environment back to
-  how it was before the run: each removal is queued to a local file
-  (`fixtures/officeCapacityQueue.ts`, `e2e/.office-capacity-restore-queue.json`, gitignored)
-  rather than restored immediately — the office needs to stay free for the rest of that
-  same test's own interactions with the date, not just the initial booking. `global-teardown.ts`
-  (wired into `playwright.config.ts`) flushes the whole queue via
-  `/admin/test/restore-office-capacity` once, at the very end of the run. If that restore
-  call itself fails (e.g. the run was interrupted), the queue file is left in place and
-  picked up by the next run's teardown instead of being silently lost.
+  how it was before the run. Not restored immediately after the fallback call itself — the
+  office needs to stay free for the rest of that same test's own interactions with the
+  date, not just the initial booking (the real booking POST happens later, in
+  `confirmRoom()`). Instead, each CSV spec file that can trigger the fallback has
+  `test.afterEach(flushOfficeCapacityQueue)` (`fixtures/officeCapacityQueue.ts`), which
+  restores everything removed during that specific test right after it finishes. If that
+  immediate restore itself fails (e.g. a transient network error), it falls back to a
+  local, gitignored queue file (`e2e/.office-capacity-restore-queue.json`) instead of
+  being silently lost — `global-teardown.ts` (wired into `playwright.config.ts`) retries
+  whatever's left in that file once, at the very end of the whole run.
 
 ## Environment
 

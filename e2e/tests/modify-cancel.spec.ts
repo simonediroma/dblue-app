@@ -8,6 +8,7 @@ import {
   selectStatus,
   confirmRoom,
 } from '../fixtures/dailyDetail';
+import { flushOfficeCapacityQueue } from '../fixtures/officeCapacityQueue';
 
 /**
  * CSV coverage — Modify/Cancel (H-26 -> H-29, H-26b)
@@ -31,6 +32,8 @@ async function confirmAppLevelWarningIfPresent(page: import('@playwright/test').
 }
 
 test.describe('CSV coverage — Modify/Cancel', () => {
+  test.afterEach(flushOfficeCapacityQueue);
+
   test('[H-26] edit any future day across status combinations', async ({ page }) => {
     const date = futureTestDate('H-26');
     await resetStatus('dev@dblue.it', date);

@@ -319,6 +319,7 @@ import {
   selectStatus as csvSelectStatus2,
   confirmRoom as csvConfirmRoom2,
 } from '../fixtures/dailyDetail';
+import { flushOfficeCapacityQueue } from '../fixtures/officeCapacityQueue';
 
 // True if today's DailyDetail is still editable (status can be (re)planned) — false if
 // already checked in / locked, in which case a test should skip rather than flake on rerun.
@@ -331,6 +332,8 @@ async function csvCanPlanToday(page: Page): Promise<boolean> {
 }
 
 test.describe('CSV coverage — Confirm/Check-In', () => {
+  test.afterEach(flushOfficeCapacityQueue);
+
   test('[H-21] check-in today from the day card "Say Good Morning" button', async ({ page }) => {
     const today = csvTodayStr2();
     await csvResetStatus('dev@dblue.it', today);

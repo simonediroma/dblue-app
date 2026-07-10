@@ -2,11 +2,13 @@ import type { FullConfig } from '@playwright/test';
 import { request as playwrightRequest } from '@playwright/test';
 import { readQueue, clearQueue } from './fixtures/officeCapacityQueue';
 
-// Restores real bookings that installOfficeCapacityFallbackAndRetry() (dailyDetail.ts)
-// removed via /admin/test/free-office-capacity during the run, putting the dev environment
-// back to how it was before this suite ran. Runs once at the very end (not per-test —
-// see officeCapacityQueue.ts for why), as its own process/invocation, so it can't rely on
-// any in-memory state from the test worker — the queue is a file on disk for that reason.
+// Safety net, not the primary restore path: each CSV spec file that can trigger the
+// IN_OFFICE fallback restores its own removed bookings per-test, via
+// test.afterEach(flushOfficeCapacityQueue) (officeCapacityQueue.ts). That only falls
+// through to the durable, file-backed queue this reads when an immediate restore itself
+// fails (e.g. a transient network error) — this runs once, at the very end of the whole
+// run, as its own process/invocation with no access to the test worker's in-memory state,
+// to retry whatever didn't make it back the first time.
 export default async function globalTeardown(_config: FullConfig): Promise<void> {
   const queue = readQueue();
   if (queue.length === 0) return;

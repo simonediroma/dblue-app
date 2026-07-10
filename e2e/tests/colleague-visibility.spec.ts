@@ -3,6 +3,7 @@ import { loginAsOwner, loginAs, DevRole, ROLE_EMAILS } from '../fixtures/auth';
 import { futureTestDate } from '../fixtures/dates';
 import { resetStatus } from '../fixtures/testAdmin';
 import { openDayCard, goToPlanningStep, selectStatus, confirmRoom, StatusKey } from '../fixtures/dailyDetail';
+import { flushOfficeCapacityQueue } from '../fixtures/officeCapacityQueue';
 
 /**
  * CSV coverage — Colleague Visibility (H-41 -> H-42)
@@ -52,6 +53,8 @@ async function setTeammates(page: Page, names: string[]) {
 }
 
 test.describe('CSV coverage — Colleague Visibility', () => {
+  test.afterEach(flushOfficeCapacityQueue);
+
   test('[H-41] teammates are prioritised at the top of the Daily View', async ({ page, browser }) => {
     const date = futureTestDate('H-41');
     await setColleagueStatus(browser, 'lab_responsible', date, 'REMOTE'); // Sara Ferrari

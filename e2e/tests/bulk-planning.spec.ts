@@ -223,6 +223,7 @@ import {
   confirmRoom as csvConfirmRoom,
   StatusKey,
 } from '../fixtures/dailyDetail';
+import { flushOfficeCapacityQueue } from '../fixtures/officeCapacityQueue';
 
 const CSV_OWNER_EMAIL = 'dev@dblue.it';
 
@@ -253,6 +254,8 @@ async function csvConfirmExtend(page: Page) {
 }
 
 test.describe('CSV coverage — Bulk Planning', () => {
+  test.afterEach(flushOfficeCapacityQueue);
+
   test('[H-15] plan a full week of office presence (bulk)', async ({ page }) => {
     const date = csvFutureTestDate('H-15');
     await csvResetStatus(CSV_OWNER_EMAIL, date);

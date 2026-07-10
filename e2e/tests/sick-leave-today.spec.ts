@@ -3,6 +3,7 @@ import { loginAsOwner } from '../fixtures/auth';
 import { todayStr } from '../fixtures/dates';
 import { resetStatus } from '../fixtures/testAdmin';
 import { openDayCard, goToPlanningStep, selectStatus, confirmRoom } from '../fixtures/dailyDetail';
+import { flushOfficeCapacityQueue } from '../fixtures/officeCapacityQueue';
 
 /**
  * CSV coverage — Sick Leave (Current Day) (H-30)
@@ -12,6 +13,8 @@ import { openDayCard, goToPlanningStep, selectStatus, confirmRoom } from '../fix
 const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:4000';
 
 test.describe('CSV coverage — Sick Leave (Current Day)', () => {
+  test.afterEach(flushOfficeCapacityQueue);
+
   test('[H-30] declaring sick leave today auto-confirms and locks the day', async ({ page }) => {
     const today = todayStr();
     await resetStatus('dev@dblue.it', today);

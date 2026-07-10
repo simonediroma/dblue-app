@@ -3,6 +3,7 @@ import { loginAsAdminMember, loginAsDirectorRole, loginAsEmployee, loginAsLabRes
 import { futureTestDate } from '../fixtures/dates';
 import { resetStatus } from '../fixtures/testAdmin';
 import { openDayCard, goToPlanningStep, selectStatus } from '../fixtures/dailyDetail';
+import { flushOfficeCapacityQueue } from '../fixtures/officeCapacityQueue';
 
 /**
  * CSV coverage — Role-Specific Booking (H-44 -> H-46)
@@ -12,6 +13,8 @@ import { openDayCard, goToPlanningStep, selectStatus } from '../fixtures/dailyDe
 const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:4000';
 
 test.describe('CSV coverage — Role-Specific Booking', () => {
+  test.afterEach(flushOfficeCapacityQueue);
+
   // [H-44] Lab Responsible booking protection: the "Book Lab" Activities feature
   // (App.tsx handleUpdateLabBooking / DailyDetail.tsx ~1588-1627) has NO backend
   // persistence — it's a client-only mock with a hardcoded booker name ('Roberto')

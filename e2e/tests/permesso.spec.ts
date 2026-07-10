@@ -3,6 +3,7 @@ import { loginAsOwner } from '../fixtures/auth';
 import { futureTestDate } from '../fixtures/dates';
 import { resetStatus } from '../fixtures/testAdmin';
 import { openDayCard, goToPlanningStep, selectStatus, confirmRoom } from '../fixtures/dailyDetail';
+import { flushOfficeCapacityQueue } from '../fixtures/officeCapacityQueue';
 
 const OWNER_EMAIL = 'dev@dblue.it';
 
@@ -33,6 +34,8 @@ async function getPresenceEntry(page: Page, date: string) {
 }
 
 test.describe('CSV coverage — Permesso', () => {
+  test.afterEach(flushOfficeCapacityQueue);
+
   test('[H-31] request leave hours alongside a normal day (custom amount)', async ({ page }) => {
     const date = futureTestDate('H-31');
     await resetStatus(OWNER_EMAIL, date);
