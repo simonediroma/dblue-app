@@ -3,6 +3,7 @@ import { loginAsOwner, loginAsEmployee } from '../fixtures/auth';
 import { futureTestDate } from '../fixtures/dates';
 import { fillCapacity, clearCapacity, resetStatus } from '../fixtures/testAdmin';
 import { openDayCard, goToPlanningStep, selectStatus, confirmRoom } from '../fixtures/dailyDetail';
+import { flushOfficeCapacityQueue } from '../fixtures/officeCapacityQueue';
 
 /**
  * CSV coverage — Capacity & Waiting List (H-40, H-40a, H-40b)
@@ -26,6 +27,8 @@ async function getRealOfficeCapacity(page: import('@playwright/test').Page): Pro
 }
 
 test.describe('CSV coverage — Capacity & Waiting List', () => {
+  test.afterEach(flushOfficeCapacityQueue);
+
   test('[H-40a] occupancy shows the real seat total, never total registered headcount', async ({ page }) => {
     await loginAsOwner(page);
     const realCapacity = await getRealOfficeCapacity(page);

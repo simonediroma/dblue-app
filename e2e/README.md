@@ -13,21 +13,45 @@ by side in `tests/`:
   backend+frontend integration bugs that a mocked response would hide.
 
   **One deliberate, narrow exception**: `selectStatus(page, 'IN_OFFICE', date)` in
-  `fixtures/dailyDetail.ts`. On the shared dev environment the office can genuinely be
-  at capacity for a given date (real bookings from other tests/testers), which would
-  otherwise make the test skip instead of exercising the IN_OFFICE flow at all. When
-  that happens, it patches that one date's `bookedCount`/`totalCapacity` in the
-  `/presence` response (every other day's real data is untouched) and reloads, so the
-  test still runs. `totalCapacity` has to be patched too, not just `bookedCount`:
-  `App.tsx`'s `processedDays` recomputes bookedCount client-side as
-  `Math.max(day.bookedCount, finalAvatars.length)`, padding in at least 5 synthetic
-  "in office" colleagues for every future day for demo purposes — a floor that patching
-  bookedCount alone can never get under. This is always clearly flagged — via a
-  `mocked-fallback` test annotation, shown
-  in both the Playwright HTML report and the committed CSV summary report (🧪 marker) —
-  so a passing/failing result is never silently attributed to real data when it wasn't.
+  `fixtures/dailyDetail.ts`. On the dev environment the office can genuinely be at
+  capacity for a given date, which would otherwise make the test skip instead of
+  exercising the IN_OFFICE flow at all. When that happens, it solves two independent
+  problems, not one:
+  1. The backend enforces capacity itself, server-side, on the booking POST — if the
+     office is genuinely full it silently downgrades an in_office request to
+     waiting_list (correct, intended behavior — not something a browser-side mock can
+     influence, since it runs against the real database in the backend process). So the
+     fallback first calls the dev-only `/admin/test/free-office-capacity` endpoint to
+     genuinely delete real in_office/office_no_desk bookings for that date — the
+     eventual booking this test makes is a real one, not a fake-looking one.
+  2. Even with real capacity freed, the UI's own "should I show plain In Office" check
+     can still read "full": `App.tsx`'s `processedDays` recomputes bookedCount
+     client-side as `Math.max(day.bookedCount, finalAvatars.length)`, padding in at
+     least 5 synthetic "in office" colleagues for every future day for demo purposes —
+     a real app bug (documented in `App.tsx`, not fixed here) that real room capacity
+     on this environment is smaller than. So the fallback also patches that one date's
+     `totalCapacity` in the `/presence` response (large enough to clear the synthetic
+     floor; every other day's real data is untouched) and reloads, purely to get past
+     that UI quirk — it doesn't change what actually gets persisted, since (1) already
+     guarantees that's real.
+
+  This is always clearly flagged — via a `mocked-fallback` test annotation, shown in
+  both the Playwright HTML report and the committed CSV summary report (🧪 marker) — so
+  a passing/failing result is never silently attributed to real data when it wasn't.
   Tests that deliberately exercise the real full-office/waiting-list path itself
   (`capacity.spec.ts` H-40) don't pass a `date` and keep the original skip behavior.
+
+  **The real bookings removed by (1) are restored**, putting the dev environment back to
+  how it was before the run. Not restored immediately after the fallback call itself — the
+  office needs to stay free for the rest of that same test's own interactions with the
+  date, not just the initial booking (the real booking POST happens later, in
+  `confirmRoom()`). Instead, each CSV spec file that can trigger the fallback has
+  `test.afterEach(flushOfficeCapacityQueue)` (`fixtures/officeCapacityQueue.ts`), which
+  restores everything removed during that specific test right after it finishes. If that
+  immediate restore itself fails (e.g. a transient network error), it falls back to a
+  local, gitignored queue file (`e2e/.office-capacity-restore-queue.json`) instead of
+  being silently lost — `global-teardown.ts` (wired into `playwright.config.ts`) retries
+  whatever's left in that file once, at the very end of the whole run.
 
 ## Environment
 

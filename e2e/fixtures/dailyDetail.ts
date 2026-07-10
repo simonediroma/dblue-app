@@ -1,4 +1,6 @@
 import { Page, expect, test } from '@playwright/test';
+import { freeOfficeCapacity } from './testAdmin';
+import { queuePendingRestore } from './officeCapacityQueue';
 
 // Shared DailyDetail navigation helpers for the new CSV-coverage spec files.
 // Existing spec files keep their own local navigation logic — not touched here.
@@ -86,21 +88,35 @@ export async function selectStatus(page: Page, status: StatusKey, date?: string)
   await detail.getByText(STATUS_LABELS[status]).click();
 }
 
-// Mocked-data fallback: instead of skipping when the real office is full for `date`,
-// patch that one day's totalCapacity (to something unreachably large) in the /presence
-// response (every other day's real data is untouched), reload so usePresence's one-shot
-// fetch picks it up, and retry entering PLANNING + selecting IN_OFFICE. Clearly flagged
-// via a test annotation so the CSV summary report and HTML report both surface that this
-// specific run used mocked data rather than a real booking.
+// Fallback for when the real office is full for `date`, instead of skipping the test.
 //
-// Patching bookedCount alone is NOT enough: App.tsx's `processedDays` (the data DailyDetail
-// actually renders from) recomputes bookedCount client-side as
-// `Math.max(day.bookedCount, finalAvatars.length)`, and pads finalAvatars to at least 5
-// synthetic "in office" colleagues for every future day (a demo/visual affordance, see
-// App.tsx ~L872-886) — a floor our patched bookedCount can never get under. Patching
-// totalCapacity instead sidesteps that floor entirely, since the "full" check is
-// `bookedCount >= totalCapacity` and a large totalCapacity keeps that false regardless of
-// the synthetic minimum.
+// Two independent problems have to be solved, not one:
+// 1. The backend enforces capacity itself, server-side, on the booking POST
+//    (working-status.service.ts upsertStatus: if the office is genuinely full it silently
+//    downgrades an in_office request to waiting_list — correct, intended behavior, and NOT
+//    something a browser-side page.route() mock can influence, since it runs entirely in
+//    the backend process against the real database). So step one is to genuinely free real
+//    capacity first, via the dev-only /admin/test/free-office-capacity endpoint — after
+//    this, the eventual booking is a REAL in_office booking, not a fake-looking one. What
+//    got removed is queued (officeCapacityQueue.ts) and restored by that test's own
+//    test.afterEach(flushOfficeCapacityQueue) — not right after this function returns,
+//    since the office needs to stay free for the rest of THIS test's own interactions with
+//    the date (the real booking POST happens later, in confirmRoom(), called by the test
+//    after selectStatus() returns).
+// 2. Even with real capacity freed, the UI's own "should I show plain In Office" check can
+//    still say "full": App.tsx's `processedDays` recomputes bookedCount client-side as
+//    `Math.max(day.bookedCount, finalAvatars.length)`, padding finalAvatars to at least 5
+//    synthetic "in office" colleagues for every future day (a demo/visual affordance, see
+//    App.tsx ~L872-888 — a real app bug, documented there, not fixed here). On this
+//    environment real room capacity is smaller than that synthetic floor, so the button
+//    would still read "full" even with zero real bookings. Patching totalCapacity in the
+//    /presence response (large enough to clear the synthetic floor) sidesteps just that
+//    UI quirk — it doesn't change what actually gets persisted, since (1) already
+//    guarantees that's real.
+//
+// Clearly flagged via a test annotation so the CSV summary report and HTML report both
+// surface that this run needed the real-capacity + UI fallback instead of finding room
+// on its own.
 //
 // `plainInOffice` is a live Locator (not a DOM snapshot), so it stays valid to
 // re-evaluate against the page after the reload below — no need to re-create it.
@@ -109,6 +125,9 @@ async function installOfficeCapacityFallbackAndRetry(
   date: string,
   plainInOffice: ReturnType<Page['locator']>,
 ) {
+  const { snapshot } = await freeOfficeCapacity(date);
+  queuePendingRestore(snapshot);
+
   const month = date.slice(0, 7);
   await page.route(`**/presence?month=${month}`, async (route) => {
     // The app sends Authorization: Bearer + credentials: 'include' cross-origin, which
@@ -133,7 +152,7 @@ async function installOfficeCapacityFallbackAndRetry(
 
   test.info().annotations.push({
     type: 'mocked-fallback',
-    description: `Office was at capacity for ${date} on the shared dev environment — bookedCount/totalCapacity were patched via page.route() (only for this date; every other day's real data is untouched) so the IN_OFFICE flow could still be exercised instead of skipping.`,
+    description: `Office was at capacity for ${date} on the shared dev environment — real bookings were cleared via /admin/test/free-office-capacity (a genuine, persisted booking, not a fake one) and totalCapacity was additionally patched in the UI's /presence response to work around App.tsx's synthetic-avatar-count bug so the IN_OFFICE button was actually clickable.`,
   });
 
   await page.reload();

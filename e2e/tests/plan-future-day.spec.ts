@@ -3,6 +3,7 @@ import { loginAsOwner } from '../fixtures/auth';
 import { futureTestDate, todayStr } from '../fixtures/dates';
 import { resetStatus } from '../fixtures/testAdmin';
 import { openDayCard, goToPlanningStep, selectStatus, confirmRoom } from '../fixtures/dailyDetail';
+import { flushOfficeCapacityQueue } from '../fixtures/officeCapacityQueue';
 
 /**
  * CSV coverage — Plan a Future Day (H-09 -> H-14)
@@ -10,6 +11,8 @@ import { openDayCard, goToPlanningStep, selectStatus, confirmRoom } from '../fix
  */
 
 test.describe('CSV coverage — Plan a Future Day', () => {
+  test.afterEach(flushOfficeCapacityQueue);
+
   test('[H-09] future day with no status shows the "Set status" empty state', async ({ page }) => {
     const date = futureTestDate('H-09');
     await loginAsOwner(page);

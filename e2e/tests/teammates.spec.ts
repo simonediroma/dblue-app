@@ -3,6 +3,7 @@ import { loginAsOwner, loginAsDirectorRole, ROLE_EMAILS } from '../fixtures/auth
 import { resetOnboarding, resetStatus } from '../fixtures/testAdmin';
 import { futureTestDate } from '../fixtures/dates';
 import { openDayCard, goToPlanningStep, selectStatus, confirmRoom } from '../fixtures/dailyDetail';
+import { flushOfficeCapacityQueue } from '../fixtures/officeCapacityQueue';
 
 /**
  * CSV coverage — Teammates (H-01 -> H-08)
@@ -108,6 +109,8 @@ async function setGiuliaStatus(browser: Browser, date: string, status: 'IN_OFFIC
 }
 
 test.describe('CSV coverage — Teammates', () => {
+  test.afterEach(flushOfficeCapacityQueue);
+
   test('[H-01] add 5 real teammates from scratch from the Onboarding', async ({ page, request }) => {
     await resetOnboarding(EMPLOYEE_EMAIL);
 

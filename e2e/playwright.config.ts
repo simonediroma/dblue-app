@@ -10,6 +10,7 @@ export default defineConfig({
   retries: 0,
   workers: 1,
   globalSetup: './global-setup.ts',
+  globalTeardown: './global-teardown.ts',
   reporter: [['html', { open: 'never' }], ['list'], ['./reporters/csv-summary-reporter.ts']],
   use: {
     // Primary target is the shared Railway dev environment (set BASE_URL/API_BASE_URL

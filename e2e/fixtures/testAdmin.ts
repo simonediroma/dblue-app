@@ -55,6 +55,27 @@ export function clearCapacity(date: string) {
   return testAdminPost<{ ok: true; modifiedCount: number }>('/clear-capacity', { date });
 }
 
+export type OfficeCapacityRecord = Record<string, unknown> & { userId: string; date: string };
+
+// Genuinely frees real office capacity for a date (unlike clearCapacity, which only touches
+// fillCapacity's synthetic bookings) — deletes every in_office/office_no_desk WorkingStatus
+// for that date, so the backend's own capacity gate (upsertStatus) finds real room and doesn't
+// silently downgrade a booking to waiting_list. Dev-only environment. Returns a snapshot of
+// what was deleted — pass it to restoreOfficeCapacity() to put the dev environment back.
+export function freeOfficeCapacity(date: string) {
+  return testAdminPost<{ ok: true; deletedCount: number; snapshot: OfficeCapacityRecord[] }>(
+    '/free-office-capacity',
+    { date }
+  );
+}
+
+// Restores real bookings previously removed by freeOfficeCapacity — see
+// e2e/global-teardown.ts, which queues and flushes these at the end of the whole run
+// (not per-test: the office needs to stay free for the rest of that same test's flow).
+export function restoreOfficeCapacity(snapshot: OfficeCapacityRecord[]) {
+  return testAdminPost<{ ok: true; restoredCount: number }>('/restore-office-capacity', { snapshot });
+}
+
 export function resetOnboarding(email: string) {
   return testAdminPost<{ ok: true; email: string; onboardingCompleted: boolean }>(
     '/reset-onboarding',
