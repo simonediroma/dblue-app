@@ -63,8 +63,14 @@ async function setTeammates(page: Page, names: string[]) {
     // the app's own setSearchQuery('') and get silently overwritten, dropping a pick.
     await expect(searchBox).toHaveValue('', { timeout: 3000 });
   }
+  // [data-testid="profile-page"] is a static wrapper in App.tsx around the whole
+  // Profile component — it never disappears when Profile's internal activeView
+  // switches away from 'teammates', so waiting for it doesn't confirm the editor has
+  // actually closed (it's inside an AnimatePresence(mode="wait") that can keep the
+  // old instance mounted briefly during its exit animation). Wait for the save
+  // button itself (unique to the editor) to be gone instead.
   await page.click('[data-testid="teammate-save"]');
-  await page.waitForSelector('[data-testid="profile-page"]');
+  await expect(page.locator('[data-testid="teammate-save"]')).not.toBeVisible({ timeout: 5000 });
 }
 
 test.describe('CSV coverage — Colleague Visibility', () => {

@@ -115,8 +115,17 @@ async function selectFillerTeammates(page: Page, count: number, excludeNames: st
 }
 
 async function saveTeammates(page: Page) {
+  // [data-testid="profile-page"] is a static wrapper in App.tsx around the whole
+  // Profile component (see App.tsx ~L1229) — it never disappears when Profile's
+  // internal activeView switches away from 'teammates', so waiting for it here is a
+  // no-op that doesn't confirm the editor has actually closed. The editor itself sits
+  // inside an AnimatePresence(mode="wait"), so its exit animation can keep the old
+  // [data-testid="teammate-option"] instance mounted (and clickable-looking) for a
+  // moment after Save — reopening the editor immediately risks a stray click landing
+  // on that stale, about-to-be-discarded instance instead of the fresh one. Wait for
+  // the save button itself (unique to the editor) to be gone before proceeding.
   await page.click('[data-testid="teammate-save"]');
-  await page.waitForSelector('[data-testid="profile-page"]');
+  await expect(page.locator('[data-testid="teammate-save"]')).not.toBeVisible({ timeout: 5000 });
 }
 
 // Sets Giulia Bianchi's own real status for a date, so surfacing can be checked from
