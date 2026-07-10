@@ -79,8 +79,10 @@ test.describe('CSV coverage — Colleague Visibility', () => {
   test('[H-41] teammates are prioritised at the top of the Daily View', async ({ page, browser }) => {
     // Two setColleagueStatus() round trips (each a full login + day-planning flow in a
     // separate browser context) plus the teammate editor flow below routinely exceed
-    // Playwright's 30s default test timeout on the real environment.
-    test.setTimeout(60000);
+    // Playwright's 30s default test timeout on the real environment. 60s still wasn't
+    // enough on a slower run — real network latency against the shared Railway
+    // environment varies, so give more headroom.
+    test.setTimeout(90000);
     const date = futureTestDate('H-41');
     await setColleagueStatus(browser, 'lab_responsible', date, 'REMOTE'); // Sara Ferrari
     await setColleagueStatus(browser, 'admin_member', date, 'LEAVE'); // Luca Esposito

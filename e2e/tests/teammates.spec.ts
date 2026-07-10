@@ -228,7 +228,9 @@ test.describe('CSV coverage — Teammates', () => {
   test('[H-04] 5 teammates added via "Profile" are correctly surfaced', async ({ page, browser }) => {
     // See H-02: two setGiuliaStatus() round trips plus the Profile editor flow below
     // routinely exceed Playwright's 30s default test timeout on the real environment.
-    test.setTimeout(60000);
+    // 60s still wasn't enough on a slower run — real network latency against the shared
+    // Railway environment varies, so give more headroom.
+    test.setTimeout(90000);
     const officeDate = futureTestDate('H-04-office');
     const remoteDate = futureTestDate('H-04-remote');
     await setGiuliaStatus(browser, officeDate, 'IN_OFFICE');
@@ -277,7 +279,9 @@ test.describe('CSV coverage — Teammates', () => {
   test('[H-06] edit teammates — replaced all 5 surfacing to the app', async ({ page, browser }) => {
     // See H-02: two setGiuliaStatus() round trips plus the Profile editor flow below
     // routinely exceed Playwright's 30s default test timeout on the real environment.
-    test.setTimeout(60000);
+    // 60s still wasn't enough on a slower run — real network latency against the shared
+    // Railway environment varies, so give more headroom.
+    test.setTimeout(90000);
     const officeDate = futureTestDate('H-06-office');
     const remoteDate = futureTestDate('H-06-remote');
     await setGiuliaStatus(browser, officeDate, 'IN_OFFICE');
@@ -329,7 +333,8 @@ test.describe('CSV coverage — Teammates', () => {
     // See H-02: two setGiuliaStatus() round trips plus TWO Profile editor round trips
     // below routinely exceed Playwright's 30s default test timeout on the real
     // environment — the most compound of these four, so given the most headroom.
-    test.setTimeout(75000);
+    // 75s still wasn't enough on a slower run.
+    test.setTimeout(105000);
     const officeDate = futureTestDate('H-08-office');
     const remoteDate = futureTestDate('H-08-remote');
     await setGiuliaStatus(browser, officeDate, 'IN_OFFICE');
