@@ -1185,7 +1185,7 @@ export default function DailyDetail({
  return (
  <div key={item.dateStr} className="flex flex-col items-center gap-1.5">
  <span className="text-[9px] font-bold text-on-surface-variant/30 uppercase tracking-wider">{item.dayLabel}</span>
- <button disabled={item.isWeekend || item.isClosed || isOriginal} onClick={() => toggleDate(item.dateStr)}
+ <button data-testid="extend-day-chip" disabled={item.isWeekend || item.isClosed || isOriginal} onClick={() => toggleDate(item.dateStr)}
  className={`
  w-full aspect-square rounded-xl flex items-center justify-center text-sm font-bold transition-all relative
  ${isOriginal ? 'bg-primary/5 text-primary border border-primary/20 cursor-default' : ''}
