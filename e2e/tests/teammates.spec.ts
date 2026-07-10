@@ -79,6 +79,10 @@ async function selectTeammatesByName(page: Page, names: string[]) {
 }
 
 async function selectFillerTeammates(page: Page, count: number, excludeNames: string[]) {
+  // The teammate list is search-filtered, and this always runs right after
+  // selectTeammatesByName()/a manual .fill() left a name in the search box — clear it
+  // first so the full list (not just matches for whatever was last searched) is visible.
+  await page.getByPlaceholder('Search by name...').fill('');
   const pattern = new RegExp(excludeNames.join('|'));
   const candidates = page.locator('[data-testid="teammate-option"]').filter({ hasNotText: pattern });
   for (let i = 0; i < count; i++) {
