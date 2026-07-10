@@ -20,12 +20,17 @@ import { flushOfficeCapacityQueue } from '../fixtures/officeCapacityQueue';
 const EMPLOYEE_EMAIL = 'mario.rossi@dblue.it';
 const KNOWN_TEAMMATES = ['Mario Rossi', 'Sara Ferrari', 'Luca Esposito', 'Giulia Bianchi', 'Marco Conti'];
 
-async function getMyTeammateNames(request: APIRequestContext, token: string): Promise<string[]> {
+// `adminToken` resolves teammate IDs to names via GET /admin/users, which is
+// director/owner-only (backend/src/routes/admin.routes.ts) — it defaults to `token`
+// for the common case where the acting user already has that role (H-03 etc., all
+// owner-acting), but callers logged in as a lower-privileged role (H-01's employee
+// onboarding flow) must pass a separately-fetched owner token here.
+async function getMyTeammateNames(request: APIRequestContext, token: string, adminToken: string = token): Promise<string[]> {
   const apiBase = process.env.API_BASE_URL ?? 'http://localhost:4000';
   const meRes = await request.get(`${apiBase}/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
   const me = (await meRes.json()) as { teammates: string[] };
   if (me.teammates.length === 0) return [];
-  const usersRes = await request.get(`${apiBase}/admin/users`, { headers: { Authorization: `Bearer ${token}` } });
+  const usersRes = await request.get(`${apiBase}/admin/users`, { headers: { Authorization: `Bearer ${adminToken}` } });
   const users = (await usersRes.json()) as Array<{ id: string; name: string }>;
   const byId = new Map(users.map((u) => [u.id, u.name]));
   return me.teammates.map((id) => byId.get(id) ?? id);
@@ -163,7 +168,8 @@ test.describe('CSV coverage — Teammates', () => {
     await page.waitForSelector('[data-testid="plan-page"]', { timeout: 15000 });
 
     const token = await loginAndGetToken(request, EMPLOYEE_EMAIL);
-    const names = await getMyTeammateNames(request, token);
+    const ownerToken = await loginAndGetToken(request, 'dev@dblue.it');
+    const names = await getMyTeammateNames(request, token, ownerToken);
     expect(names.length).toBe(5);
     for (const n of KNOWN_TEAMMATES) expect(names).toContain(n);
   });

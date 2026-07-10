@@ -94,7 +94,7 @@ test.describe('Bulk planning — Extend to other days', () => {
 
     // Select first 3 available date chips
     const detail = page.locator('[data-testid="daily-detail"]');
-    const chips = detail.locator('button:not([disabled]):not([data-testid])').filter({ hasNot: page.locator('svg') });
+    const chips = detail.locator('[data-testid="extend-day-chip"]:not([disabled])');
 
     const chipCount = await chips.count();
     const toSelect = Math.min(3, chipCount);
@@ -188,7 +188,7 @@ test.describe('Bulk planning — Extend to other days', () => {
 
     // Select 2 date chips
     const detail = page.locator('[data-testid="daily-detail"]');
-    const chips = detail.locator('button:not([disabled]):not([data-testid])').filter({ hasNot: page.locator('svg') });
+    const chips = detail.locator('[data-testid="extend-day-chip"]:not([disabled])');
     const chipCount = await chips.count();
     for (let i = 0; i < Math.min(2, chipCount); i++) {
       await chips.nth(i).click();
@@ -240,7 +240,12 @@ async function csvSetStatusAndOpenExtend(page: Page, date: string, status: Statu
 
 async function csvSelectExtendChips(page: Page, count: number): Promise<number> {
   const detail = page.locator('[data-testid="daily-detail"]');
-  const chips = detail.locator('button:not([disabled]):not([data-testid])').filter({ hasNot: page.locator('svg') });
+  // Selecting a chip adds a checkmark <svg> badge inside it (DailyDetail.tsx's EXTEND
+  // step) — a locator filtered on { hasNot: svg } would drop each chip out of its own
+  // matching set the moment it's clicked, shifting every subsequent .nth(i) index and
+  // eventually running past the end of the (shrinking) list. data-testid is immune to
+  // that, since it doesn't care what's rendered inside the button.
+  const chips = detail.locator('[data-testid="extend-day-chip"]:not([disabled])');
   const chipCount = await chips.count();
   const toSelect = Math.min(count, chipCount);
   for (let i = 0; i < toSelect; i++) await chips.nth(i).click();
@@ -331,7 +336,7 @@ test.describe('CSV coverage — Bulk Planning', () => {
     await detail.getByText(/i need a special extended leave/i).click();
     await detail.getByText(/i need more than 2 weeks/i).click();
 
-    const chips = detail.locator('button:not([disabled]):not([data-testid])').filter({ hasNot: page.locator('svg') });
+    const chips = detail.locator('[data-testid="extend-day-chip"]:not([disabled])');
     const chipCount = await chips.count();
     if (chipCount === 0) { test.skip(); return; }
     await chips.first().click();
@@ -384,7 +389,7 @@ test.describe('CSV coverage — Bulk Planning', () => {
       if (dow !== 0 && dow !== 6) expectedWeekdays++;
     }
 
-    const chips = detail.locator('button:not([disabled]):not([data-testid])').filter({ hasNot: page.locator('svg') });
+    const chips = detail.locator('[data-testid="extend-day-chip"]:not([disabled])');
     const actualCount = await chips.count();
 
     // The calendar must never offer a date beyond the 30-day window.
