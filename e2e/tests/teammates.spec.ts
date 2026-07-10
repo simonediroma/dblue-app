@@ -175,6 +175,12 @@ test.describe('CSV coverage — Teammates', () => {
   });
 
   test('[H-02] 5 teammates added via onboarding are correctly surfaced', async ({ page, browser }) => {
+    // Two full setGiuliaStatus() round trips (each its own login + day-planning flow
+    // in a separate browser context) plus the onboarding flow below routinely push
+    // this past Playwright's 30s default test timeout — not a functional failure, just
+    // not enough budget for a genuinely multi-step test on a real, network-latency-bound
+    // shared environment.
+    test.setTimeout(60000);
     const officeDate = futureTestDate('H-02-office');
     const remoteDate = futureTestDate('H-02-remote');
     await setGiuliaStatus(browser, officeDate, 'IN_OFFICE');
@@ -220,6 +226,9 @@ test.describe('CSV coverage — Teammates', () => {
   });
 
   test('[H-04] 5 teammates added via "Profile" are correctly surfaced', async ({ page, browser }) => {
+    // See H-02: two setGiuliaStatus() round trips plus the Profile editor flow below
+    // routinely exceed Playwright's 30s default test timeout on the real environment.
+    test.setTimeout(60000);
     const officeDate = futureTestDate('H-04-office');
     const remoteDate = futureTestDate('H-04-remote');
     await setGiuliaStatus(browser, officeDate, 'IN_OFFICE');
@@ -266,6 +275,9 @@ test.describe('CSV coverage — Teammates', () => {
   });
 
   test('[H-06] edit teammates — replaced all 5 surfacing to the app', async ({ page, browser }) => {
+    // See H-02: two setGiuliaStatus() round trips plus the Profile editor flow below
+    // routinely exceed Playwright's 30s default test timeout on the real environment.
+    test.setTimeout(60000);
     const officeDate = futureTestDate('H-06-office');
     const remoteDate = futureTestDate('H-06-remote');
     await setGiuliaStatus(browser, officeDate, 'IN_OFFICE');
@@ -314,6 +326,10 @@ test.describe('CSV coverage — Teammates', () => {
   });
 
   test('[H-08] edit teammates — replaced subset surface correctly', async ({ page, browser }) => {
+    // See H-02: two setGiuliaStatus() round trips plus TWO Profile editor round trips
+    // below routinely exceed Playwright's 30s default test timeout on the real
+    // environment — the most compound of these four, so given the most headroom.
+    test.setTimeout(75000);
     const officeDate = futureTestDate('H-08-office');
     const remoteDate = futureTestDate('H-08-remote');
     await setGiuliaStatus(browser, officeDate, 'IN_OFFICE');

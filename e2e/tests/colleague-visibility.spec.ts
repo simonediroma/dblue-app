@@ -77,6 +77,10 @@ test.describe('CSV coverage — Colleague Visibility', () => {
   test.afterEach(flushOfficeCapacityQueue);
 
   test('[H-41] teammates are prioritised at the top of the Daily View', async ({ page, browser }) => {
+    // Two setColleagueStatus() round trips (each a full login + day-planning flow in a
+    // separate browser context) plus the teammate editor flow below routinely exceed
+    // Playwright's 30s default test timeout on the real environment.
+    test.setTimeout(60000);
     const date = futureTestDate('H-41');
     await setColleagueStatus(browser, 'lab_responsible', date, 'REMOTE'); // Sara Ferrari
     await setColleagueStatus(browser, 'admin_member', date, 'LEAVE'); // Luca Esposito
@@ -105,6 +109,10 @@ test.describe('CSV coverage — Colleague Visibility', () => {
   });
 
   test('[H-42] colleagues are correctly split by status, not lumped into "in office"', async ({ page, browser }) => {
+    // Four setColleagueStatus() round trips (each a full login + day-planning flow in a
+    // separate browser context) routinely exceed Playwright's 30s default test timeout
+    // on the real environment.
+    test.setTimeout(90000);
     const date = futureTestDate('H-42');
     await setColleagueStatus(browser, 'employee', date, 'REMOTE'); // Mario Rossi
     await setColleagueStatus(browser, 'lab_responsible', date, 'LEAVE'); // Sara Ferrari
