@@ -87,11 +87,20 @@ export async function selectStatus(page: Page, status: StatusKey, date?: string)
 }
 
 // Mocked-data fallback: instead of skipping when the real office is full for `date`,
-// patch just that one day's bookedCount to 0 in the /presence response (every other
-// day's real data is untouched), reload so usePresence's one-shot fetch picks it up,
-// and retry entering PLANNING + selecting IN_OFFICE. Clearly flagged via a test
-// annotation so the CSV summary report and HTML report both surface that this specific
-// run used mocked data rather than a real booking.
+// patch that one day's totalCapacity (to something unreachably large) in the /presence
+// response (every other day's real data is untouched), reload so usePresence's one-shot
+// fetch picks it up, and retry entering PLANNING + selecting IN_OFFICE. Clearly flagged
+// via a test annotation so the CSV summary report and HTML report both surface that this
+// specific run used mocked data rather than a real booking.
+//
+// Patching bookedCount alone is NOT enough: App.tsx's `processedDays` (the data DailyDetail
+// actually renders from) recomputes bookedCount client-side as
+// `Math.max(day.bookedCount, finalAvatars.length)`, and pads finalAvatars to at least 5
+// synthetic "in office" colleagues for every future day (a demo/visual affordance, see
+// App.tsx ~L872-886) — a floor our patched bookedCount can never get under. Patching
+// totalCapacity instead sidesteps that floor entirely, since the "full" check is
+// `bookedCount >= totalCapacity` and a large totalCapacity keeps that false regardless of
+// the synthetic minimum.
 //
 // `plainInOffice` is a live Locator (not a DOM snapshot), so it stays valid to
 // re-evaluate against the page after the reload below — no need to re-create it.
@@ -115,13 +124,16 @@ async function installOfficeCapacityFallbackAndRetry(
     const response = await route.fetch();
     const json = await response.json();
     const day = Array.isArray(json) ? json.find((d: { date: string }) => d.date === date) : undefined;
-    if (day) day.bookedCount = 0;
+    if (day) {
+      day.bookedCount = 0;
+      day.totalCapacity = 9999;
+    }
     await route.fulfill({ response, json });
   });
 
   test.info().annotations.push({
     type: 'mocked-fallback',
-    description: `Office was at capacity for ${date} on the shared dev environment — bookedCount was patched via page.route() (only for this date; every other day's real data is untouched) so the IN_OFFICE flow could still be exercised instead of skipping.`,
+    description: `Office was at capacity for ${date} on the shared dev environment — bookedCount/totalCapacity were patched via page.route() (only for this date; every other day's real data is untouched) so the IN_OFFICE flow could still be exercised instead of skipping.`,
   });
 
   await page.reload();

@@ -16,9 +16,14 @@ by side in `tests/`:
   `fixtures/dailyDetail.ts`. On the shared dev environment the office can genuinely be
   at capacity for a given date (real bookings from other tests/testers), which would
   otherwise make the test skip instead of exercising the IN_OFFICE flow at all. When
-  that happens, it patches just that one date's `bookedCount` to 0 in the `/presence`
-  response (every other day's real data is untouched) and reloads, so the test still
-  runs. This is always clearly flagged — via a `mocked-fallback` test annotation, shown
+  that happens, it patches that one date's `bookedCount`/`totalCapacity` in the
+  `/presence` response (every other day's real data is untouched) and reloads, so the
+  test still runs. `totalCapacity` has to be patched too, not just `bookedCount`:
+  `App.tsx`'s `processedDays` recomputes bookedCount client-side as
+  `Math.max(day.bookedCount, finalAvatars.length)`, padding in at least 5 synthetic
+  "in office" colleagues for every future day for demo purposes — a floor that patching
+  bookedCount alone can never get under. This is always clearly flagged — via a
+  `mocked-fallback` test annotation, shown
   in both the Playwright HTML report and the committed CSV summary report (🧪 marker) —
   so a passing/failing result is never silently attributed to real data when it wasn't.
   Tests that deliberately exercise the real full-office/waiting-list path itself
