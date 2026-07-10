@@ -310,6 +310,7 @@ import {
   loginAsAdminMember as csvLoginAsAdminMember,
   loginAsLabResponsible as csvLoginAsLabResponsible,
   loginAsDirectorRole as csvLoginAsDirectorRole,
+  getAuthHeaders,
 } from '../fixtures/auth';
 import { todayStr as csvTodayStr2 } from '../fixtures/dates';
 import { resetStatus as csvResetStatus } from '../fixtures/testAdmin';
@@ -453,7 +454,7 @@ test.describe('CSV coverage — Confirm/Check-In', () => {
     const month = today.slice(0, 7);
     let stillConfirmed = true;
     for (let i = 0; i < 5; i++) {
-      const res = await page.request.get(`${apiBase}/presence?month=${month}`);
+      const res = await page.request.get(`${apiBase}/presence?month=${month}`, { headers: await getAuthHeaders(page) });
       const days = (await res.json()) as Array<{ date: string; isConfirmed?: boolean }>;
       const todayEntry = days.find((d) => d.date === today);
       stillConfirmed = !!todayEntry?.isConfirmed;
@@ -487,7 +488,10 @@ test.describe('CSV coverage — Confirm/Check-In', () => {
 
     // And the backend itself must reject a further status change (409).
     const apiBase = process.env.API_BASE_URL ?? 'http://localhost:4000';
-    const res = await page.request.post(`${apiBase}/presence`, { data: { date: today, status: 'remote' } });
+    const res = await page.request.post(`${apiBase}/presence`, {
+      data: { date: today, status: 'remote' },
+      headers: await getAuthHeaders(page),
+    });
     expect(res.status()).toBe(409);
   });
 });

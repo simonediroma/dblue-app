@@ -213,7 +213,7 @@ test.describe('Bulk planning — Extend to other days', () => {
 // mocking like the block above. See e2e/README.md. Kept separate from the regression
 // tests above; do not merge.
 // ---------------------------------------------------------------------------------
-import { loginAsOwner as csvLoginAsOwner } from '../fixtures/auth';
+import { loginAsOwner as csvLoginAsOwner, getAuthHeaders } from '../fixtures/auth';
 import { futureTestDate as csvFutureTestDate, todayStr as csvTodayStr } from '../fixtures/dates';
 import { resetStatus as csvResetStatus } from '../fixtures/testAdmin';
 import {
@@ -347,9 +347,10 @@ test.describe('CSV coverage — Bulk Planning', () => {
     nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
     const month2 = `${nextMonthDate.getFullYear()}-${String(nextMonthDate.getMonth() + 1).padStart(2, '0')}`;
 
+    const bulkAuthHeaders = await getAuthHeaders(page);
     const [res1, res2] = await Promise.all([
-      page.request.get(`${apiBase}/presence?month=${month1}`),
-      page.request.get(`${apiBase}/presence?month=${month2}`),
+      page.request.get(`${apiBase}/presence?month=${month1}`, { headers: bulkAuthHeaders }),
+      page.request.get(`${apiBase}/presence?month=${month2}`, { headers: bulkAuthHeaders }),
     ]);
     const days1 = (await res1.json()) as Array<{ date: string; status: string }>;
     const days2 = (await res2.json()) as Array<{ date: string; status: string }>;

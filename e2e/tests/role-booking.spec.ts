@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { loginAsAdminMember, loginAsDirectorRole, loginAsEmployee, loginAsLabResponsible, ROLE_EMAILS } from '../fixtures/auth';
+import { loginAsAdminMember, loginAsDirectorRole, loginAsEmployee, loginAsLabResponsible, ROLE_EMAILS, getAuthHeaders } from '../fixtures/auth';
 import { futureTestDate } from '../fixtures/dates';
 import { resetStatus } from '../fixtures/testAdmin';
 import { openDayCard, goToPlanningStep, selectStatus } from '../fixtures/dailyDetail';
@@ -43,7 +43,7 @@ test.describe('CSV coverage — Role-Specific Booking', () => {
     await expect(adminRoomOption).toBeVisible({ timeout: 5000 });
     await adminRoomOption.click();
 
-    const res = await page.request.get(`${API_BASE}/presence?month=${date.slice(0, 7)}`);
+    const res = await page.request.get(`${API_BASE}/presence?month=${date.slice(0, 7)}`, { headers: await getAuthHeaders(page) });
     const days = (await res.json()) as Array<{ date: string; room?: string }>;
     expect(days.find((d) => d.date === date)?.room).toBe('Admin Room');
   });
@@ -53,6 +53,7 @@ test.describe('CSV coverage — Role-Specific Booking', () => {
     const date = futureTestDate('H-45b');
     const res = await page.request.post(`${API_BASE}/presence`, {
       data: { date, status: 'in_office', room: 'Admin Room' },
+      headers: await getAuthHeaders(page),
     });
     // Bonus backend-level check (see F6 in the plan): upsertStatus does not currently
     // cross-check `room` against the caller's role-permitted room types, so this is
@@ -74,7 +75,7 @@ test.describe('CSV coverage — Role-Specific Booking', () => {
     await expect(managementRoomOption).toBeVisible({ timeout: 5000 });
     await managementRoomOption.click();
 
-    const res = await page.request.get(`${API_BASE}/presence?month=${date.slice(0, 7)}`);
+    const res = await page.request.get(`${API_BASE}/presence?month=${date.slice(0, 7)}`, { headers: await getAuthHeaders(page) });
     const days = (await res.json()) as Array<{ date: string; room?: string }>;
     expect(days.find((d) => d.date === date)?.room).toBe('Management Room');
   });
@@ -84,7 +85,7 @@ test.describe('CSV coverage — Role-Specific Booking', () => {
       const context = await browser.newContext();
       const page = await context.newPage();
       await login(page);
-      const res = await page.request.get(`${API_BASE}/rooms`);
+      const res = await page.request.get(`${API_BASE}/rooms`, { headers: await getAuthHeaders(page) });
       const rooms = (await res.json()) as Array<{ name: string; type: string }>;
       expect(rooms.some((r) => r.type === 'management')).toBe(false);
       await context.close();

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { loginAsOwner } from '../fixtures/auth';
+import { loginAsOwner, getAuthHeaders } from '../fixtures/auth';
 import { todayStr } from '../fixtures/dates';
 import { resetStatus } from '../fixtures/testAdmin';
 import { openDayCard, goToPlanningStep, selectStatus, confirmRoom } from '../fixtures/dailyDetail';
@@ -56,7 +56,10 @@ test.describe('CSV coverage — Sick Leave (Current Day)', () => {
     await expect(detail.locator('button:has(svg.lucide-pen)')).not.toBeVisible();
 
     // ...and the backend should reject a further status change (409).
-    const res = await page.request.post(`${API_BASE}/presence`, { data: { date: today, status: 'remote' } });
+    const res = await page.request.post(`${API_BASE}/presence`, {
+      data: { date: today, status: 'remote' },
+      headers: await getAuthHeaders(page),
+    });
     expect(res.status()).toBe(409);
   });
 });
