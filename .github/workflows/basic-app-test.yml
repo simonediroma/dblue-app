@@ -32,10 +32,18 @@ jobs:
       - name: Install Playwright browsers
         run: cd e2e && npx playwright install chromium --with-deps
 
+      # RAILWAY_BACKEND_URL has a trailing slash (copied from Railway's own env var
+      # config). Several test files build request URLs via raw string concatenation
+      # (`${API_BASE_URL}/rooms`), which a trailing slash turns into a double slash —
+      # Express's route matching doesn't collapse that, so the request 404s and the
+      # response body is the default HTML error page instead of JSON. Strip it once
+      # here so every call site gets a clean base, regardless of how the secret is set.
+      - name: Normalize API_BASE_URL
+        run: echo "API_BASE_URL=$(echo '${{ secrets.RAILWAY_BACKEND_URL }}' | sed 's:/*$::')" >> "$GITHUB_ENV"
+
       - name: Run basic app tests
         env:
           BASE_URL: ${{ secrets.RAILWAY_FRONTEND_URL }}
-          API_BASE_URL: ${{ secrets.RAILWAY_BACKEND_URL }}
           DEV_LOGIN_USER: ${{ secrets.DEV_LOGIN_USER }}
           DEV_LOGIN_PASS: ${{ secrets.DEV_LOGIN_PASS }}
           # Fixed backend/src/routes/auth.routes.ts DEV_ACCOUNTS entry — same shared
