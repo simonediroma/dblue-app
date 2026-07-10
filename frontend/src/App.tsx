@@ -885,6 +885,11 @@ export default function App() {
  }
  }
 
+ // BUG: this synthetic minimum means bookedCount (and therefore the "office full" /
+ // waiting-list decision downstream) can never reflect real capacity for a future day
+ // once finalAvatars pads past totalCapacity — independent of how many people are
+ // actually booked. Confirmed on the shared dev environment, where the real seeded
+ // room capacity is smaller than 5, so every future day appears permanently full.
  const finalBookedCount = Math.max(day.bookedCount || 0, finalAvatars.length);
 
  return {
