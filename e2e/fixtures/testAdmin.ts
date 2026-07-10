@@ -55,6 +55,14 @@ export function clearCapacity(date: string) {
   return testAdminPost<{ ok: true; modifiedCount: number }>('/clear-capacity', { date });
 }
 
+// Genuinely frees real office capacity for a date (unlike clearCapacity, which only touches
+// fillCapacity's synthetic bookings) — deletes every in_office/office_no_desk WorkingStatus
+// for that date, so the backend's own capacity gate (upsertStatus) finds real room and doesn't
+// silently downgrade a booking to waiting_list. Dev-only environment.
+export function freeOfficeCapacity(date: string) {
+  return testAdminPost<{ ok: true; deletedCount: number }>('/free-office-capacity', { date });
+}
+
 export function resetOnboarding(email: string) {
   return testAdminPost<{ ok: true; email: string; onboardingCompleted: boolean }>(
     '/reset-onboarding',

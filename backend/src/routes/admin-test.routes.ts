@@ -84,6 +84,30 @@ router.post('/clear-capacity', async (req: Request, res: Response): Promise<void
   }
 });
 
+// POST /admin/test/free-office-capacity — libera per davvero la capacita reale dell'ufficio per
+// una data (a differenza di clear-capacity, che tocca solo le prenotazioni sintetiche create da
+// fill-capacity): elimina OGNI WorkingStatus in_office/office_no_desk per quella data,
+// indipendentemente da chi/come sia stato creato. Serve al fallback e2e per date con ufficio
+// realmente pieno sull'ambiente dev — cosi il gate di capacita server-side in upsertStatus()
+// trova posto vero e non declassa la richiesta a waiting_list. Solo ambiente dev (mai eseguito
+// contro produzione, stesso gate ENABLE_DEV_LOGIN+owner degli altri endpoint di questo file).
+router.post('/free-office-capacity', async (req: Request, res: Response): Promise<void> => {
+  const { date } = req.body as { date?: string };
+  if (!date) {
+    res.status(400).json({ error: 'date richiesta' });
+    return;
+  }
+  try {
+    const result = await WorkingStatus.deleteMany({
+      date,
+      status: { $in: ['in_office', 'office_no_desk'] },
+    });
+    res.json({ ok: true, deletedCount: result.deletedCount });
+  } catch (err) {
+    handleError(res, err);
+  }
+});
+
 // POST /admin/test/reset-onboarding — forza onboardingCompleted:false su un account dev-login esistente
 router.post('/reset-onboarding', async (req: Request, res: Response): Promise<void> => {
   const { email } = req.body as { email?: string };
