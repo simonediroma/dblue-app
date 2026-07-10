@@ -44,13 +44,18 @@ async function loginAndGetToken(request: APIRequestContext, email: string): Prom
 
 async function selectOnboardingTeammates(page: Page, names: string[]) {
   await page.locator('[data-testid="onboarding"]').getByRole('button', { name: /choose my project teammates/i }).click();
+  const searchBox = page.locator('input[placeholder="Search by name..."]');
   for (const name of names) {
-    await page.locator('input[placeholder="Search by name..."]').fill(name.split(' ')[0]);
+    await searchBox.fill(name.split(' ')[0]);
     // Filter by the sought name instead of blindly clicking .first(): selecting a
     // colleague clears the search box as a side effect (see Profile.tsx toggleTeammate),
     // and .first() on the bare locator can resolve against the list before this fill's
     // filter has rendered, clicking whoever's alphabetically first instead.
     await page.locator('[data-testid="onboarding-colleague-option"]').filter({ hasText: name }).first().click();
+    // Wait for that same clear-on-select side effect to actually land before the next
+    // loop iteration fills a new name — otherwise a fast back-to-back fill() can race
+    // the app's own setSearchQuery('') and get silently overwritten, dropping a pick.
+    await expect(searchBox).toHaveValue('', { timeout: 3000 });
   }
 }
 
@@ -82,13 +87,18 @@ async function clearSelectedTeammates(page: Page) {
 }
 
 async function selectTeammatesByName(page: Page, names: string[]) {
+  const searchBox = page.getByPlaceholder('Search by name...');
   for (const name of names) {
-    await page.getByPlaceholder('Search by name...').fill(name.split(' ')[0]);
+    await searchBox.fill(name.split(' ')[0]);
     // Filter by the sought name instead of blindly clicking .first(): selecting a
     // colleague clears the search box as a side effect (see Profile.tsx toggleTeammate),
     // and .first() on the bare locator can resolve against the list before this fill's
     // filter has rendered, clicking whoever's alphabetically first instead.
     await page.locator('[data-testid="teammate-option"]').filter({ hasText: name }).first().click();
+    // Wait for that same clear-on-select side effect to actually land before the next
+    // loop iteration fills a new name — otherwise a fast back-to-back fill() can race
+    // the app's own setSearchQuery('') and get silently overwritten, dropping a pick.
+    await expect(searchBox).toHaveValue('', { timeout: 3000 });
   }
 }
 
