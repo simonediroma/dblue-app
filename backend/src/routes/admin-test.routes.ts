@@ -91,6 +91,7 @@ router.post('/clear-capacity', async (req: Request, res: Response): Promise<void
 // realmente pieno sull'ambiente dev — cosi il gate di capacita server-side in upsertStatus()
 // trova posto vero e non declassa la richiesta a waiting_list. Solo ambiente dev (mai eseguito
 // contro produzione, stesso gate ENABLE_DEV_LOGIN+owner degli altri endpoint di questo file).
+// Restituisce uno snapshot dei record eliminati — vedi /restore-office-capacity per ripristinarli.
 router.post('/free-office-capacity', async (req: Request, res: Response): Promise<void> => {
   const { date } = req.body as { date?: string };
   if (!date) {
@@ -98,11 +99,41 @@ router.post('/free-office-capacity', async (req: Request, res: Response): Promis
     return;
   }
   try {
-    const result = await WorkingStatus.deleteMany({
+    const docs = await WorkingStatus.find({
       date,
       status: { $in: ['in_office', 'office_no_desk'] },
-    });
-    res.json({ ok: true, deletedCount: result.deletedCount });
+    }).lean();
+    const snapshot = docs.map(({ _id, __v, createdAt, updatedAt, ...rest }) => rest);
+    await WorkingStatus.deleteMany({ date, status: { $in: ['in_office', 'office_no_desk'] } });
+    res.json({ ok: true, deletedCount: docs.length, snapshot });
+  } catch (err) {
+    handleError(res, err);
+  }
+});
+
+// POST /admin/test/restore-office-capacity — ripristina i record eliminati da una precedente
+// chiamata a free-office-capacity, riportando l'ambiente dev allo stato precedente il test.
+// Upsert per userId+date: se quell'utente ha nel frattempo un record diverso per quella data
+// (es. il proprio account di test), viene sovrascritto con lo snapshot originale.
+router.post('/restore-office-capacity', async (req: Request, res: Response): Promise<void> => {
+  const { snapshot } = req.body as { snapshot?: Array<Record<string, unknown>> };
+  if (!Array.isArray(snapshot)) {
+    res.status(400).json({ error: 'snapshot (array) richiesto' });
+    return;
+  }
+  try {
+    let restoredCount = 0;
+    for (const record of snapshot) {
+      const { userId, date, ...rest } = record as { userId?: string; date?: string };
+      if (!userId || !date) continue;
+      await WorkingStatus.findOneAndUpdate(
+        { userId, date },
+        { $set: { ...rest, userId, date } },
+        { upsert: true, setDefaultsOnInsert: true }
+      );
+      restoredCount++;
+    }
+    res.json({ ok: true, restoredCount });
   } catch (err) {
     handleError(res, err);
   }

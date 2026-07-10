@@ -1,5 +1,6 @@
 import { Page, expect, test } from '@playwright/test';
 import { freeOfficeCapacity } from './testAdmin';
+import { queueOfficeCapacityRestore } from './officeCapacityQueue';
 
 // Shared DailyDetail navigation helpers for the new CSV-coverage spec files.
 // Existing spec files keep their own local navigation logic — not touched here.
@@ -96,7 +97,11 @@ export async function selectStatus(page: Page, status: StatusKey, date?: string)
 //    something a browser-side page.route() mock can influence, since it runs entirely in
 //    the backend process against the real database). So step one is to genuinely free real
 //    capacity first, via the dev-only /admin/test/free-office-capacity endpoint — after
-//    this, the eventual booking is a REAL in_office booking, not a fake-looking one.
+//    this, the eventual booking is a REAL in_office booking, not a fake-looking one. What
+//    got removed is queued (officeCapacityQueue.ts) and restored once, in
+//    global-teardown.ts, at the end of the whole run — not right after this function
+//    returns, since the office needs to stay free for the rest of THIS test's own
+//    interactions with the date (e.g. reopening it to switch status again).
 // 2. Even with real capacity freed, the UI's own "should I show plain In Office" check can
 //    still say "full": App.tsx's `processedDays` recomputes bookedCount client-side as
 //    `Math.max(day.bookedCount, finalAvatars.length)`, padding finalAvatars to at least 5
@@ -119,7 +124,8 @@ async function installOfficeCapacityFallbackAndRetry(
   date: string,
   plainInOffice: ReturnType<Page['locator']>,
 ) {
-  await freeOfficeCapacity(date);
+  const { snapshot } = await freeOfficeCapacity(date);
+  queueOfficeCapacityRestore(snapshot);
 
   const month = date.slice(0, 7);
   await page.route(`**/presence?month=${month}`, async (route) => {

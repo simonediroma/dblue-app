@@ -41,6 +41,16 @@ by side in `tests/`:
   Tests that deliberately exercise the real full-office/waiting-list path itself
   (`capacity.spec.ts` H-40) don't pass a `date` and keep the original skip behavior.
 
+  **The real bookings removed by (1) are restored**, putting the dev environment back to
+  how it was before the run: each removal is queued to a local file
+  (`fixtures/officeCapacityQueue.ts`, `e2e/.office-capacity-restore-queue.json`, gitignored)
+  rather than restored immediately — the office needs to stay free for the rest of that
+  same test's own interactions with the date, not just the initial booking. `global-teardown.ts`
+  (wired into `playwright.config.ts`) flushes the whole queue via
+  `/admin/test/restore-office-capacity` once, at the very end of the run. If that restore
+  call itself fails (e.g. the run was interrupted), the queue file is left in place and
+  picked up by the next run's teardown instead of being silently lost.
+
 ## Environment
 
 **There is no local dev environment for this suite.** It runs against the shared
