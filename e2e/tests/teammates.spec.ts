@@ -46,7 +46,11 @@ async function selectOnboardingTeammates(page: Page, names: string[]) {
   await page.locator('[data-testid="onboarding"]').getByRole('button', { name: /choose my project teammates/i }).click();
   for (const name of names) {
     await page.locator('input[placeholder="Search by name..."]').fill(name.split(' ')[0]);
-    await page.locator('[data-testid="onboarding-colleague-option"]').first().click();
+    // Filter by the sought name instead of blindly clicking .first(): selecting a
+    // colleague clears the search box as a side effect (see Profile.tsx toggleTeammate),
+    // and .first() on the bare locator can resolve against the list before this fill's
+    // filter has rendered, clicking whoever's alphabetically first instead.
+    await page.locator('[data-testid="onboarding-colleague-option"]').filter({ hasText: name }).first().click();
   }
 }
 
@@ -74,7 +78,11 @@ async function clearSelectedTeammates(page: Page) {
 async function selectTeammatesByName(page: Page, names: string[]) {
   for (const name of names) {
     await page.getByPlaceholder('Search by name...').fill(name.split(' ')[0]);
-    await page.locator('[data-testid="teammate-option"]').first().click();
+    // Filter by the sought name instead of blindly clicking .first(): selecting a
+    // colleague clears the search box as a side effect (see Profile.tsx toggleTeammate),
+    // and .first() on the bare locator can resolve against the list before this fill's
+    // filter has rendered, clicking whoever's alphabetically first instead.
+    await page.locator('[data-testid="teammate-option"]').filter({ hasText: name }).first().click();
   }
 }
 
@@ -258,9 +266,9 @@ test.describe('CSV coverage — Teammates', () => {
     // Deselect exactly 2 (Mario, Sara) and add 2 fillers instead.
     await openProfileTeammatesEditor(page);
     await page.getByPlaceholder('Search by name...').fill('Mario');
-    await page.locator('[data-testid="teammate-option"]').first().click();
+    await page.locator('[data-testid="teammate-option"]').filter({ hasText: 'Mario' }).first().click();
     await page.getByPlaceholder('Search by name...').fill('Sara');
-    await page.locator('[data-testid="teammate-option"]').first().click();
+    await page.locator('[data-testid="teammate-option"]').filter({ hasText: 'Sara' }).first().click();
     await selectFillerTeammates(page, 2, KNOWN_TEAMMATES);
     await saveTeammates(page);
 
@@ -288,7 +296,7 @@ test.describe('CSV coverage — Teammates', () => {
 
     await openProfileTeammatesEditor(page);
     await page.getByPlaceholder('Search by name...').fill('Mario');
-    await page.locator('[data-testid="teammate-option"]').first().click();
+    await page.locator('[data-testid="teammate-option"]').filter({ hasText: 'Mario' }).first().click();
     await selectFillerTeammates(page, 1, KNOWN_TEAMMATES);
     await saveTeammates(page);
 

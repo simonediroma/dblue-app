@@ -46,7 +46,11 @@ async function setTeammates(page: Page, names: string[]) {
   await clearSelectedTeammates(page);
   for (const name of names) {
     await page.getByPlaceholder('Search by name...').fill(name.split(' ')[0]);
-    await page.locator('[data-testid="teammate-option"]').first().click();
+    // Filter by the sought name instead of blindly clicking .first(): selecting a
+    // colleague clears the search box as a side effect (see Profile.tsx toggleTeammate),
+    // and .first() on the bare locator can resolve against the list before this fill's
+    // filter has rendered, clicking whoever's alphabetically first instead.
+    await page.locator('[data-testid="teammate-option"]').filter({ hasText: name }).first().click();
   }
   await page.click('[data-testid="teammate-save"]');
   await page.waitForSelector('[data-testid="profile-page"]');
