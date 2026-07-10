@@ -64,6 +64,12 @@ async function openProfileTeammatesEditor(page: Page) {
   await page.waitForSelector('[data-testid="profile-page"]');
   await page.click('[data-testid="profile-manage-teammates"]');
   await expect(page.getByPlaceholder('Search by name...')).toBeVisible({ timeout: 5000 });
+  // The search box renders immediately (outside the loading conditional in
+  // Profile.tsx), but the colleague list itself (GET /admin/users, kicked off only
+  // once this view mounts) hasn't necessarily resolved yet — clearSelectedTeammates()
+  // and selectTeammatesByName() would silently no-op against zero rendered options if
+  // they ran during that window. Wait for at least one real option before proceeding.
+  await expect(page.locator('[data-testid="teammate-option"]').first()).toBeVisible({ timeout: 10000 });
 }
 
 async function clearSelectedTeammates(page: Page) {
