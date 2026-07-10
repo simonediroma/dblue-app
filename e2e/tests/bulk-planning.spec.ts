@@ -41,7 +41,7 @@ async function openExtendStep(page: Page, skip = 0): Promise<void> {
     await editBtn.click();
   } else {
     // Already in PLANNING (status is set), look for the pencil/edit icon
-    const planningEditBtn = page.locator('[data-testid="daily-detail"] button svg.lucide-edit-2').locator('..');
+    const planningEditBtn = page.locator('[data-testid="daily-detail"] button svg.lucide-pen').locator('..');
     const hasPlanningEdit = await planningEditBtn.isVisible().catch(() => false);
     if (hasPlanningEdit) await planningEditBtn.click();
   }

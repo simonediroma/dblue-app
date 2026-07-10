@@ -43,7 +43,7 @@ export async function goToPlanningStep(page: Page) {
     return;
   }
 
-  const editIcon = detail.locator('button:has(svg.lucide-edit-2)').first();
+  const editIcon = detail.locator('button:has(svg.lucide-pen)').first();
   await editIcon.click();
 }
 

@@ -327,7 +327,7 @@ async function csvCanPlanToday(page: Page): Promise<boolean> {
   const detail = page.locator('[data-testid="daily-detail"]');
   const canEnterPlanning =
     (await detail.getByRole('button', { name: /define working status/i }).isVisible().catch(() => false)) ||
-    (await detail.locator('button:has(svg.lucide-edit-2)').isVisible().catch(() => false));
+    (await detail.locator('button:has(svg.lucide-pen)').isVisible().catch(() => false));
   return canEnterPlanning;
 }
 
@@ -483,7 +483,7 @@ test.describe('CSV coverage — Confirm/Check-In', () => {
 
     // Once checked in, no edit affordance (pencil icon) should remain in DailyDetail.
     await csvOpenDayCard2(page, today);
-    await expect(page.locator('[data-testid="daily-detail"] button:has(svg.lucide-edit-2)')).not.toBeVisible();
+    await expect(page.locator('[data-testid="daily-detail"] button:has(svg.lucide-pen)')).not.toBeVisible();
 
     // And the backend itself must reject a further status change (409).
     const apiBase = process.env.API_BASE_URL ?? 'http://localhost:4000';
