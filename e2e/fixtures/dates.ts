@@ -30,6 +30,17 @@ export function todayStr(): string {
 }
 
 /**
+ * True on Saturday/Sunday. getWorkingDaysOfMonth() on the backend excludes
+ * weekends from GET /presence entirely, so a test that opens "today's" day-card
+ * on a weekend finds no such card and hangs on scrollIntoViewIfNeeded() until
+ * the full test timeout — skip gracefully instead, there's no real "today"
+ * office day to exercise.
+ */
+export function isTodayWeekend(): boolean {
+  return [0, 6].includes(new Date().getDay());
+}
+
+/**
  * A stable future weekday for a given test ID, always inside the real 30-day
  * rolling planning window (see H-20). Two different IDs may collide on the
  * same date — harmless, since every test sets/overwrites its own day's

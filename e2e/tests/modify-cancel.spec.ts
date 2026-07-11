@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { loginAsOwner, loginAsEmployee, getAuthHeaders } from '../fixtures/auth';
-import { futureTestDate, todayStr } from '../fixtures/dates';
+import { futureTestDate, todayStr, isTodayWeekend } from '../fixtures/dates';
 import { resetStatus } from '../fixtures/testAdmin';
 import {
   openDayCard,
@@ -64,6 +64,9 @@ test.describe('CSV coverage — Modify/Cancel', () => {
   });
 
   test('[H-27] cancelling an in-office booking <24h shows the last-minute alert', async ({ page }) => {
+    // On a weekend there's no working-day entry for "today" at all (backend excludes
+    // Sat/Sun from GET /presence) — openDayCard() would just hang until the test timeout.
+    test.skip(isTodayWeekend(), 'today is a weekend — no working day to check into');
     const today = todayStr();
     await resetStatus('dev@dblue.it', today);
     await loginAsOwner(page);
@@ -88,6 +91,9 @@ test.describe('CSV coverage — Modify/Cancel', () => {
   });
 
   test('[H-28] last-minute unbooking is saved correctly in the stats', async ({ page }) => {
+    // On a weekend there's no working-day entry for "today" at all (backend excludes
+    // Sat/Sun from GET /presence) — openDayCard() would just hang until the test timeout.
+    test.skip(isTodayWeekend(), 'today is a weekend — no working day to check into');
     const today = todayStr();
     await resetStatus('dev@dblue.it', today);
     await loginAsOwner(page);
@@ -145,6 +151,9 @@ test.describe('CSV coverage — Modify/Cancel', () => {
   });
 
   test('[H-26b] cancelling a last-minute in-office booking works on the employee account', async ({ page }) => {
+    // On a weekend there's no working-day entry for "today" at all (backend excludes
+    // Sat/Sun from GET /presence) — openDayCard() would just hang until the test timeout.
+    test.skip(isTodayWeekend(), 'today is a weekend — no working day to check into');
     const today = todayStr();
     await resetStatus('mario.rossi@dblue.it', today);
     await loginAsEmployee(page);

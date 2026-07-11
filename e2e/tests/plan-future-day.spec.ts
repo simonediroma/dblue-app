@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { loginAsOwner } from '../fixtures/auth';
-import { futureTestDate, todayStr } from '../fixtures/dates';
+import { futureTestDate, todayStr, isTodayWeekend } from '../fixtures/dates';
 import { resetStatus } from '../fixtures/testAdmin';
 import { openDayCard, goToPlanningStep, selectStatus, confirmRoom } from '../fixtures/dailyDetail';
 import { flushOfficeCapacityQueue } from '../fixtures/officeCapacityQueue';
@@ -96,6 +96,9 @@ test.describe('CSV coverage — Plan a Future Day', () => {
 
   test('[H-14] plan a future day — On Sick Leave (extended path) does not blank the app', async ({ page }) => {
     // SICK is today-only server-side; the "extend" path is reached from today's card.
+    // On a weekend there's no working-day entry for "today" at all (backend excludes
+    // Sat/Sun from GET /presence) — openDayCard() would just hang until the test timeout.
+    test.skip(isTodayWeekend(), 'today is a weekend — no working day to check into');
     // Reset first: other CSV-coverage spec files may also use the owner account's "today".
     const today = todayStr();
     await resetStatus('dev@dblue.it', today);
