@@ -53,12 +53,18 @@ test.describe('CSV coverage — Capacity & Waiting List', () => {
     const card = page.locator(`[data-testid="day-card"][data-date="${date}"]`);
     await card.scrollIntoViewIfNeeded();
 
-    const before = await card.locator('[data-testid="daycard-occupancy"]').textContent();
-    const bookedBefore = Number((before ?? '0/0').split('/')[0]);
-
     await openDayCard(page, date);
     await goToPlanningStep(page);
     await selectStatus(page, 'IN_OFFICE', date);
+    // Captured here, not before selectStatus: if the office was full for this date, its
+    // mocked-fallback path (dailyDetail.ts) genuinely wipes every real in_office booking
+    // via /admin/test/free-office-capacity before retrying — a "before" snapshot taken
+    // earlier would reflect a baseline that no longer exists, making the after === before
+    // + 1 comparison below meaningless. This read is always the true state immediately
+    // preceding the real increment, whether or not the fallback engaged.
+    await card.scrollIntoViewIfNeeded();
+    const before = await card.locator('[data-testid="daycard-occupancy"]').textContent();
+    const bookedBefore = Number((before ?? '0/0').split('/')[0]);
     await confirmRoom(page, /./);
 
     await card.scrollIntoViewIfNeeded();
