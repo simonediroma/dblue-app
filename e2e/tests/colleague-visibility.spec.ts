@@ -78,7 +78,16 @@ async function setTeammates(page: Page, names: string[]) {
   // actually closed (it's inside an AnimatePresence(mode="wait") that can keep the
   // old instance mounted briefly during its exit animation). Wait for the save
   // button itself (unique to the editor) to be gone instead.
+  //
+  // The Save button's onClick (Profile.tsx) fires PATCH /users/me/teammates without
+  // awaiting it before switching views — wait for the actual response so whatever
+  // reads teammate state right after (e.g. opening a day card) doesn't race a still
+  // in-flight save.
+  const saved = page.waitForResponse(
+    (res) => res.url().includes('/users/me/teammates') && res.request().method() === 'PATCH'
+  );
   await page.click('[data-testid="teammate-save"]');
+  await saved;
   await expect(page.locator('[data-testid="teammate-save"]')).not.toBeVisible({ timeout: 5000 });
 }
 
