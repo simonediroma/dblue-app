@@ -117,6 +117,19 @@ async function selectTeammatesByName(page: Page, names: string[]) {
   }
 }
 
+// Deselects a currently-selected teammate by (partial) name. toggleTeammate's isSelected
+// branch (Profile.tsx) never clears the search box — only selecting does — so there's no
+// side effect to wait on there; wait directly for this item's own checkmark to disappear
+// instead, same reasoning as clearSelectedTeammates's fix. Without this, a fast
+// fill()+click()+fill() sequence (the previous inline code at each call site) had no
+// guarantee the deselect had actually landed before moving on.
+async function deselectTeammateByName(page: Page, name: string) {
+  await page.getByPlaceholder('Search by name...').fill(name);
+  const item = page.locator('[data-testid="teammate-option"]').filter({ hasText: name }).first();
+  await item.click();
+  await expect(item.locator('svg.lucide-check')).toHaveCount(0, { timeout: 3000 });
+}
+
 async function selectFillerTeammates(page: Page, count: number, excludeNames: string[]) {
   // The teammate list is search-filtered, and this always runs right after
   // selectTeammatesByName()/a manual .fill() left a name in the search box — clear it
@@ -322,10 +335,8 @@ test.describe('CSV coverage — Teammates', () => {
 
     // Deselect exactly 2 (Mario, Sara) and add 2 fillers instead.
     await openProfileTeammatesEditor(page);
-    await page.getByPlaceholder('Search by name...').fill('Mario');
-    await page.locator('[data-testid="teammate-option"]').filter({ hasText: 'Mario' }).first().click();
-    await page.getByPlaceholder('Search by name...').fill('Sara');
-    await page.locator('[data-testid="teammate-option"]').filter({ hasText: 'Sara' }).first().click();
+    await deselectTeammateByName(page, 'Mario');
+    await deselectTeammateByName(page, 'Sara');
     await selectFillerTeammates(page, 2, KNOWN_TEAMMATES);
     await saveTeammates(page);
 
@@ -357,8 +368,7 @@ test.describe('CSV coverage — Teammates', () => {
     await saveTeammates(page);
 
     await openProfileTeammatesEditor(page);
-    await page.getByPlaceholder('Search by name...').fill('Mario');
-    await page.locator('[data-testid="teammate-option"]').filter({ hasText: 'Mario' }).first().click();
+    await deselectTeammateByName(page, 'Mario');
     await selectFillerTeammates(page, 1, KNOWN_TEAMMATES);
     await saveTeammates(page);
 
