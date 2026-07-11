@@ -131,10 +131,17 @@ test.describe('CSV coverage — Colleague Visibility', () => {
       await expect(inOfficeSection.locator('[data-testid="colleague-item"]').filter({ hasText: name })).toHaveCount(0);
     }
 
-    // Each must show its own correct status label somewhere in the colleague list.
-    await expect(detail.locator('[data-testid="colleague-item"]').filter({ hasText: 'Mario' }).filter({ hasText: /remote/i })).toBeVisible();
-    await expect(detail.locator('[data-testid="colleague-item"]').filter({ hasText: 'Sara' }).filter({ hasText: /leave/i })).toBeVisible();
-    await expect(detail.locator('[data-testid="colleague-item"]').filter({ hasText: 'Luca' }).filter({ hasText: /mission/i })).toBeVisible();
-    await expect(detail.locator('[data-testid="colleague-item"]').filter({ hasText: 'Giulia' }).filter({ hasText: /parental/i })).toBeVisible();
+    // The "Other colleagues" section on this screen (DailyDetail.tsx VIEW step) is
+    // a compact avatar-only grid — no data-testid="colleague-item" and no text label
+    // at all, by design (only "Project Teammates" and "In the office" render full
+    // ColleagueItem rows inline). Each person's status label is only rendered as text
+    // on the "See all" screen (ALL_COLLEAGUES step), which lists every colleague via
+    // ColleagueItem — navigate there before checking status labels.
+    await page.getByRole('button', { name: /see all/i }).click();
+    const allColleaguesDetail = page.locator('[data-testid="daily-detail"]');
+    await expect(allColleaguesDetail.locator('[data-testid="colleague-item"]').filter({ hasText: 'Mario' }).filter({ hasText: /remote/i })).toBeVisible();
+    await expect(allColleaguesDetail.locator('[data-testid="colleague-item"]').filter({ hasText: 'Sara' }).filter({ hasText: /leave/i })).toBeVisible();
+    await expect(allColleaguesDetail.locator('[data-testid="colleague-item"]').filter({ hasText: 'Luca' }).filter({ hasText: /mission/i })).toBeVisible();
+    await expect(allColleaguesDetail.locator('[data-testid="colleague-item"]').filter({ hasText: 'Giulia' }).filter({ hasText: /parental/i })).toBeVisible();
   });
 });
