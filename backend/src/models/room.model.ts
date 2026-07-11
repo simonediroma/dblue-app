@@ -50,7 +50,7 @@ const DEFAULT_ROOMS: Array<{
   { name: 'Green', type: 'open_space', capacity: 20, color: '#22c55e' },
   { name: 'Blue', type: 'open_space', capacity: 20, color: '#3b82f6' },
   { name: 'DBLue Innovation Lab', type: 'lab', capacity: 15, color: '#a855f7', visibleRoles: ['lab_responsible'] },
-  { name: 'Admin Room', type: 'admin', capacity: 8, color: '#6366f1', visibleRoles: ['director'] },
+  { name: 'Admin Room', type: 'admin', capacity: 8, color: '#6366f1', visibleRoles: ['admin_member'] },
   { name: 'Management Room', type: 'management', capacity: 6, color: '#f59e0b', visibleRoles: ['director'] },
 ];
 
