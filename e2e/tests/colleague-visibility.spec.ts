@@ -39,10 +39,19 @@ async function openProfileTeammatesEditor(page: Page) {
 }
 
 async function clearSelectedTeammates(page: Page) {
-  const active = () => page.locator('[data-testid="teammate-option"]').filter({ has: page.locator('svg.lucide-check') });
+  const options = page.locator('[data-testid="teammate-option"]');
+  const active = () => options.filter({ has: page.locator('svg.lucide-check') });
   let guard = 0;
   while ((await active().count()) > 0 && guard < 10) {
-    await active().first().click();
+    const item = active().first();
+    const name = await item.innerText();
+    await item.click();
+    // Wait for this specific click to actually land before re-querying active() by
+    // checkmark presence — active() is a live query, not a snapshot, so a stale DOM
+    // read here can re-resolve to the SAME still-checked item next iteration and toggle
+    // it back on, burning the guard budget while other genuinely-stale selections are
+    // never touched.
+    await expect(options.filter({ hasText: name }).locator('svg.lucide-check')).toHaveCount(0, { timeout: 3000 });
     guard++;
   }
 }
