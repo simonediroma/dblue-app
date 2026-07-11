@@ -129,7 +129,8 @@ async function installOfficeCapacityFallbackAndRetry(
   queuePendingRestore(snapshot);
 
   const month = date.slice(0, 7);
-  await page.route(`**/presence?month=${month}`, async (route) => {
+  const presencePattern = `**/presence?month=${month}`;
+  await page.route(presencePattern, async (route) => {
     // The app sends Authorization: Bearer + credentials: 'include' cross-origin, which
     // triggers a CORS preflight (OPTIONS) request to this exact same URL before the real
     // GET. page.route() matches by URL regardless of method, so an unfiltered handler (or
@@ -162,6 +163,14 @@ async function installOfficeCapacityFallbackAndRetry(
 
   await expect(plainInOffice).toBeVisible({ timeout: 5000 });
   await plainInOffice.click();
+
+  // The route handler's only job was getting past the "office full" display for this
+  // one click — page.route() handlers otherwise persist across page.reload() (they're
+  // bound to the Page, not a navigation), so leaving it registered would keep forcing
+  // bookedCount to 0 on every later /presence fetch for this date, including a
+  // deliberate post-booking reload a test might do to verify the REAL persisted state
+  // (e.g. H-40b) — silently masking the very thing being checked.
+  await page.unroute(presencePattern);
 }
 
 export async function confirmRoom(page: Page, roomName: string | RegExp) {
