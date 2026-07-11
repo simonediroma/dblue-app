@@ -152,7 +152,19 @@ async function saveTeammates(page: Page) {
   // moment after Save — reopening the editor immediately risks a stray click landing
   // on that stale, about-to-be-discarded instance instead of the fresh one. Wait for
   // the save button itself (unique to the editor) to be gone before proceeding.
+  //
+  // The Save button's onClick (Profile.tsx) calls onUpdateProjectTeammates(...) WITHOUT
+  // awaiting it, then immediately switches views — so the PATCH /users/me/teammates
+  // request is still in flight when the button disappears. A test that immediately
+  // reopens the editor and saves again races that still-pending request: whichever
+  // PATCH the backend finishes processing last wins, silently discarding the other
+  // round's edits (observed as the final state reverting to an earlier round's
+  // selections). Wait for the actual response before moving on.
+  const saved = page.waitForResponse(
+    (res) => res.url().includes('/users/me/teammates') && res.request().method() === 'PATCH'
+  );
   await page.click('[data-testid="teammate-save"]');
+  await saved;
   await expect(page.locator('[data-testid="teammate-save"]')).not.toBeVisible({ timeout: 5000 });
 }
 
