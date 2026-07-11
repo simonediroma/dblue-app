@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { loginAsOwner, getAuthHeaders } from '../fixtures/auth';
-import { todayStr } from '../fixtures/dates';
+import { todayStr, isTodayWeekend } from '../fixtures/dates';
 import { resetStatus } from '../fixtures/testAdmin';
 import { openDayCard, goToPlanningStep, selectStatus, confirmRoom } from '../fixtures/dailyDetail';
 import { flushOfficeCapacityQueue } from '../fixtures/officeCapacityQueue';
@@ -16,6 +16,9 @@ test.describe('CSV coverage — Sick Leave (Current Day)', () => {
   test.afterEach(flushOfficeCapacityQueue);
 
   test('[H-30] declaring sick leave today auto-confirms and locks the day', async ({ page }) => {
+    // On a weekend there's no working-day entry for "today" at all (backend excludes
+    // Sat/Sun from GET /presence) — openDayCard() would just hang until the test timeout.
+    test.skip(isTodayWeekend(), 'today is a weekend — no working day to check into');
     const today = todayStr();
     await resetStatus('dev@dblue.it', today);
     await loginAsOwner(page);

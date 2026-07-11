@@ -312,7 +312,7 @@ import {
   loginAsDirectorRole as csvLoginAsDirectorRole,
   getAuthHeaders,
 } from '../fixtures/auth';
-import { todayStr as csvTodayStr2 } from '../fixtures/dates';
+import { todayStr as csvTodayStr2, isTodayWeekend as csvIsTodayWeekend } from '../fixtures/dates';
 import { resetStatus as csvResetStatus } from '../fixtures/testAdmin';
 import {
   openDayCard as csvOpenDayCard2,
@@ -333,6 +333,10 @@ async function csvCanPlanToday(page: Page): Promise<boolean> {
 }
 
 test.describe('CSV coverage — Confirm/Check-In', () => {
+  // All these tests plan/check-in "today" — on a weekend there's no working-day entry
+  // for it at all (backend excludes Sat/Sun from GET /presence), so openDayCard() would
+  // just hang until the test timeout instead of failing meaningfully.
+  test.beforeEach(() => { test.skip(csvIsTodayWeekend(), 'today is a weekend — no working day to check into'); });
   test.afterEach(flushOfficeCapacityQueue);
 
   test('[H-21] check-in today from the day card "Say Good Morning" button', async ({ page }) => {
