@@ -2,6 +2,7 @@
 
 Generated automatically at the end of each `npx playwright test` run — newest first.
 
+- [2026-07-11T12-26-46-238Z.md](./2026-07-11T12-26-46-238Z.md) — 14 passed, 16 failed, 22 skipped (52 total) — run status: failed
 - [2026-07-11T12-18-30-192Z.md](./2026-07-11T12-18-30-192Z.md) — 13 passed, 17 failed, 22 skipped (52 total) — run status: failed
 - [2026-07-11T09-58-54-705Z.md](./2026-07-11T09-58-54-705Z.md) — 14 passed, 16 failed, 22 skipped (52 total) — run status: failed
 - [2026-07-11T09-25-16-871Z.md](./2026-07-11T09-25-16-871Z.md) — 13 passed, 28 failed, 11 skipped (52 total) — run status: failed
