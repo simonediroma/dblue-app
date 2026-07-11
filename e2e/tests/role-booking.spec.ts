@@ -40,7 +40,10 @@ test.describe('CSV coverage — Role-Specific Booking', () => {
 
     const detail = page.locator('[data-testid="daily-detail"]');
     const adminRoomOption = detail.locator('[data-testid="room-option"]').filter({ hasText: /admin room/i });
-    await expect(adminRoomOption).toBeVisible({ timeout: 5000 });
+    // The office-capacity fallback above does a full page.reload() + reopens the day card
+    // + re-enters planning before this point — GET /rooms restarts from scratch on that
+    // fresh mount, so 5s can be tight on the shared environment's variable network latency.
+    await expect(adminRoomOption).toBeVisible({ timeout: 15000 });
     await adminRoomOption.click();
 
     const res = await page.request.get(`${API_BASE}/presence?month=${date.slice(0, 7)}`, { headers: await getAuthHeaders(page) });
@@ -72,7 +75,8 @@ test.describe('CSV coverage — Role-Specific Booking', () => {
 
     const detail = page.locator('[data-testid="daily-detail"]');
     const managementRoomOption = detail.locator('[data-testid="room-option"]').filter({ hasText: /management room/i });
-    await expect(managementRoomOption).toBeVisible({ timeout: 5000 });
+    // Same reload-then-refetch timing concern as H-45 above.
+    await expect(managementRoomOption).toBeVisible({ timeout: 15000 });
     await managementRoomOption.click();
 
     const res = await page.request.get(`${API_BASE}/presence?month=${date.slice(0, 7)}`, { headers: await getAuthHeaders(page) });
