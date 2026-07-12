@@ -20,10 +20,22 @@ export async function waitForSplashGone(page: Page) {
 export async function openDayCard(page: Page, date: string) {
   await waitForSplashGone(page);
   const card = page.locator(`[data-testid="day-card"][data-date="${date}"]`);
+  const detail = page.locator('[data-testid="daily-detail"]');
   await card.scrollIntoViewIfNeeded();
   await expect(card).toBeVisible({ timeout: 10000 });
   await card.click();
-  await expect(page.locator('[data-testid="daily-detail"]')).toBeVisible({ timeout: 5000 });
+  try {
+    await expect(detail).toBeVisible({ timeout: 5000 });
+  } catch {
+    // App.tsx's handleDayClick debounces single vs double click over a 250ms window
+    // (clickTimeoutRef) — a click landing too soon after a panel we just closed risks
+    // being coalesced with a stray event and misread as a double-click, which silently
+    // toggles the day's status instead of opening the panel. Confirmed by H-10's report:
+    // this exact expect() failed with a clean call log (element(s) not found) rather
+    // than the test's own timeout, on a reopen following an earlier close. Retry once.
+    await card.click();
+    await expect(detail).toBeVisible({ timeout: 10000 });
+  }
 }
 
 // From the DailyDetail VIEW step, enters PLANNING (works for pending days, already-set
