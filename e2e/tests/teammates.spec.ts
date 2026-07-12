@@ -138,7 +138,12 @@ async function selectFillerTeammates(page: Page, count: number, excludeNames: st
   const pattern = new RegExp(excludeNames.join('|'));
   const candidates = page.locator('[data-testid="teammate-option"]').filter({ hasNotText: pattern });
   for (let i = 0; i < count; i++) {
-    await candidates.nth(i).click();
+    const candidate = candidates.nth(i);
+    // Bare .click() has no timeout of its own — if fewer than `count` candidates ever
+    // render, this hangs silently until the whole test's own timeout kills it with no
+    // call log. Give it a descriptive, bounded wait instead.
+    await expect(candidate).toBeVisible({ timeout: 15000 });
+    await candidate.click();
   }
 }
 
