@@ -52,6 +52,17 @@ test.describe('CSV coverage — Plan a Future Day', () => {
     const backBtn = page.getByRole('button', { name: /back/i }).first();
     await expect(backBtn).toBeVisible({ timeout: 10000 });
     await backBtn.click();
+    // App.tsx's handleDayClick debounces single vs double click over a 250ms window
+    // (clickTimeoutRef) — if the next day-card click below lands while the panel we
+    // just closed hasn't genuinely finished closing yet, it risks being coalesced
+    // with a stray event and misread as a double-click. handleDayDoubleClick, for a
+    // day that's currently IN_OFFICE, silently unbooks it back to PENDING instead of
+    // opening anything — which would explain the pencil never appearing on the next
+    // reopen (a PENDING day shows "Define working status", not a pencil, and
+    // goToPlanningStep does check for that text first, but if the click was
+    // swallowed entirely mid-transition the safest fix is to not race the close).
+    // Wait for the panel to be genuinely gone before proceeding.
+    await expect(page.locator('[data-testid="daily-detail"]')).not.toBeVisible({ timeout: 5000 });
 
     // Regression: switch away from In Office, then back — the room "Planned" badge
     // should NOT appear for a not-yet-reconfirmed room selection.
