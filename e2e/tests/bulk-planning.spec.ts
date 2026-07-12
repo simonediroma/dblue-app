@@ -329,12 +329,22 @@ test.describe('CSV coverage — Bulk Planning', () => {
     await csvSelectStatus(page, 'LEAVE');
 
     await csvOpenDayCard(page, date);
-    await page.locator('[data-testid="extend-trigger"]').click();
+    // Bare clicks below have no timeout of their own (playwright.config.ts sets no
+    // actionTimeout) — if any of these three never renders, the whole test hangs
+    // silently until its own timeout kills it with no call log (the exact signature
+    // this test has shown). Give each an explicit, bounded, descriptive wait instead.
+    const extendTrigger = page.locator('[data-testid="extend-trigger"]');
+    await expect(extendTrigger).toBeVisible({ timeout: 10000 });
+    await extendTrigger.click();
     const detail = page.locator('[data-testid="daily-detail"]');
     await expect(detail.getByText(/extend status/i)).toBeVisible({ timeout: 5000 });
 
-    await detail.getByText(/i need a special extended leave/i).click();
-    await detail.getByText(/i need more than 2 weeks/i).click();
+    const specialLeaveToggle = detail.getByText(/i need a special extended leave/i);
+    await expect(specialLeaveToggle).toBeVisible({ timeout: 10000 });
+    await specialLeaveToggle.click();
+    const moreThanTwoWeeks = detail.getByText(/i need more than 2 weeks/i);
+    await expect(moreThanTwoWeeks).toBeVisible({ timeout: 10000 });
+    await moreThanTwoWeeks.click();
 
     const chips = detail.locator('[data-testid="extend-day-chip"]:not([disabled])');
     const chipCount = await chips.count();

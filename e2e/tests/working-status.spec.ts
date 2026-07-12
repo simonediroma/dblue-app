@@ -83,8 +83,14 @@ test.describe('Working Status', () => {
       }
     }
     await expect(page.locator('[data-testid="daily-detail"]')).toBeVisible({ timeout: 5000 });
-    // Close via X button
-    await page.getByRole('button', { name: /close|×|cancel/i }).first().click();
+    // Close via the panel's Back button — DailyDetail's VIEW-step close affordance is
+    // labelled "Back" (see handleClose/handleBack in DailyDetail.tsx), never a literal
+    // "Close"/"Cancel"/"×" — that regex never matched anything, so this bare .click()
+    // (no timeout of its own, since playwright.config.ts sets no actionTimeout) hung
+    // silently until the whole test's own timeout killed it.
+    const backBtn = page.getByRole('button', { name: /back/i }).first();
+    await expect(backBtn).toBeVisible({ timeout: 10000 });
+    await backBtn.click();
     await expect(page.locator('[data-testid="daily-detail"]')).not.toBeVisible({ timeout: 5000 });
   });
 });
