@@ -44,7 +44,14 @@ test.describe('CSV coverage — Plan a Future Day', () => {
 
     await openDayCard(page, date);
     await expect(page.locator('[data-testid="daily-detail"]').getByText(/in office/i).first()).toBeVisible();
-    await page.getByRole('button', { name: /close|×|cancel/i }).first().click();
+    // DailyDetail's VIEW-step close affordance is actually labelled "Back" (see
+    // handleClose/handleBack in DailyDetail.tsx) — never "Close"/"Cancel"/"×". That
+    // regex never matched anything, so this bare .click() (no timeout of its own) hung
+    // silently until the whole test's own timeout killed it — this is H-10's exact
+    // "Test timeout of 30000ms exceeded" with no call log.
+    const backBtn = page.getByRole('button', { name: /back/i }).first();
+    await expect(backBtn).toBeVisible({ timeout: 10000 });
+    await backBtn.click();
 
     // Regression: switch away from In Office, then back — the room "Planned" badge
     // should NOT appear for a not-yet-reconfirmed room selection.

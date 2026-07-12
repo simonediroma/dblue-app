@@ -52,7 +52,14 @@ test.describe('CSV coverage — Modify/Cancel', () => {
     let detail = page.locator('[data-testid="daily-detail"]');
     await expect(detail.getByText(/remote/i).first()).toBeVisible();
     await expect(detail.getByText(/^in office$/i)).not.toBeVisible();
-    await page.getByRole('button', { name: /close|×|cancel/i }).first().click();
+    // DailyDetail's VIEW-step close affordance is actually labelled "Back" (see
+    // handleClose/handleBack in DailyDetail.tsx) — never "Close"/"Cancel"/"×". That
+    // regex never matched anything, so this bare .click() (no timeout of its own) hung
+    // silently until the whole test's own timeout killed it — this test's exact
+    // "Test timeout of 30000ms exceeded" with no call log.
+    const backBtn = page.getByRole('button', { name: /back/i }).first();
+    await expect(backBtn).toBeVisible({ timeout: 10000 });
+    await backBtn.click();
 
     await openDayCard(page, date);
     await goToPlanningStep(page);
