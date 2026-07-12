@@ -44,6 +44,13 @@ export async function goToPlanningStep(page: Page) {
   }
 
   const editIcon = detail.locator('button:has(svg.lucide-pen)').first();
+  // Plain .click() with no wait has no timeout of its own (no actionTimeout is set in
+  // playwright.config.ts) — if this locator never resolves, the whole test hangs
+  // silently until ITS OWN timeout kills it, with no call log to explain why (the
+  // signature behind several still-unexplained "genuine hangs" in this session, e.g.
+  // H-04/H-06/H-08/H-41). Give it its own descriptive, bounded wait so a future
+  // failure here is diagnosable from the report alone.
+  await expect(editIcon).toBeVisible({ timeout: 15000 });
   await editIcon.click();
 }
 
@@ -175,7 +182,12 @@ async function installOfficeCapacityFallbackAndRetry(
 
 export async function confirmRoom(page: Page, roomName: string | RegExp) {
   const rooms = page.locator('[data-testid="room-option"]');
-  await rooms.filter({ hasText: roomName }).first().click();
+  const target = rooms.filter({ hasText: roomName }).first();
+  // Same reasoning as goToPlanningStep's editIcon wait above — a bare .click() here
+  // has no timeout of its own, so if the room list is ever empty/slow to load this
+  // hangs silently until the whole test's own timeout kills it with no call log.
+  await expect(target).toBeVisible({ timeout: 15000 });
+  await target.click();
 }
 
 export async function confirmRetrofit(page: Page) {
