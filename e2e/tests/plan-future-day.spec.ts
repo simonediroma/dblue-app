@@ -29,6 +29,12 @@ test.describe('CSV coverage — Plan a Future Day', () => {
   });
 
   test('[H-10] plan a future day — In Office', async ({ page }) => {
+    // Four full open/close round trips on the same day plus three real status changes
+    // against the shared environment — unlike its "compound" siblings (H-04/06/08/41)
+    // this test never had a custom timeout override, so it was already close to
+    // Playwright's 30s default before PR #95 added one more explicit wait, which was
+    // enough to push a run over the edge into a bare, undiagnosable timeout again.
+    test.setTimeout(60000);
     const date = futureTestDate('H-10');
     await resetStatus('dev@dblue.it', date);
     await loginAsOwner(page);
