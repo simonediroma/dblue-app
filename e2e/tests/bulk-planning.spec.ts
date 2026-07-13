@@ -361,15 +361,16 @@ test.describe('CSV coverage — Bulk Planning', () => {
     if (chipCount === 0) { test.skip(); return; }
     const firstChip = chips.first();
     await expect(firstChip).toBeVisible({ timeout: 10000 });
-    // Confirmed via a live trace: plain .click() (which internally calls
-    // scrollIntoViewIfNeeded, aligning to the nearest edge) can land the chip right at
-    // the bottom of the viewport, exactly where the EXTEND step's fixed footer
-    // ("Select dates to extend", DailyDetail.tsx's <footer className="fixed bottom-0...
-    // z-[140]">) covers it — 44 retries over 22s, all "intercepts pointer events",
-    // confirms this isn't a timing/animation issue. Force a center-aligned scroll
-    // first so the footer can't overlap the target.
+    // A prior fix here (scrollIntoView({block:'center'}) before a plain .click()) turned
+    // out not to hold: a live trace showed the exact same failure afterward — the click's
+    // own internal actionability protocol re-runs scrollIntoViewIfNeeded (aligning to the
+    // nearest edge) on every one of its retries, undoing our one-time center scroll and
+    // leaving the click's target coordinates stale relative to the post-rescroll layout.
+    // 45 of 46 retries landed on <main>'s own background (the grid's gutter), not the
+    // chip — not a timing/animation issue, a coordinate/hit-test mismatch. Bypass
+    // Playwright's hit-testing for the click itself (visibility already confirmed above).
     await firstChip.evaluate((el) => el.scrollIntoView({ block: 'center' }));
-    await firstChip.click();
+    await firstChip.evaluate((el) => (el as HTMLElement).click());
     await csvConfirmExtend(page);
 
     // Regression: a day extended via "I need more than 2 weeks" from a Vacation day

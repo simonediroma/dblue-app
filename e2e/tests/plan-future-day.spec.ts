@@ -159,11 +159,14 @@ test.describe('CSV coverage — Plan a Future Day', () => {
     if (chipCount > 0) {
       const firstChip = chips.first();
       await expect(firstChip).toBeVisible({ timeout: 10000 });
-      // See H-19's identical fix (bulk-planning.spec.ts): a plain .click() aligns the
-      // scroll to the nearest viewport edge, which can land the target right where the
-      // EXTEND step's fixed footer covers it. Force a center-aligned scroll first.
+      // See H-19's identical fix (bulk-planning.spec.ts): the one-time center scroll
+      // alone doesn't hold, since a plain .click()'s own actionability protocol re-runs
+      // scrollIntoViewIfNeeded (nearest-edge) on every retry, undoing it and leaving the
+      // click's target coordinates stale — landing on the EXTEND step's fixed footer or
+      // its container instead of the chip. Bypass Playwright's hit-testing for the click
+      // itself (visibility already confirmed above).
       await firstChip.evaluate((el) => el.scrollIntoView({ block: 'center' }));
-      await firstChip.click();
+      await firstChip.evaluate((el) => (el as HTMLElement).click());
       const confirmBtn = page.locator('[data-testid="extend-confirm"]');
       if (await confirmBtn.isEnabled().catch(() => false)) {
         await expect(confirmBtn).toBeVisible({ timeout: 10000 });
