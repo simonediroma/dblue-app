@@ -97,9 +97,39 @@ test.describe('CSV coverage — Capacity & Waiting List', () => {
     await fillCapacity(date, realCapacity - 1);
     try {
       // The owner books the last real seat — should succeed as In Office.
+      //
+      // App.tsx's processedDays pads bookedCount to at least 5 synthetic "in office"
+      // colleagues for every future day (a real, documented app bug — see
+      // dailyDetail.ts's installOfficeCapacityFallbackAndRetry). On this environment
+      // real room capacity is smaller than that synthetic floor, so the plain
+      // "In Office" button would stay hidden even with only realCapacity-1 real
+      // bookings, well below true capacity — selectStatus('IN_OFFICE') without a date
+      // would just skip. Patch ONLY totalCapacity (never bookedCount, which stays real)
+      // in the /presence response so the UI's own "is it full" check reflects the true
+      // state fillCapacity() just set up — same technique as the generic fallback, but
+      // scoped to this one click (not calling freeOfficeCapacity again, which would
+      // wipe the realCapacity-1 seats above) so it doesn't mask the real occupancy
+      // assertion below.
+      const month = date.slice(0, 7);
+      const presencePattern = `**/presence?month=${month}`;
+      await page.route(presencePattern, async (route) => {
+        if (route.request().method() !== 'GET') {
+          await route.continue();
+          return;
+        }
+        const response = await route.fetch();
+        const json = await response.json();
+        const day = Array.isArray(json) ? json.find((d: { date: string }) => d.date === date) : undefined;
+        if (day) day.totalCapacity = 9999;
+        await route.fulfill({ response, json });
+      });
+
       await openDayCard(page, date);
       await goToPlanningStep(page);
-      await selectStatus(page, 'IN_OFFICE');
+      const plainInOffice = page.locator('[data-testid="daily-detail"]').getByText(/^in office$/i);
+      await expect(plainInOffice).toBeVisible({ timeout: 10000 });
+      await plainInOffice.click();
+      await page.unroute(presencePattern);
       await confirmRoom(page, /./);
 
       const card = page.locator(`[data-testid="day-card"][data-date="${date}"]`);
