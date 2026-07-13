@@ -24,10 +24,18 @@ const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:4000';
 
 // Confirming DailyDetail's own last-minute warning can trigger a second, separate
 // App-level last-minute dialog (data-testid="last-minute-warning", "Yes, change it").
+// For a same-day IN_OFFICE->REMOTE switch (App.tsx's handleUpdateStatus) this second
+// dialog is actually deterministic, not merely possible — but its enter animation can
+// take longer than a couple hundred ms, so a too-tight check here can miss it (H-28's
+// failure: "remote" never applied because this returned false too early, leaving the
+// real update stuck pending). Widened from 2000ms; still a soft check via .catch, since
+// some callers (e.g. H-30's SICK switch) legitimately never trigger it at all.
 async function confirmAppLevelWarningIfPresent(page: import('@playwright/test').Page) {
   const appWarning = page.locator('[data-testid="last-minute-warning"]');
-  if (await appWarning.isVisible({ timeout: 2000 }).catch(() => false)) {
-    await appWarning.getByRole('button', { name: /yes, change it/i }).click();
+  if (await appWarning.isVisible({ timeout: 8000 }).catch(() => false)) {
+    const yesBtn = appWarning.getByRole('button', { name: /yes, change it/i });
+    await expect(yesBtn).toBeVisible({ timeout: 5000 });
+    await yesBtn.click();
   }
 }
 

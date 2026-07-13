@@ -101,10 +101,19 @@ export async function selectStatus(page: Page, status: StatusKey, date?: string)
       await installOfficeCapacityFallbackAndRetry(page, date, plainInOffice);
       return;
     }
+    await expect(plainInOffice).toBeVisible({ timeout: 10000 });
     await plainInOffice.click();
     return;
   }
-  await detail.getByText(STATUS_LABELS[status]).click();
+  // Bare .click() has no timeout of its own (no actionTimeout in playwright.config.ts)
+  // — if this option is ever visible-but-not-yet-actionable (mid PLANNING-step render/
+  // animation), it can hang silently until the whole test's own timeout, with no call
+  // log. This is the single locus shared by every non-IN_OFFICE selectStatus() call,
+  // which matches the "genuine hang" tests still affected after hardening other, more
+  // specific bare clicks (H-14, H-19, H-25b, H-26b, H-27, H-30).
+  const option = detail.getByText(STATUS_LABELS[status]);
+  await expect(option).toBeVisible({ timeout: 10000 });
+  await option.click();
 }
 
 // Fallback for when the real office is full for `date`, instead of skipping the test.
