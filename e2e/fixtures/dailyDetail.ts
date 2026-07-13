@@ -225,11 +225,21 @@ export async function confirmRoom(page: Page, roomName: string | RegExp) {
 // step branches), so this assumes the same class of transient timing issue rather than a
 // specific one, and recovers from it the same way.
 export async function clickAndWaitGone(locator: ReturnType<Page['locator']>) {
-  await locator.click();
+  // A bare .click() with no timeout of its own can retry internally against a target
+  // that keeps flickering ("not stable") until the whole test's own deadline kills it —
+  // confirmed by H-28's trace: hung the full 60s inside this exact click, never even
+  // reaching the retry logic below. Bound each attempt explicitly so a stuck click fails
+  // fast enough for a second attempt to actually get a turn.
+  try {
+    await locator.click({ timeout: 15000 });
+  } catch {
+    await locator.click({ timeout: 15000 });
+    return;
+  }
   try {
     await expect(locator).not.toBeVisible({ timeout: 5000 });
   } catch {
-    await locator.click();
+    await locator.click({ timeout: 15000 });
     await expect(locator).not.toBeVisible({ timeout: 10000 });
   }
 }
