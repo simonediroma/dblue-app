@@ -488,6 +488,10 @@ test.describe('CSV coverage — Confirm/Check-In', () => {
       await csvOpenDayCard2(page, today);
       const morningBtn = page.locator('[data-testid="daily-detail"]').getByText(/say good morning/i);
       if (await morningBtn.isVisible().catch(() => false)) {
+        // Bare .click() has no timeout of its own — same "genuine hang" signature
+        // fixed elsewhere this session. isVisible() above only proves it existed a
+        // moment ago, not that it's still actionable now.
+        await expect(morningBtn).toBeVisible({ timeout: 5000 });
         await morningBtn.click();
         // Same IN_OFFICE room re-confirmation panel as H-21 — see its comment.
         const roomOption = page.locator('[data-testid="checkin-room-option"]').first();

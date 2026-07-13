@@ -349,7 +349,9 @@ test.describe('CSV coverage — Bulk Planning', () => {
     const chips = detail.locator('[data-testid="extend-day-chip"]:not([disabled])');
     const chipCount = await chips.count();
     if (chipCount === 0) { test.skip(); return; }
-    await chips.first().click();
+    const firstChip = chips.first();
+    await expect(firstChip).toBeVisible({ timeout: 10000 });
+    await firstChip.click();
     await csvConfirmExtend(page);
 
     // Regression: a day extended via "I need more than 2 weeks" from a Vacation day
