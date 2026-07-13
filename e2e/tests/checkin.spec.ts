@@ -355,6 +355,13 @@ test.describe('CSV coverage — Confirm/Check-In', () => {
     await expect(morningBtn).toBeVisible({ timeout: 10000 });
     await morningBtn.click();
 
+    // For IN_OFFICE, App.tsx's handleCheckIn (isToday && status === IN_OFFICE) opens a
+    // room re-confirmation panel instead of checking in directly — the actual check-in
+    // only fires once a room is (re)picked here.
+    const roomOption = page.locator('[data-testid="checkin-room-option"]').first();
+    await expect(roomOption).toBeVisible({ timeout: 5000 });
+    await roomOption.click();
+
     await expect(page.getByText(/successfully checked in/i)).toBeVisible({ timeout: 5000 });
     await expect(page.getByText(/check-in failed/i)).not.toBeVisible();
   });
@@ -482,6 +489,10 @@ test.describe('CSV coverage — Confirm/Check-In', () => {
       const morningBtn = page.locator('[data-testid="daily-detail"]').getByText(/say good morning/i);
       if (await morningBtn.isVisible().catch(() => false)) {
         await morningBtn.click();
+        // Same IN_OFFICE room re-confirmation panel as H-21 — see its comment.
+        const roomOption = page.locator('[data-testid="checkin-room-option"]').first();
+        await expect(roomOption).toBeVisible({ timeout: 5000 });
+        await roomOption.click();
         await expect(page.getByText(/successfully checked in/i)).toBeVisible({ timeout: 5000 });
       }
     }

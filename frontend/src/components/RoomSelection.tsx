@@ -32,7 +32,7 @@ export default function RoomSelection({ date, rooms, onSelect, onBack, mode = 'c
   const sectionTitle = mode === 'confirm' ? 'Say good morning from...' : 'I plan to use a desk in...';
 
   return (
-    <motion.div initial={{opacity: 0, x: 20}} animate={{opacity: 1, x: 0}} exit={{opacity: 0, x: -20}} className="fixed inset-0 z-[150] bg-surface flex flex-col">
+    <motion.div data-testid="checkin-room-selection" initial={{opacity: 0, x: 20}} animate={{opacity: 1, x: 0}} exit={{opacity: 0, x: -20}} className="fixed inset-0 z-[150] bg-surface flex flex-col">
       <header className="px-6 py-8 flex flex-col gap-8">
         <button onClick={onBack} className="flex items-center gap-2 font-headline font-semibold text-on-surface hover:text-primary transition-colors active:scale-95 w-fit">
           <ArrowLeft className="w-5 h-5"/>
@@ -54,7 +54,7 @@ export default function RoomSelection({ date, rooms, onSelect, onBack, mode = 'c
               const color = roomTypeColor[room.type] ?? fallbackColors[i % fallbackColors.length];
               const isPlanned = room.name === plannedRoom;
               return (
-                <button key={room.id} onClick={() => onSelect(room.name)}
+                <button key={room.id} data-testid="checkin-room-option" onClick={() => onSelect(room.name)}
                   className={`w-full bg-surface-container-lowest rounded-2xl p-5 flex items-center justify-between transition-all duration-200 border ${isPlanned ? 'border-primary ring-1 ring-primary/20' : 'border-outline-variant/10'} hover:border-primary/40 hover:shadow-lg active:scale-[0.98] group shadow-sm relative`}
                 >
                   {isPlanned && (
