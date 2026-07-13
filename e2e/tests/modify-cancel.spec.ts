@@ -38,6 +38,13 @@ async function confirmAppLevelWarningIfPresent(page: import('@playwright/test').
     await expect(yesBtn).toBeVisible({ timeout: 5000 });
     await yesBtn.click();
   }
+  // The confirmed update fires the panel's own auto-close (App.tsx's handleUpdateStatus:
+  // shouldClose -> setSelectedDay(null)) asynchronously, not awaited by this click — if the
+  // caller reopens before that lands, it can slam shut on the freshly-reopened instance
+  // (H-27's trace: "changed to Remote" toast visible, but no daily-detail panel at all in
+  // the failure snapshot — the update landed just after the reopen already started). Wait
+  // for the close to genuinely settle first, same pattern as confirmRoom()'s fix.
+  await page.locator('[data-testid="daily-detail"]').waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {});
 }
 
 test.describe('CSV coverage — Modify/Cancel', () => {
