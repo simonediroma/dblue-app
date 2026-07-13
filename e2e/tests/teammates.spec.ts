@@ -282,6 +282,15 @@ test.describe('CSV coverage — Teammates', () => {
     await selectTeammatesByName(page, KNOWN_TEAMMATES);
     await saveTeammates(page);
 
+    // Confirmed via a live trace: openProfileTeammatesEditor() navigates to the Profile
+    // tab and nothing ever navigates back — saveTeammates() only closes the editor
+    // sub-view within Profile. The day-card locators below don't exist anywhere on the
+    // page until "Plan" is clicked again; scrollIntoViewIfNeeded() was hanging with no
+    // call log because it was waiting for an element that was never going to appear on
+    // the Profile tab (page snapshot at the failure was Profile's own content, not Plan).
+    await page.click('[data-testid="nav-plan-desktop"]');
+    await page.waitForSelector('[data-testid="plan-page"]');
+
     const officeCard = page.locator(`[data-testid="day-card"][data-date="${officeDate}"]`);
     await officeCard.scrollIntoViewIfNeeded();
     await expect(officeCard.locator('[data-testid="daycard-teammate-avatar"]')).toHaveCount(1, { timeout: 10000 });
@@ -333,6 +342,10 @@ test.describe('CSV coverage — Teammates', () => {
     await selectTeammatesByName(page, ['Giulia Bianchi']);
     await selectFillerTeammates(page, 4, KNOWN_TEAMMATES);
     await saveTeammates(page);
+
+    // See H-04's comment: openProfileTeammatesEditor() never navigates back to Plan.
+    await page.click('[data-testid="nav-plan-desktop"]');
+    await page.waitForSelector('[data-testid="plan-page"]');
 
     const officeCard = page.locator(`[data-testid="day-card"][data-date="${officeDate}"]`);
     await officeCard.scrollIntoViewIfNeeded();
@@ -388,6 +401,10 @@ test.describe('CSV coverage — Teammates', () => {
     await deselectTeammateByName(page, 'Mario');
     await selectFillerTeammates(page, 1, KNOWN_TEAMMATES);
     await saveTeammates(page);
+
+    // See H-04's comment: openProfileTeammatesEditor() never navigates back to Plan.
+    await page.click('[data-testid="nav-plan-desktop"]');
+    await page.waitForSelector('[data-testid="plan-page"]');
 
     // Giulia was untouched by the substitution — she should still surface correctly.
     const officeCard = page.locator(`[data-testid="day-card"][data-date="${officeDate}"]`);
