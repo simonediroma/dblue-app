@@ -108,6 +108,13 @@ test.describe('CSV coverage — Colleague Visibility', () => {
     await loginAsOwner(page);
     await setTeammates(page, ['Sara Ferrari', 'Luca Esposito']);
 
+    // Confirmed via a live trace on the identical H-04 pattern (teammates.spec.ts):
+    // openProfileTeammatesEditor() navigates to the Profile tab and nothing ever
+    // navigates back — the day-card openDayCard() below looks for doesn't exist
+    // anywhere on the page until "Plan" is clicked again.
+    await page.click('[data-testid="nav-plan-desktop"]');
+    await page.waitForSelector('[data-testid="plan-page"]');
+
     await openDayCard(page, date);
     const detail = page.locator('[data-testid="daily-detail"]');
 

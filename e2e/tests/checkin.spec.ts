@@ -501,6 +501,18 @@ test.describe('CSV coverage — Confirm/Check-In', () => {
       }
     }
 
+    // Confirmed via a live trace: the panel opened above (either the initial open at
+    // the top, or the one left open when canPlanToday is false / morningBtn never
+    // appears) is never closed before this reopen. openDayCard()'s card.click() then
+    // just keeps hitting the still-open daily-detail overlay (z-[100], fixed inset-0)
+    // instead of the day-card underneath — a real "genuine hang" with no call log,
+    // not a fixture/app race. Close it first if still open.
+    const detailPanel = page.locator('[data-testid="daily-detail"]');
+    if (await detailPanel.isVisible().catch(() => false)) {
+      await detailPanel.getByRole('button', { name: /back/i }).click();
+      await expect(detailPanel).not.toBeVisible({ timeout: 5000 });
+    }
+
     // Once checked in, no edit affordance (pencil icon) should remain in DailyDetail.
     await csvOpenDayCard2(page, today);
     await expect(page.locator('[data-testid="daily-detail"] button:has(svg.lucide-pen)')).not.toBeVisible();

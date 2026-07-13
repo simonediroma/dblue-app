@@ -351,6 +351,14 @@ test.describe('CSV coverage — Bulk Planning', () => {
     if (chipCount === 0) { test.skip(); return; }
     const firstChip = chips.first();
     await expect(firstChip).toBeVisible({ timeout: 10000 });
+    // Confirmed via a live trace: plain .click() (which internally calls
+    // scrollIntoViewIfNeeded, aligning to the nearest edge) can land the chip right at
+    // the bottom of the viewport, exactly where the EXTEND step's fixed footer
+    // ("Select dates to extend", DailyDetail.tsx's <footer className="fixed bottom-0...
+    // z-[140]">) covers it — 44 retries over 22s, all "intercepts pointer events",
+    // confirms this isn't a timing/animation issue. Force a center-aligned scroll
+    // first so the footer can't overlap the target.
+    await firstChip.evaluate((el) => el.scrollIntoView({ block: 'center' }));
     await firstChip.click();
     await csvConfirmExtend(page);
 

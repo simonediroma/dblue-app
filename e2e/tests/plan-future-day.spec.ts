@@ -119,6 +119,13 @@ test.describe('CSV coverage — Plan a Future Day', () => {
   });
 
   test('[H-14] plan a future day — On Sick Leave (extended path) does not blank the app', async ({ page }) => {
+    // Long sequential chain of real network round-trips (reset, login, two full
+    // open/plan/status cycles, extend flow) with no custom timeout — same shape as
+    // H-10 before it got test.setTimeout(60000) in PR #96. Without it, the overall
+    // 30s test timeout can truncate the final, otherwise-generous assertion window
+    // mid-poll, producing a misleading "element not found" instead of what's likely
+    // just a slow-but-working flow against the real shared backend.
+    test.setTimeout(60000);
     // SICK is today-only server-side; the "extend" path is reached from today's card.
     // On a weekend there's no working-day entry for "today" at all (backend excludes
     // Sat/Sun from GET /presence) — openDayCard() would just hang until the test timeout.
@@ -152,6 +159,10 @@ test.describe('CSV coverage — Plan a Future Day', () => {
     if (chipCount > 0) {
       const firstChip = chips.first();
       await expect(firstChip).toBeVisible({ timeout: 10000 });
+      // See H-19's identical fix (bulk-planning.spec.ts): a plain .click() aligns the
+      // scroll to the nearest viewport edge, which can land the target right where the
+      // EXTEND step's fixed footer covers it. Force a center-aligned scroll first.
+      await firstChip.evaluate((el) => el.scrollIntoView({ block: 'center' }));
       await firstChip.click();
       const confirmBtn = page.locator('[data-testid="extend-confirm"]');
       if (await confirmBtn.isEnabled().catch(() => false)) {
