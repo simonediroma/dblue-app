@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { loginAsOwner, loginAsEmployee, getAuthHeaders } from '../fixtures/auth';
 import { futureTestDate } from '../fixtures/dates';
 import { fillCapacity, clearCapacity, resetStatus, freeOfficeCapacity } from '../fixtures/testAdmin';
-import { openDayCard, goToPlanningStep, selectStatus, confirmRoom } from '../fixtures/dailyDetail';
+import { openDayCard, goToPlanningStep, selectStatus, confirmRoom, waitForSplashGone } from '../fixtures/dailyDetail';
 import { flushOfficeCapacityQueue, queuePendingRestore } from '../fixtures/officeCapacityQueue';
 
 /**
@@ -123,6 +123,12 @@ test.describe('CSV coverage — Capacity & Waiting List', () => {
         if (day) day.totalCapacity = 9999;
         await route.fulfill({ response, json });
       });
+      // The month's /presence data was already fetched (and cached in app state) by the
+      // login navigation above, before this route existed — registering a route alone
+      // doesn't retroactively patch data already in memory. Reload so the next fetch
+      // actually goes through the route, same as installOfficeCapacityFallbackAndRetry.
+      await page.reload();
+      await waitForSplashGone(page);
 
       await openDayCard(page, date);
       await goToPlanningStep(page);
