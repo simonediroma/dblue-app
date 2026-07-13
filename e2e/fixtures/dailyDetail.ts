@@ -209,6 +209,12 @@ export async function confirmRoom(page: Page, roomName: string | RegExp) {
   // hangs silently until the whole test's own timeout kills it with no call log.
   await expect(target).toBeVisible({ timeout: 15000 });
   await target.click();
+  // Selecting a room auto-closes DailyDetail (handleRoomSelect's onClose()) — wait for
+  // that close to fully settle before the caller reopens the panel, otherwise a
+  // still-exiting old instance's backdrop can intercept the next click (H-28: "<html>
+  // intercepts pointer events" then "element was detached from the DOM", right after
+  // confirmRoom() followed by an immediate openDayCard() for a second status change).
+  await page.locator('[data-testid="daily-detail"]').waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {});
 }
 
 export async function confirmRetrofit(page: Page) {
