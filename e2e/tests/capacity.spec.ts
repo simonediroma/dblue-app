@@ -102,23 +102,27 @@ test.describe('CSV coverage — Capacity & Waiting List', () => {
       );
 
       // A second, distinct account tries to book the same (now full) day — real waiting list.
+      //
+      // The UI intentionally hides the plain "In Office" option once it knows capacity is
+      // exhausted, swapping in "Waiting List" / "In Office / Not using a desk" instead —
+      // both are user-INITIATED alternate choices, not the automatic server-side downgrade
+      // this test is actually meant to verify. "Waiting List" in particular bypasses the
+      // capacity check entirely (upsertStatus only re-checks capacity when payload.status
+      // is 'in_office'), so clicking it would make this test pass for the wrong reason.
+      // There is no UI path left to request "in_office" once the button is gone — exercise
+      // the backend's own capacity gate directly instead, same approach as H-45b.
       const employeeContext = await browser.newContext();
       const employeePage = await employeeContext.newPage();
       await loginAsEmployee(employeePage);
-      await openDayCard(employeePage, date);
-      await goToPlanningStep(employeePage);
-      await selectStatus(employeePage, 'IN_OFFICE');
-      await confirmRoom(employeePage, /./);
 
       const employeeAuthHeaders = await getAuthHeaders(employeePage);
-      const meRes = await employeePage.request.get(`${API_BASE}/auth/me`, { headers: employeeAuthHeaders });
-      const me = (await meRes.json()) as { id: string };
-      const month = date.slice(0, 7);
-      const presenceRes = await employeePage.request.get(`${API_BASE}/presence?month=${month}`, { headers: employeeAuthHeaders });
-      const days = (await presenceRes.json()) as Array<{ date: string; status: string }>;
-      void me;
-      const entry = days.find((d) => d.date === date);
-      expect(entry?.status?.toLowerCase()).toBe('waiting_list');
+      const bookRes = await employeePage.request.post(`${API_BASE}/presence`, {
+        data: { date, status: 'in_office' },
+        headers: employeeAuthHeaders,
+      });
+      expect(bookRes.status()).toBe(200);
+      const booked = (await bookRes.json()) as { status: string };
+      expect(booked.status?.toLowerCase()).toBe('waiting_list');
 
       await employeeContext.close();
     } finally {

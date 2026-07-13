@@ -282,12 +282,22 @@ test.describe('CSV coverage — Bulk Planning', () => {
     await csvLoginAsOwner(page);
     await csvSetStatusAndOpenExtend(page, date, 'IN_OFFICE');
 
+    // The "Room Assignment FOR NEW DAYS" section only renders once at least one day is
+    // selected (DailyDetail.tsx: `{isOffice && extendedDates.length > 0 && (...)}`) — this
+    // test never selected any day-chip before checking for it, so extend-room-option
+    // always resolved to 0 elements and the test skipped every single run,
+    // deterministically, never exercising its own regression assertion below.
+    const selected = await csvSelectExtendChips(page, 4);
+    if (selected === 0) { test.skip(); return; }
+
     // Assign a room per extended day via the "Room Assignment FOR NEW DAYS" section.
     const roomOptions = page.locator('[data-testid="extend-room-option"]');
     const roomCount = await roomOptions.count();
     if (roomCount === 0) { test.skip(); return; }
     for (let i = 0; i < roomCount; i++) {
-      await roomOptions.nth(i).click();
+      const option = roomOptions.nth(i);
+      await expect(option).toBeVisible({ timeout: 10000 });
+      await option.click();
     }
     await csvConfirmExtend(page);
 
