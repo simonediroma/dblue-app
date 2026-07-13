@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
 import { loginAsOwner, loginAsEmployee, getAuthHeaders } from '../fixtures/auth';
 import { futureTestDate } from '../fixtures/dates';
-import { fillCapacity, clearCapacity, resetStatus } from '../fixtures/testAdmin';
+import { fillCapacity, clearCapacity, resetStatus, freeOfficeCapacity } from '../fixtures/testAdmin';
 import { openDayCard, goToPlanningStep, selectStatus, confirmRoom } from '../fixtures/dailyDetail';
-import { flushOfficeCapacityQueue } from '../fixtures/officeCapacityQueue';
+import { flushOfficeCapacityQueue, queuePendingRestore } from '../fixtures/officeCapacityQueue';
 
 /**
  * CSV coverage — Capacity & Waiting List (H-40, H-40a, H-40b)
@@ -86,6 +86,14 @@ test.describe('CSV coverage — Capacity & Waiting List', () => {
     const realCapacity = await getRealOfficeCapacity(page);
     const date = futureTestDate('H-40');
 
+    // fillCapacity() upserts N seeded users to in_office without first clearing whatever's
+    // already booked for that date — on this shared, heavily-used environment,
+    // futureTestDate() is deterministic (same date every run today), so leftover real
+    // occupancy from other tests/accounts can already exist, silently pushing total
+    // occupancy above realCapacity-1 before the owner even gets to book. Guarantee a clean
+    // slate first so the owner's booking is deterministically the last seat.
+    const { snapshot } = await freeOfficeCapacity(date);
+    queuePendingRestore(snapshot);
     await fillCapacity(date, realCapacity - 1);
     try {
       // The owner books the last real seat — should succeed as In Office.
