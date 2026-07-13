@@ -208,12 +208,22 @@ export async function confirmRoom(page: Page, roomName: string | RegExp) {
   // has no timeout of its own, so if the room list is ever empty/slow to load this
   // hangs silently until the whole test's own timeout kills it with no call log.
   await expect(target).toBeVisible({ timeout: 15000 });
+  // DailyDetail.tsx's local handleRoomSelect calls onUpdateStatus(...) WITHOUT awaiting
+  // it, then immediately onClose() — the panel closes right away, but the real
+  // persist (App.tsx's handleUpdateStatus -> POST /presence) keeps running in the
+  // background and, once IT resolves, fires its OWN separate setSelectedDay(null) +
+  // notification (shouldClose defaults true). If that lands during a later, unrelated
+  // action on the same day, it can slam that action's panel shut too — confirmed by a
+  // raw trace for H-28: "Confirm & Proceed" resolved to zero elements for a full 30s
+  // right after this exact sequence, not a stability/flicker issue. Wait for the real
+  // response before returning so the caller's next action never races this delayed close.
+  const responsePromise = page
+    .waitForResponse((res) => res.request().method() === 'POST' && res.url().includes('/presence'), { timeout: 15000 })
+    .catch(() => null);
   await target.click();
-  // Selecting a room auto-closes DailyDetail (handleRoomSelect's onClose()) — wait for
-  // that close to fully settle before the caller reopens the panel, otherwise a
-  // still-exiting old instance's backdrop can intercept the next click (H-28: "<html>
-  // intercepts pointer events" then "element was detached from the DOM", right after
-  // confirmRoom() followed by an immediate openDayCard() for a second status change).
+  await responsePromise;
+  // Belt-and-suspenders: also wait for the immediate, synchronous close (onClose()) to
+  // settle, in case a still-exiting old instance's backdrop intercepts the next click.
   await page.locator('[data-testid="daily-detail"]').waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {});
 }
 
