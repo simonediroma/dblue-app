@@ -217,6 +217,23 @@ export async function confirmRoom(page: Page, roomName: string | RegExp) {
   await page.locator('[data-testid="daily-detail"]').waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {});
 }
 
+// Click a locator that's expected to close/disappear as a result (e.g. a modal's confirm
+// button) and retry once if it doesn't. Covers the same "not stable" -> "detached from the
+// DOM" signature already seen for bare clicks elsewhere in this session (openDayCard's
+// retry, PR #97) — no deterministic app-side cause was found by reading DailyDetail.tsx's
+// unbooking modal (no stray key prop, no effect resetting local state, mutually exclusive
+// step branches), so this assumes the same class of transient timing issue rather than a
+// specific one, and recovers from it the same way.
+export async function clickAndWaitGone(locator: ReturnType<Page['locator']>) {
+  await locator.click();
+  try {
+    await expect(locator).not.toBeVisible({ timeout: 5000 });
+  } catch {
+    await locator.click();
+    await expect(locator).not.toBeVisible({ timeout: 10000 });
+  }
+}
+
 export async function confirmRetrofit(page: Page) {
   await expect(page.getByText(/are you sure you want to retrofit/i)).toBeVisible({ timeout: 5000 });
   await page.getByRole('button', { name: /^confirm$/i }).click();
