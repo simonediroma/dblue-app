@@ -7,6 +7,7 @@ import {
   goToPlanningStep,
   selectStatus,
   confirmRoom,
+  clickAndWaitGone,
 } from '../fixtures/dailyDetail';
 import { flushOfficeCapacityQueue } from '../fixtures/officeCapacityQueue';
 
@@ -111,7 +112,12 @@ test.describe('CSV coverage — Modify/Cancel', () => {
     // e.g. H-26's Back button). Give it an explicit, bounded wait first.
     const confirmProceedBtn = warning.getByRole('button', { name: /confirm.*proceed/i });
     await expect(confirmProceedBtn).toBeVisible({ timeout: 10000 });
-    await confirmProceedBtn.click();
+    // No deterministic app-side cause found for the occasional "not stable" -> "detached
+    // from the DOM" retry loop on this exact button (checked DailyDetail.tsx: no stray
+    // key prop remounting the panel, no effect resetting local state, mutually exclusive
+    // step branches) — same class of transient click issue as openDayCard's retry
+    // (PR #97), recovered from the same way.
+    await clickAndWaitGone(confirmProceedBtn);
     await confirmAppLevelWarningIfPresent(page);
 
     await openDayCard(page, today);
@@ -142,7 +148,12 @@ test.describe('CSV coverage — Modify/Cancel', () => {
     // See H-27's comment: bare .click() on this modal's button can hang silently.
     const confirmProceedBtn = warning.getByRole('button', { name: /confirm.*proceed/i });
     await expect(confirmProceedBtn).toBeVisible({ timeout: 10000 });
-    await confirmProceedBtn.click();
+    // No deterministic app-side cause found for the occasional "not stable" -> "detached
+    // from the DOM" retry loop on this exact button (checked DailyDetail.tsx: no stray
+    // key prop remounting the panel, no effect resetting local state, mutually exclusive
+    // step branches) — same class of transient click issue as openDayCard's retry
+    // (PR #97), recovered from the same way.
+    await clickAndWaitGone(confirmProceedBtn);
     await confirmAppLevelWarningIfPresent(page);
 
     await openDayCard(page, today);
@@ -213,7 +224,12 @@ test.describe('CSV coverage — Modify/Cancel', () => {
     // See H-27's comment: bare .click() on this modal's button can hang silently.
     const confirmProceedBtn = warning.getByRole('button', { name: /confirm.*proceed/i });
     await expect(confirmProceedBtn).toBeVisible({ timeout: 10000 });
-    await confirmProceedBtn.click();
+    // No deterministic app-side cause found for the occasional "not stable" -> "detached
+    // from the DOM" retry loop on this exact button (checked DailyDetail.tsx: no stray
+    // key prop remounting the panel, no effect resetting local state, mutually exclusive
+    // step branches) — same class of transient click issue as openDayCard's retry
+    // (PR #97), recovered from the same way.
+    await clickAndWaitGone(confirmProceedBtn);
     await confirmAppLevelWarningIfPresent(page);
 
     // Regression: this specific flow was reported broken only on the Mario Rossi
