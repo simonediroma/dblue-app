@@ -79,6 +79,12 @@ test.describe('CSV coverage — Modify/Cancel', () => {
   });
 
   test('[H-27] cancelling an in-office booking <24h shows the last-minute alert', async ({ page }) => {
+    // Same reasoning as H-10/H-14: a long chain of real network round-trips (reset,
+    // login, two open/plan/status cycles — the first of which can trigger the
+    // office-capacity mocked-fallback's own reload+reopen cycle if "today" is full)
+    // with no custom timeout can push right up against Playwright's 30s default,
+    // truncating the final assertion's own generous wait mid-poll.
+    test.setTimeout(60000);
     // On a weekend there's no working-day entry for "today" at all (backend excludes
     // Sat/Sun from GET /presence) — openDayCard() would just hang until the test timeout.
     test.skip(isTodayWeekend(), 'today is a weekend — no working day to check into');
@@ -113,6 +119,9 @@ test.describe('CSV coverage — Modify/Cancel', () => {
   });
 
   test('[H-28] last-minute unbooking is saved correctly in the stats', async ({ page }) => {
+    // See H-27's comment: same long chain of real network round-trips, no custom
+    // timeout, can push right up against Playwright's 30s default.
+    test.setTimeout(60000);
     // On a weekend there's no working-day entry for "today" at all (backend excludes
     // Sat/Sun from GET /presence) — openDayCard() would just hang until the test timeout.
     test.skip(isTodayWeekend(), 'today is a weekend — no working day to check into');
@@ -176,6 +185,14 @@ test.describe('CSV coverage — Modify/Cancel', () => {
   });
 
   test('[H-26b] cancelling a last-minute in-office booking works on the employee account', async ({ page }) => {
+    // See H-27's comment: same long chain of real network round-trips, no custom
+    // timeout, can push right up against Playwright's 30s default. Confirmed via a
+    // live trace: the outer unbooking-warning modal was found visible, but the
+    // "Confirm & Proceed" button inside it wasn't within its own 10s window — the
+    // report's own "mocked-fallback" annotation for this exact test (office was full
+    // for "today") means the earlier IN_OFFICE step likely already ran a full
+    // reload+reopen cycle, eating into the remaining budget before this final wait.
+    test.setTimeout(60000);
     // On a weekend there's no working-day entry for "today" at all (backend excludes
     // Sat/Sun from GET /presence) — openDayCard() would just hang until the test timeout.
     test.skip(isTodayWeekend(), 'today is a weekend — no working day to check into');

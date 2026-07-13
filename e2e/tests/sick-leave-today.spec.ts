@@ -16,6 +16,11 @@ test.describe('CSV coverage — Sick Leave (Current Day)', () => {
   test.afterEach(flushOfficeCapacityQueue);
 
   test('[H-30] declaring sick leave today auto-confirms and locks the day', async ({ page }) => {
+    // Same reasoning as H-10/H-14/H-26b/H-27/H-28: a long chain of real network
+    // round-trips with no custom timeout, including a possible office-capacity
+    // mocked-fallback reload cycle on the initial IN_OFFICE step, can push right up
+    // against Playwright's 30s default and truncate a later assertion mid-poll.
+    test.setTimeout(60000);
     // On a weekend there's no working-day entry for "today" at all (backend excludes
     // Sat/Sun from GET /presence) — openDayCard() would just hang until the test timeout.
     test.skip(isTodayWeekend(), 'today is a weekend — no working day to check into');
