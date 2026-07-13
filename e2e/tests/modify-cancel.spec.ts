@@ -90,7 +90,14 @@ test.describe('CSV coverage — Modify/Cancel', () => {
     const warning = page.locator('[data-testid="daily-detail-unbooking-warning"]');
     await expect(warning).toBeVisible({ timeout: 5000 });
     await expect(warning.getByText(/last-minute change/i)).toBeVisible();
-    await warning.getByRole('button', { name: /confirm.*proceed/i }).click();
+    // Bare .click() on a just-mounted modal's button has no timeout of its own (no
+    // actionTimeout set in playwright.config.ts) — if the enter animation/actionability
+    // isn't settled yet, it can hang silently until the whole test's own timeout, with
+    // no call log (the same "genuine hang" signature fixed elsewhere in this session,
+    // e.g. H-26's Back button). Give it an explicit, bounded wait first.
+    const confirmProceedBtn = warning.getByRole('button', { name: /confirm.*proceed/i });
+    await expect(confirmProceedBtn).toBeVisible({ timeout: 10000 });
+    await confirmProceedBtn.click();
     await confirmAppLevelWarningIfPresent(page);
 
     await openDayCard(page, today);
@@ -115,7 +122,10 @@ test.describe('CSV coverage — Modify/Cancel', () => {
     await selectStatus(page, 'REMOTE');
     const warning = page.locator('[data-testid="daily-detail-unbooking-warning"]');
     await expect(warning).toBeVisible({ timeout: 5000 });
-    await warning.getByRole('button', { name: /confirm.*proceed/i }).click();
+    // See H-27's comment: bare .click() on this modal's button can hang silently.
+    const confirmProceedBtn = warning.getByRole('button', { name: /confirm.*proceed/i });
+    await expect(confirmProceedBtn).toBeVisible({ timeout: 10000 });
+    await confirmProceedBtn.click();
     await confirmAppLevelWarningIfPresent(page);
 
     await openDayCard(page, today);
@@ -175,7 +185,10 @@ test.describe('CSV coverage — Modify/Cancel', () => {
     await selectStatus(page, 'REMOTE');
     const warning = page.locator('[data-testid="daily-detail-unbooking-warning"]');
     await expect(warning).toBeVisible({ timeout: 5000 });
-    await warning.getByRole('button', { name: /confirm.*proceed/i }).click();
+    // See H-27's comment: bare .click() on this modal's button can hang silently.
+    const confirmProceedBtn = warning.getByRole('button', { name: /confirm.*proceed/i });
+    await expect(confirmProceedBtn).toBeVisible({ timeout: 10000 });
+    await confirmProceedBtn.click();
     await confirmAppLevelWarningIfPresent(page);
 
     // Regression: this specific flow was reported broken only on the Mario Rossi

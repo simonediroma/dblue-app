@@ -138,6 +138,11 @@ test.describe('CSV coverage — Plan a Future Day', () => {
       test.skip();
       return;
     }
+    // Bare clicks below have no timeout of their own (no actionTimeout set in
+    // playwright.config.ts) — a visible-but-not-yet-actionable element (mid animation)
+    // can hang silently until the whole test's own timeout, with no call log (same
+    // "genuine hang" signature fixed elsewhere this session). Wait explicitly first.
+    await expect(extendTrigger).toBeVisible({ timeout: 10000 });
     await extendTrigger.click();
     await expect(page.locator('[data-testid="daily-detail"]').getByText(/extend status/i)).toBeVisible({ timeout: 5000 });
 
@@ -145,9 +150,12 @@ test.describe('CSV coverage — Plan a Future Day', () => {
     const chips = detail.locator('button:not([disabled]):not([data-testid])').filter({ hasNot: page.locator('svg') });
     const chipCount = await chips.count();
     if (chipCount > 0) {
-      await chips.first().click();
+      const firstChip = chips.first();
+      await expect(firstChip).toBeVisible({ timeout: 10000 });
+      await firstChip.click();
       const confirmBtn = page.locator('[data-testid="extend-confirm"]');
       if (await confirmBtn.isEnabled().catch(() => false)) {
+        await expect(confirmBtn).toBeVisible({ timeout: 10000 });
         await confirmBtn.click();
       }
     }

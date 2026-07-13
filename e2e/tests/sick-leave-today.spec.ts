@@ -37,7 +37,13 @@ test.describe('CSV coverage — Sick Leave (Current Day)', () => {
 
     const warning = page.locator('[data-testid="daily-detail-unbooking-warning"]');
     await expect(warning).toBeVisible({ timeout: 5000 });
-    await warning.getByRole('button', { name: /confirm.*proceed/i }).click();
+    // Bare .click() on a just-mounted modal's button has no timeout of its own — if the
+    // enter animation/actionability isn't settled yet it can hang silently until the
+    // whole test's own timeout (same "genuine hang" signature fixed elsewhere this
+    // session, e.g. H-26's Back button, H-27/H-28's identical modal). Wait explicitly.
+    const confirmProceedBtn = warning.getByRole('button', { name: /confirm.*proceed/i });
+    await expect(confirmProceedBtn).toBeVisible({ timeout: 10000 });
+    await confirmProceedBtn.click();
     const appWarning = page.locator('[data-testid="last-minute-warning"]');
     if (await appWarning.isVisible({ timeout: 2000 }).catch(() => false)) {
       await appWarning.getByRole('button', { name: /yes, change it/i }).click();
