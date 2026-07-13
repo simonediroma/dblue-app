@@ -119,6 +119,13 @@ test.describe('CSV coverage — Plan a Future Day', () => {
   });
 
   test('[H-14] plan a future day — On Sick Leave (extended path) does not blank the app', async ({ page }) => {
+    // Long sequential chain of real network round-trips (reset, login, two full
+    // open/plan/status cycles, extend flow) with no custom timeout — same shape as
+    // H-10 before it got test.setTimeout(60000) in PR #96. Without it, the overall
+    // 30s test timeout can truncate the final, otherwise-generous assertion window
+    // mid-poll, producing a misleading "element not found" instead of what's likely
+    // just a slow-but-working flow against the real shared backend.
+    test.setTimeout(60000);
     // SICK is today-only server-side; the "extend" path is reached from today's card.
     // On a weekend there's no working-day entry for "today" at all (backend excludes
     // Sat/Sun from GET /presence) — openDayCard() would just hang until the test timeout.
