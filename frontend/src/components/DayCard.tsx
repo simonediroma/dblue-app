@@ -174,7 +174,7 @@ export default function DayCard({ day, onClick, onDoubleClick, onCheckIn, isSimp
  ) : (
  <Monitor className="w-3 h-3 sm:w-3.5 sm:h-3.5"/>
  )}
- <span className="">{day.room || (day.status === WorkStatus.OFFICE_NO_DESK ? 'No Desk' : 'Blue Room')}</span>
+ <span className="">{day.room || (day.status === WorkStatus.OFFICE_NO_DESK ? 'No Desk' : 'No room selected')}</span>
  {!day.isCheckedIn && (
  <span className="text-on-surface-variant/40 ml-0.5">(planned)</span>
  )}
@@ -264,7 +264,7 @@ export default function DayCard({ day, onClick, onDoubleClick, onCheckIn, isSimp
  <Monitor className="w-3 h-3 sm:w-3.5 sm:h-3.5"/>
  )}
  </div>
- <span className="">{day.room || (day.status === WorkStatus.OFFICE_NO_DESK ? 'No Desk' : 'Blue Room')}</span>
+ <span className="">{day.room || (day.status === WorkStatus.OFFICE_NO_DESK ? 'No Desk' : 'No room selected')}</span>
  {!day.isCheckedIn && (
  <span className="text-on-surface-variant/40 ml-0.5 whitespace-nowrap">(planned)</span>
  )}
