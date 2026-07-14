@@ -7,6 +7,7 @@ export type WorkingStatusValue =
   | 'leave'
   | 'sick'
   | 'parental_leave'
+  | 'long_term_leave'
   | 'waiting_list'
   | 'office_no_desk'
   | 'pending';
@@ -44,7 +45,7 @@ const workingStatusSchema = new Schema<IWorkingStatus>(
     date: { type: String, required: true },
     status: {
       type: String,
-      enum: ['in_office', 'remote', 'mission', 'leave', 'sick', 'parental_leave', 'waiting_list', 'office_no_desk', 'pending'],
+      enum: ['in_office', 'remote', 'mission', 'leave', 'sick', 'parental_leave', 'long_term_leave', 'waiting_list', 'office_no_desk', 'pending'],
       default: 'pending',
     },
     isConfirmed: { type: Boolean, default: false },

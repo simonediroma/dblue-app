@@ -202,13 +202,13 @@ router.post('/simulate-confirm', async (req: Request, res: Response): Promise<vo
   }
   try {
     const result = await WorkingStatus.findOneAndUpdate(
-      { userId, date, status: { $in: ['mission', 'leave', 'sick', 'parental_leave'] } },
+      { userId, date, status: { $in: ['mission', 'leave', 'sick', 'parental_leave', 'long_term_leave'] } },
       { $set: { isConfirmed: true, confirmedAt: new Date() } },
       { new: true }
     );
     if (!result) {
       res.status(404).json({
-        error: 'Nessun record mission/leave/sick/parental_leave non confermato trovato per userId+date',
+        error: 'Nessun record mission/leave/sick/parental_leave/long_term_leave non confermato trovato per userId+date',
       });
       return;
     }
