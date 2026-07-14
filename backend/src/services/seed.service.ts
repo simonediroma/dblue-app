@@ -2,7 +2,6 @@ import { Types } from 'mongoose';
 import { User } from '../models/user.model';
 import { Room, seedDefaultRooms } from '../models/room.model';
 import { WorkingStatus, WorkingStatusValue } from '../models/working-status.model';
-import { getTotalCapacity } from './capacity.service';
 import { DEV_ACCOUNTS } from '../routes/auth.routes';
 
 // ─── Seeded pseudo-random (riproducibile) ────────────────────────────────────
@@ -288,11 +287,17 @@ export async function runSeed(fresh = false): Promise<SeedSummary> {
 
   // Guarantee ONE fully-booked future day so the waiting-list flow can always be
   // tested, without every other day also reading as full: officeProb below is tuned
-  // so organic attendance normally stays comfortably under capacity, so this date
-  // needs the real total office capacity ('owner' scope, all rooms) force-assigned
-  // directly, not just the smaller employee-visible subset used before.
+  // so organic attendance normally stays comfortably under capacity. Synthetic seeding
+  // only ever assigns the 3 open_space rooms (Blue/Red/Green, see OPEN_SPACE_ROOMS) —
+  // it never touches role-restricted rooms (Lab/Admin/Management), so "full" here must
+  // be measured against that open_space pool's real capacity, not the owner's full
+  // cross-role total (which includes seats no synthetic record can ever occupy).
   const fullCapacityTestDate = colleaguesDays.find((d) => d > todayStr) ?? null;
-  const fullCapacityTestSeats = await getTotalCapacity('owner');
+  const openSpaceRoomDocs = await Room.find({ name: { $in: OPEN_SPACE_ROOMS }, isActive: true })
+    .select('name capacity')
+    .lean();
+  const openSpaceCapacityByRoom = new Map(openSpaceRoomDocs.map((r) => [r.name, r.capacity]));
+  const fullCapacityTestSeats = openSpaceRoomDocs.reduce((sum, r) => sum + r.capacity, 0);
 
   const meRecords = buildStatusForUser(
     meUser._id as Types.ObjectId,
@@ -346,29 +351,31 @@ export async function runSeed(fresh = false): Promise<SeedSummary> {
     colleagueRecordsByUser.push({ user: u, records });
   }
 
-  // Cap organic daily office attendance to the real total office capacity. Each
-  // user's day is generated independently with no cross-user awareness, which was
-  // harmless against the old default capacity (89 seats) but routinely "overbooks"
-  // a day now that real room capacity is much smaller (4 seats/room) — demote the
-  // overflow to waiting_list, same as upsertStatus() would for a real booking once
-  // capacity is hit. Applies to fullCapacityTestDate too: that date's hand-built
-  // block above only force-assigns the first fullCapacityTestSeats+2 colleagues —
-  // everyone else still rolls their own independent random attendance for that same
-  // date, so without this cap the "guaranteed full" day can end up further over
-  // capacity than any organic day (confirmed live: 45 booked against a capacity of 24).
-  const totalOfficeCapacity = await getTotalCapacity('owner');
-  const byDate = new Map<string, StatusRecord[]>();
+  // Cap organic daily office attendance to each room's real capacity, not just the
+  // office-wide total. Each user's day (and room preference) is generated independently
+  // with no cross-user awareness — capping only the aggregate total isn't enough to
+  // prevent a single room from being "overbooked" (e.g. 9 people randomly landing in
+  // Blue on the same date) while the office-wide total still reads as under capacity.
+  // Demote per-room overflow to waiting_list, same as upsertStatus() would for a real
+  // booking once that room is full. Synthetic seeding only ever assigns open_space
+  // rooms (see OPEN_SPACE_ROOMS), so this never has to consider role-restricted rooms.
+  const byDateRoom = new Map<string, Map<string, StatusRecord[]>>();
   for (const r of [...meRecords, ...colleagueRecordsByUser.flatMap((c) => c.records)]) {
-    if (!OFFICE_STATUSES.includes(r.status)) continue;
-    const list = byDate.get(r.date) ?? [];
+    if (!OFFICE_STATUSES.includes(r.status) || !r.room) continue;
+    const roomMap = byDateRoom.get(r.date) ?? new Map<string, StatusRecord[]>();
+    const list = roomMap.get(r.room) ?? [];
     list.push(r);
-    byDate.set(r.date, list);
+    roomMap.set(r.room, list);
+    byDateRoom.set(r.date, roomMap);
   }
-  for (const records of byDate.values()) {
-    for (const r of records.slice(totalOfficeCapacity)) {
-      r.status = 'waiting_list';
-      delete r.room;
-      delete r.isUsingDesk;
+  for (const roomMap of byDateRoom.values()) {
+    for (const [roomName, records] of roomMap) {
+      const capacity = openSpaceCapacityByRoom.get(roomName) ?? 0;
+      for (const r of records.slice(capacity)) {
+        r.status = 'waiting_list';
+        delete r.room;
+        delete r.isUsingDesk;
+      }
     }
   }
 
