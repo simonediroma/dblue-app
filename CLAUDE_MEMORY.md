@@ -2,9 +2,24 @@
 
 ## Stato Corrente
 
-**Branch:** nessun branch di lavoro corrente — **PR #114 (fix B-07 isPast + riabilitazione 7 test) MERGIATA (sha `9d36762`), batteria rilanciata** — esito da verificare: H-34→H-39 + H-43 girano per la prima volta in assoluto. ATTENZIONE: fix backend — se la run parte prima che Railway completi il redeploy, i test retrofit falliranno ancora sul bottone mancante (backend vecchio); in quel caso rilanciare. PR #113 (track memoria) mergiata. Run post-PR#111 verificata (sha `92a0c9c`): H-14 PASSA, batteria in stato "ideale" (30 passed, 13 failed tutti mappati sui bug noti, 9 skipped). `bug_report.csv` esteso a 17 bug (B-01→B-17). Decisioni prese con l'utente (AskUserQuestion): si parte da B-07 (raccomandato), decisione Lab booking (B-08/B-15) RIMANDATA.
+**Branch:** nessun branch di lavoro corrente — **PR #116 aperta (fix B-01+B-13 insieme, in attesa di merge)**; PR #114 (B-07 isPast) MERGIATA (sha `9d36762`), batteria rilanciata — esito da verificare: H-34→H-39 + H-43 girano per la prima volta in assoluto. ATTENZIONE: fix backend — se la run parte prima che Railway completi il redeploy, i test retrofit falliranno ancora sul bottone mancante (backend vecchio); in quel caso rilanciare. PR #113 (track memoria) mergiata. Run post-PR#111 verificata (sha `92a0c9c`): H-14 PASSA, batteria in stato "ideale" (30 passed, 13 failed tutti mappati sui bug noti, 9 skipped). `bug_report.csv` esteso a 17 bug (B-01→B-17). Decisioni prese con l'utente (AskUserQuestion): si parte da B-07 (raccomandato), decisione Lab booking (B-08/B-15) RIMANDATA.
 **PR corrente:** nessuna aperta
 **Ultima sessione:** 2026-07-14
+
+## Trentacinquesimo giro: B-01+B-13 fixati insieme (PR #116) — scoperto che B-01 da solo era codice morto
+
+**Scoperta chiave durante l'indagine su B-01**: il campo `colleagueAvatars` del backend (forma sbagliata, stringhe avatar) e' SOVRASCRITTO SEMPRE da `processedDays` in App.tsx, che lo ricostruisce client-side da `officeUserIds` (dato reale, aggiunto in una sessione successiva alla diagnosi originale di B-01) + presenza fittizia hash-based + padding a 5 (=B-13). Quindi: fixare solo B-01 non avrebbe avuto NESSUN effetto visibile; il blocco sintetico di processedDays esiste storicamente proprio come workaround del campo backend rotto. Deciso con l'utente (AskUserQuestion): fixare B-01+B-13 come unica unita' coerente.
+
+**Fix backend**: `getStatusForUser()` ora deriva `{initials, color}` da name+id del user popolato, replicando ESATTAMENTE `mapUserToColleague` di `useColleagues.ts` (stessa palette 12 colori, stesso hash, stessa chiave id) — requisito di sincronia documentato su entrambi i lati. Fixato anche un bug latente: il filtro di auto-esclusione confrontava l'oggetto POPOLATO via `.toString()` ("[object Object]") e non escludeva mai il richiedente — innocuo finche' il campo era rotto, visibile dopo il fix.
+
+**Fix frontend**: rimossi da `processedDays` (per il piano di remove_mockdata.md): pick hash-random ~20%, minimo sintetico di 5 avatar per giorni futuri, `bookedCount=Math.max(reale,sintetico)`. Mantenuta la re-intersezione client-side dei teammates via officeUserIds (edit teammates senza refetch). bookedCount/totalCapacity ora riflettono solo dati reali.
+
+**NON incluso (follow-up dopo conferma del run)**: semplificazione del patch `totalCapacity` nei fixture e2e (mocked-fallback + H-40) ora teoricamente superfluo; B-15 (hash-fake in DailyDetail) resta rimandato con la decisione Lab booking.
+
+**Possibile layer successivo, da tenere d'occhio se H-02/04/06/08 falliscono ancora**: il filtro room-visibility in getStatusForUser puo' nascondere un collega prenotato in una stanza role-restricted ai viewer che non vedono quella stanza (es. Giulia director che prenota la prima stanza della SUA lista — che sul DB stale include Admin Room visibile ai director, B-09 — vista da un viewer employee).
+
+- Validato: tsc pulito su backend e frontend, playwright --list invariato (113), diff limitato ai 2 file.
+- PR #116 aperta — in attesa di conferma dell'utente per merge + rilancio batteria (ricordare: fix backend+frontend, serve redeploy Railway completo prima che il run sia significativo).
 
 ## Trentaquattresimo giro: fix B-07 (isPast) — primo fix applicativo della nuova fase (PR #114)
 
