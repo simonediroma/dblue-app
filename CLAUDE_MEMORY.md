@@ -2,9 +2,20 @@
 
 ## Stato Corrente
 
-**Branch:** `claude/track-claude-memory` (PR #113 aperta: CLAUDE_MEMORY.md ora tracciato in git). **Run post-PR#111 verificata (sha `92a0c9c`): H-14 PASSA** — unico cambiamento nel diff, batteria in stato "ideale": 30 passed, 13 failed (TUTTI mappati 1:1 sui bug noti B-01/02/03/05/06/09/10/11), 9 skipped (H-09 difensivo + 7 fixme per B-07 isPast + H-44 per B-08). Il crash/schermo bianco di H-14 segnalato dal tester NON si è riprodotto al primo vero esercizio del flusso extend — probabilmente già risolto nel build corrente. `bug_report.csv` esteso a **17 bug (B-01→B-17)** con le 4 voci uniche di `remove_mockdata.md` (B-14 waiting list "7", B-15 isRoomFull fake, B-16 /admin/seed non gated, B-17 Blue Room fallback). **FASE FIX DELL'APP pronta a partire** — decisioni aperte: partire da B-13 (processedDays)? Lab booking completare o rimuovere?
-**PR corrente:** PR #113 aperta (track CLAUDE_MEMORY.md), in attesa di merge
+**Branch:** `claude/fix-b07-ispast` — **PRIMO FIX DELL'APP: B-07 (isPast) in PR #114, aperta in attesa di merge**. PR #113 (track memoria) mergiata. Run post-PR#111 verificata (sha `92a0c9c`): H-14 PASSA, batteria in stato "ideale" (30 passed, 13 failed tutti mappati sui bug noti, 9 skipped). `bug_report.csv` esteso a 17 bug (B-01→B-17). Decisioni prese con l'utente (AskUserQuestion): si parte da B-07 (raccomandato), decisione Lab booking (B-08/B-15) RIMANDATA.
+**PR corrente:** PR #114 aperta (fix B-07 isPast + riabilitazione 7 test), in attesa di merge
 **Ultima sessione:** 2026-07-14
+
+## Trentaquattresimo giro: fix B-07 (isPast) — primo fix applicativo della nuova fase (PR #114)
+
+**Fix backend, minimale (+6 righe)**: `getStatusForUser()` (working-status.service.ts) ora deriva `isPast: date < getTodayStr()` per ogni giorno restituito — mai persistito, sempre calcolato. `normalizeDay()` frontend fa spread di tutti i campi, quindi passa al client senza modifiche lato frontend. Scoperta positiva: la Plan view ha GIÀ una sezione `pastDays` dedicata (App.tsx:1146, renderizzata prima della card di oggi) progettata per isPast reale — finora sempre vuota, coi giorni passati mis-filed tra i futuri. Il fix ripristina il layout previsto.
+
+**Riabilitati i 7 test fixme** (H-34→H-39 in retrofit.spec.ts, H-43 in stats.spec.ts) con i due catch-up che avevano saltato mentre erano parcheggiati: (1) header Authorization sulle chiamate raw `page.request` (stessa classe fixata ovunque in PR #76 — questi file erano stati saltati perché fixme); (2) `resetStatus()` per test (date deterministiche per giorno solare + cron notturno che conferma i giorni passati → un record confermato residuo farebbe 409 il retrofit al run successivo dello stesso giorno).
+
+**CONSEGUENZA NOTA, deliberatamente NON gestita (decisione di prodotto)**: i giorni passati del MESE CORRENTE ora mostrano il bottone "Retrofit Working Status", ma il backend accetta il retrofit solo per il mese precedente (`retrofitStatus` → 400 altrimenti). Prima mostravano la matita di modifica normale (e l'edit su giorni passati veniva accettato senza guardie). Da decidere quale sia il comportamento giusto per i giorni passati del mese corrente.
+
+- Validato: `tsc --noEmit` backend pulito, `npx playwright test --list` invariato (113 test), diff limitato ai 3 file (+CLAUDE_MEMORY.md).
+- PR #114 aperta — al merge, rilanciare la batteria: H-34→H-39 + H-43 gireranno per la prima volta in assoluto (aspettarsi pass O fallimenti descrittivi genuini, es. il già documentato "retrofit non blocca In Office/Remote" per H-38).
 
 ## Trentatreesimo giro: report finali consegnati, CLAUDE_MEMORY.md ora tracciato (PR #113), letto il piano remove_mockdata — inizio della fase "fix dell'app"
 
