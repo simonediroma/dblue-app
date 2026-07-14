@@ -185,10 +185,15 @@ export function deleteRoom(id: string): Promise<Room> {
 }
 
 export function updateOffTime(date: string, offTime: { type: string; hours?: number } | null): Promise<DayPresence> {
+  // The backend's offTime.type enum is lowercase ('morning'/'afternoon'/'custom'),
+  // but DailyDetail.tsx sends the frontend's uppercase OffTimeType enum values
+  // (e.g. 'CUSTOM') — normalize before sending, same as normalizeDay() does for
+  // `status` on the way back.
+  const normalized = offTime ? { ...offTime, type: offTime.type.toLowerCase() } : null;
   return request<DayPresence>(`/presence/${date}/offtime`, {
     method: 'PATCH',
-    body: JSON.stringify({ offTime }),
-  });
+    body: JSON.stringify({ offTime: normalized }),
+  }).then(normalizeDay);
 }
 
 export interface MonthlyStats {
