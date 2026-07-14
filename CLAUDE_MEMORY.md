@@ -2,9 +2,19 @@
 
 ## Stato Corrente
 
-**Branch:** nessun branch di lavoro corrente — **PR #116 aperta (fix B-01+B-13 insieme, in attesa di merge)**; PR #114 (B-07 isPast) MERGIATA (sha `9d36762`), batteria rilanciata — esito da verificare: H-34→H-39 + H-43 girano per la prima volta in assoluto. ATTENZIONE: fix backend — se la run parte prima che Railway completi il redeploy, i test retrofit falliranno ancora sul bottone mancante (backend vecchio); in quel caso rilanciare. PR #113 (track memoria) mergiata. Run post-PR#111 verificata (sha `92a0c9c`): H-14 PASSA, batteria in stato "ideale" (30 passed, 13 failed tutti mappati sui bug noti, 9 skipped). `bug_report.csv` esteso a 17 bug (B-01→B-17). Decisioni prese con l'utente (AskUserQuestion): si parte da B-07 (raccomandato), decisione Lab booking (B-08/B-15) RIMANDATA.
+**Branch:** `claude/e2e-h04-reset-and-fallback-cleanup` — follow-up e2e post-B-01/B-13, PR aperta in attesa di merge. PR #115 (memoria) e PR #116 (B-01+B-13) MERGIATE — esito da verificare: H-34→H-39 + H-43 girano per la prima volta in assoluto. ATTENZIONE: fix backend — se la run parte prima che Railway completi il redeploy, i test retrofit falliranno ancora sul bottone mancante (backend vecchio); in quel caso rilanciare. PR #113 (track memoria) mergiata. Run post-PR#111 verificata (sha `92a0c9c`): H-14 PASSA, batteria in stato "ideale" (30 passed, 13 failed tutti mappati sui bug noti, 9 skipped). `bug_report.csv` esteso a 17 bug (B-01→B-17). Decisioni prese con l'utente (AskUserQuestion): si parte da B-07 (raccomandato), decisione Lab booking (B-08/B-15) RIMANDATA.
 **PR corrente:** nessuna aperta
 **Ultima sessione:** 2026-07-14
+
+## Trentaseiesimo giro: B-01+B-13 CONFERMATI dal run (H-02/06/08 passano, mocked-fallback 20->0) — follow-up e2e per H-04 e pulizia mock
+
+**Run post-PR#116 (sha `c1a9bdb`): 34 passed, 16 failed, 2 skipped** (da 31/19/2). Diff: H-02/H-06/H-08 → PASSED (avatar reali end-to-end). **Annotazioni `mocked-fallback`: da 20 a 0** — senza il floor sintetico nessun giorno appare più "pieno" quando non lo è, il fallback non è mai scattato. Prima ancora, il run post-PR#114 aveva confermato B-07: H-43 passa subito; H-34/35/36 falliscono con "Received: pending" (**nuovo bug candidato: il retrofit UI completa ma non persiste**); H-37 conferma B-06 anche sul percorso retrofit; H-38 conferma il bug noto "retrofit non blocca In Office" (Expected 400, Received 200); H-39 flake di login. H-19 (B-03) è passato in entrambi i run — intermittente/data-dependent, da monitorare.
+
+**H-04 post-fix: Expected 1, Received 2** — nuova causa più "sana": gli avatar ora sono reali, e la data deterministica condivisa (2026-08-03) aveva una prenotazione residua di un ALTRO account dev (anche lui tra i 5 teammates) lasciata da un altro test. Fragilità del test, non bug dell'app — stessa fragilità latente in H-02/06/08.
+
+**Fix in questo branch (e2e-only)**: (1) `setGiuliaStatus` ora resetta TUTTI e 5 gli account teammate (incluso marco.conti, che non è in ROLE_EMAILS) per la data target; (2) rimossi i patch `totalCapacity`/`bookedCount` ormai superflui da `installOfficeCapacityFallbackAndRetry` (resta solo free-capacity reale + reload — ciò che la UI mostra dopo è il rendering genuino) e da H-40 (un posto genuinamente libero fa apparire il bottone da solo); annotazione mocked-fallback aggiornata.
+
+**Discussione seed con l'utente (decisione presa: fresh seed DOPO questo giro)**: `fresh:true` fixa B-09 (H-45) e B-11 (H-46) e pulisce la spazzatura accumulata (ora visibile con B-13 fixato); l'upsert NON fixa B-11 (isActive non è nel payload di seedDefaultRooms, è solo default di schema all'insert). ATTENZIONE: il fresh riporta le capacità ai default (89 posti totali) → romperebbe H-40 (fillCapacity(88) con ~84 utenti seedati = "insufficienti") e renderebbe fragile H-40a (89 < ~90 per un soffio) → dopo il seed vanno RI-RIDOTTE le capacità da "Gestisci Stanze" come già fatto in passato. NUOVA CONVENZIONE MEMORIA: si aggiorna nel branch di sviluppo corrente, niente branch separati.
 
 ## Trentacinquesimo giro: B-01+B-13 fixati insieme (PR #116) — scoperto che B-01 da solo era codice morto
 
