@@ -239,15 +239,17 @@ export async function runSeed(fresh = false): Promise<SeedSummary> {
   // a fresh:true reseed (which wipes every User), that leaves them nonexistent until
   // something logs in as them. Create them here too, same upsert shape dev-login
   // itself uses, so they're immediately usable right after a reseed instead of only
-  // after their first login. onboardingCompleted:true is forced so these accounts
-  // never hit the onboarding overlay — nothing exercises it for director/admin_member/
-  // lab_responsible, so without this they'd stay stuck at the schema default (false)
-  // forever after a fresh reseed.
+  // after their first login. onboardingCompleted:true is forced ONLY at creation time
+  // ($setOnInsert, not $set) so these accounts never hit the onboarding overlay on a
+  // fresh reseed — nothing exercises it for director/admin_member/lab_responsible, so
+  // without this they'd stay stuck at the schema default (false) forever. Using $set
+  // instead would stomp on a deliberate mid-suite reset (resetOnboarding(), used by
+  // H-01/H-02 to exercise the onboarding flow itself) on every subsequent call.
   for (const account of DEV_ACCOUNTS) {
     if (account.email === meData.email) continue;
     await User.findOneAndUpdate(
       { email: account.email },
-      { $setOnInsert: { googleId: `dev-login:${account.email}`, email: account.email, name: account.name }, $set: { role: account.role, onboardingCompleted: true } },
+      { $setOnInsert: { googleId: `dev-login:${account.email}`, email: account.email, name: account.name, onboardingCompleted: true }, $set: { role: account.role } },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
   }

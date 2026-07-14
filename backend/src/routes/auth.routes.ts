@@ -93,7 +93,7 @@ router.post('/dev-login', async (req: Request, res: Response): Promise<void> => 
 
   const user = await User.findOneAndUpdate(
     { email: account.email },
-    { $setOnInsert: { googleId: `dev-login:${account.email}`, email: account.email, name: account.name }, $set: { role: account.role, onboardingCompleted: true } },
+    { $setOnInsert: { googleId: `dev-login:${account.email}`, email: account.email, name: account.name, onboardingCompleted: true }, $set: { role: account.role } },
     { upsert: true, new: true }
   );
 
