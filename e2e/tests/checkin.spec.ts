@@ -430,6 +430,10 @@ test.describe('CSV coverage — Confirm/Check-In', () => {
   });
 
   test('[H-25] check-in today if remote, and Undo reverts it for real', async ({ page }) => {
+    // The B-04 fix makes undo wait on a real, sequential second network round trip
+    // (see the polling comment below) on top of this test's own already-long chain
+    // of real network calls — give it more headroom than the 30s default.
+    test.setTimeout(60000);
     const today = csvTodayStr2();
     await csvResetStatus('giulia.bianchi@dblue.it', today);
     await csvLoginAsDirectorRole(page);
@@ -459,12 +463,14 @@ test.describe('CSV coverage — Confirm/Check-In', () => {
     await expect(card.getByText(/say good morning/i)).toBeVisible({ timeout: 5000 });
 
     // ...and the backend must genuinely agree (regression for the "Undo looks like it
-    // worked but the confirmed status is still active" bug) — undoCheckIn is fire-and-forget
-    // client-side, so poll briefly rather than asserting instantaneously.
+    // worked but the confirmed status is still active" bug). B-04 fix: undoAction now
+    // awaits the check-in POST before firing undoCheckIn(), so this is two sequential
+    // network round trips instead of one racing call — poll longer to give both room
+    // on the shared environment's variable latency.
     const apiBase = process.env.API_BASE_URL ?? 'http://localhost:4000';
     const month = today.slice(0, 7);
     let stillConfirmed = true;
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 15; i++) {
       const res = await page.request.get(`${apiBase}/presence?month=${month}`, { headers: await getAuthHeaders(page) });
       const days = (await res.json()) as Array<{ date: string; isConfirmed?: boolean }>;
       const todayEntry = days.find((d) => d.date === today);
