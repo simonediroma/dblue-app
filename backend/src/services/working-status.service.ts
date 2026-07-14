@@ -41,6 +41,32 @@ function getWorkingDaysOfMonth(month: string): string[] {
 
 const OFFICE_STATUSES: WorkingStatusValue[] = ['in_office', 'office_no_desk'];
 
+// Colleague avatar derivation — MUST stay in sync with the frontend's own derivation in
+// frontend/src/hooks/useColleagues.ts (mapUserToColleague): same palette, same hash, same
+// initials rule, keyed on the same user id string. If they drift, the same person renders
+// with different colors on the day card vs everywhere else.
+const AVATAR_COLORS = [
+  'bg-blue-500', 'bg-red-500', 'bg-green-500', 'bg-yellow-500',
+  'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-teal-500',
+  'bg-orange-500', 'bg-cyan-500', 'bg-emerald-500', 'bg-violet-500',
+];
+
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return hash;
+}
+
+function avatarColor(id: string): string {
+  return AVATAR_COLORS[Math.floor(Math.abs(hashString(id)) % AVATAR_COLORS.length)];
+}
+
+function nameInitials(name: string): string {
+  return name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2);
+}
+
 export async function getStatusForUser(
   userId: Types.ObjectId,
   month: string
@@ -58,7 +84,7 @@ export async function getStatusForUser(
       date: { $gte: startDate, $lte: endDate },
       status: { $in: OFFICE_STATUSES },
     })
-      .populate('userId', 'avatar _id teammates')
+      .populate('userId', 'name _id teammates')
       .lean(),
     getTotalCapacity(role),
     getVisibleRooms(role),
@@ -89,12 +115,19 @@ export async function getStatusForUser(
     // TODO (RBAC area filter): employee/lab_responsible/admin_member should only see colleagues
     // in their own area/floor. Director and owner see everyone. Add filter here once the
     // `area` field is added to the User model. For now all roles see all in-office colleagues.
+    //
+    // Shape contract: frontend/src/types.ts declares ColleagueAvatarInfo { initials, color }.
+    // This used to send User.avatar (a URL string, only ever set by the Google OAuth flow —
+    // empty for every dev-login account), so the day card's colleague avatars never rendered.
     const colleagueAvatars = officeEntries
-      .filter((ws) => ws.userId.toString() !== userId.toString())
+      // Compare on ._id: ws.userId is populated here, so .toString() on the object itself
+      // would be "[object Object]" and the self-exclusion would silently never match.
+      .filter((ws) => (ws.userId as unknown as { _id: Types.ObjectId })._id.toString() !== userId.toString())
       .slice(0, 10)
       .map((ws) => {
-        const u = ws.userId as unknown as { _id: Types.ObjectId; avatar?: string };
-        return u.avatar ?? null;
+        const u = ws.userId as unknown as { _id: Types.ObjectId; name?: string };
+        if (!u.name) return null;
+        return { initials: nameInitials(u.name), color: avatarColor(u._id.toString()) };
       })
       .filter(Boolean);
 

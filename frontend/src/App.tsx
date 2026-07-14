@@ -831,14 +831,18 @@ export default function App() {
  }
  };
 
- // Re-inject project teammates into days avatars if they are in office
+ // Re-inject project teammates into days avatars if they are in office.
+ // Everything here is derived from real per-day presence data: officeUserIds and
+ // colleagueAvatars both come from the backend (getStatusForUser). The previous
+ // version fabricated extra "in office" colleagues (hash-pseudo-random picks plus a
+ // synthetic minimum of 5 avatars per future day) and force-raised bookedCount to
+ // match — making the "office full"/waiting-list display wrong whenever real room
+ // capacity was smaller than the synthetic floor.
  const processedDays = useMemo(() => {
  return days.map(day => {
- const isFutureDay = day.date > TODAY && !day.isPast;
-
- const hash = day.date.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-
- // Determine project teammates who are in office, from real per-day presence data
+ // Project teammates who are in office, re-intersected client-side so a
+ // freshly-edited teammates selection reflects without a refetch. Their
+ // initials/colors come from the local Colleague mapping.
  const officeUserIds = new Set(day.officeUserIds || []);
  const officeProjectTeammates = projectTeammates.filter(c => officeUserIds.has(c.id));
 
@@ -847,60 +851,22 @@ export default function App() {
  color: c.color
  }));
 
- // Find other people in office for that day (consistent with DailyDetail)
- const otherOfficeAvatars: ColleagueAvatarInfo[] = [];
- const projectInitials = new Set(officeProjectTeammates.map(c => c.initials));
+ // Other people genuinely in office that day, as reported by the backend —
+ // teammates first, then the rest, deduped by initials.
+ const projectInitials = new Set(projectAvatars.map(a => a.initials));
+ const otherOfficeAvatars = (day.colleagueAvatars || []).filter(a => a.initials && !projectInitials.has(a.initials));
 
- colleagues.forEach((colleague, i) => {
- if (colleague.name === 'Roberto') return;
- if (projectInitials.has(colleague.initials)) return;
-
- const seed = hash + i;
- const rand = (n: number) => (Math.abs(seed * n) % 100);
-
- if (rand(101) < 20) {
- otherOfficeAvatars.push({
- initials: colleague.initials,
- color: colleague.color
- });
- }
- });
-
- // Final determination of avatars for the card
- let finalAvatars = [...projectAvatars, ...otherOfficeAvatars];
-
- // If future day, ensure at least 5 avatars pick people marked as "in office"
- if (isFutureDay && !day.isClosed && !day.isOfficeClosed) {
- if (finalAvatars.length < 5) {
- const usedInitials = new Set(finalAvatars.map(a => a.initials));
- const availableColleagues = colleagues.filter(c => c.name !== 'Roberto' && !usedInitials.has(c.initials));
-
- const fillersNeeded = 5 - finalAvatars.length;
- const fillers = availableColleagues.slice(0, fillersNeeded).map(c => ({
- initials: c.initials,
- color: c.color
- }));
-
- finalAvatars = [...finalAvatars, ...fillers];
- }
- }
-
- // BUG: this synthetic minimum means bookedCount (and therefore the "office full" /
- // waiting-list decision downstream) can never reflect real capacity for a future day
- // once finalAvatars pads past totalCapacity — independent of how many people are
- // actually booked. Confirmed on the shared dev environment, where the real seeded
- // room capacity is smaller than 5, so every future day appears permanently full.
- const finalBookedCount = Math.max(day.bookedCount || 0, finalAvatars.length);
+ const finalAvatars = [...projectAvatars, ...otherOfficeAvatars];
 
  return {
  ...day,
  colleagueAvatars: finalAvatars.slice(0, 10),
- bookedCount: finalBookedCount,
+ bookedCount: day.bookedCount || 0,
  totalCapacity: day.totalCapacity || 23,
  projectTeammatesCount: officeProjectTeammates.length
  };
  });
- }, [days, projectTeammates, colleagues]);
+ }, [days, projectTeammates]);
 
  const handleDayClick = (day: DayPresence) => {
  if (day.isClosed) return; // Ignore clicks on closed days
