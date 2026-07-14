@@ -190,6 +190,19 @@ export async function upsertStatus(
   ]);
   const role: Role = actingUser?.role ?? 'employee';
 
+  // Role check: the frontend only ever offers rooms getVisibleRooms(role) returns for
+  // this user, but nothing enforced that server-side — a direct API call could set
+  // `room` to any name, including a role-restricted one (e.g. an employee booking the
+  // Admin Room). Reject before touching the DB.
+  if (payload.room) {
+    const visibleRooms = await getVisibleRooms(role);
+    const visibleRoomNames = new Set(visibleRooms.map((r) => r.name));
+    if (!visibleRoomNames.has(payload.room)) {
+      const err = Object.assign(new Error('Stanza non visibile per il tuo ruolo'), { statusCode: 403 });
+      throw err;
+    }
+  }
+
   if (existing?.isConfirmed) {
     const err = Object.assign(new Error('Status già confermato, non modificabile'), { statusCode: 409 });
     throw err;
