@@ -219,5 +219,15 @@ export async function clickAndWaitGone(locator: ReturnType<Page['locator']>) {
 
 export async function confirmRetrofit(page: Page) {
   await expect(page.getByText(/are you sure you want to retrofit/i)).toBeVisible({ timeout: 5000 });
+  // DailyDetail.tsx's local handleConfirmRetrofit calls onUpdateStatus(...) WITHOUT
+  // awaiting it — same fire-and-forget class already fixed for confirmRoom() (PR #109)
+  // and setColleagueStatus/setGiuliaStatus (PR #118). Callers of this helper (H-34/H-35/
+  // H-36) immediately check the persisted status via a raw GET right after — without this
+  // wait, that check can race the still-in-flight POST /presence/:date/retrofit and read
+  // the pre-retrofit 'pending' status instead of the real result.
+  const responsePromise = page
+    .waitForResponse((res) => res.request().method() === 'POST' && res.url().includes('/retrofit'), { timeout: 15000 })
+    .catch(() => null);
   await page.getByRole('button', { name: /^confirm$/i }).click();
+  await responsePromise;
 }

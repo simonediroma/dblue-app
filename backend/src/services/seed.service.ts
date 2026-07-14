@@ -105,6 +105,7 @@ function nameToEmail(name: string): string {
 // ─── Generazione status ──────────────────────────────────────────────────────
 
 const OPEN_SPACE_ROOMS = ['Blue', 'Red', 'Green'];
+const OFFICE_STATUSES: WorkingStatusValue[] = ['in_office', 'office_no_desk'];
 
 type ColleagueProfile = {
   officeProb: number;
@@ -289,10 +290,8 @@ export async function runSeed(fresh = false): Promise<SeedSummary> {
       delete meTestRecord.isUsingDesk;
     }
   }
-  await WorkingStatus.deleteMany({ userId: meUser._id });
-  await WorkingStatus.insertMany(meRecords);
 
-  let totalColleagueRecords = 0;
+  const colleagueRecordsByUser: Array<{ user: (typeof colleagueUsers)[number]; records: StatusRecord[] }> = [];
   for (let i = 0; i < colleagueUsers.length; i++) {
     const u = colleagueUsers[i];
     const profile = generateColleagueProfile(i * 100 + 7);
@@ -322,6 +321,37 @@ export async function runSeed(fresh = false): Promise<SeedSummary> {
         }
       }
     }
+    colleagueRecordsByUser.push({ user: u, records });
+  }
+
+  // Cap organic daily office attendance to the real total office capacity. Each
+  // user's day is generated independently with no cross-user awareness, which was
+  // harmless against the old default capacity (89 seats) but routinely "overbooks"
+  // a day now that real room capacity is much smaller (4 seats/room) — demote the
+  // overflow to waiting_list, same as upsertStatus() would for a real booking once
+  // capacity is hit. fullCapacityTestDate is excluded — it's already hand-built to
+  // its own exact numbers above.
+  const totalOfficeCapacity = await getTotalCapacity('owner');
+  const byDate = new Map<string, StatusRecord[]>();
+  for (const r of [...meRecords, ...colleagueRecordsByUser.flatMap((c) => c.records)]) {
+    if (r.date === fullCapacityTestDate || !OFFICE_STATUSES.includes(r.status)) continue;
+    const list = byDate.get(r.date) ?? [];
+    list.push(r);
+    byDate.set(r.date, list);
+  }
+  for (const records of byDate.values()) {
+    for (const r of records.slice(totalOfficeCapacity)) {
+      r.status = 'waiting_list';
+      delete r.room;
+      delete r.isUsingDesk;
+    }
+  }
+
+  await WorkingStatus.deleteMany({ userId: meUser._id });
+  await WorkingStatus.insertMany(meRecords);
+
+  let totalColleagueRecords = 0;
+  for (const { user: u, records } of colleagueRecordsByUser) {
     await WorkingStatus.deleteMany({ userId: u._id });
     await WorkingStatus.insertMany(records);
     totalColleagueRecords += records.length;
