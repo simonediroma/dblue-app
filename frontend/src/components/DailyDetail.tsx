@@ -1709,7 +1709,7 @@ export default function DailyDetail({
  {/* In the office Section */}
  {(() => {
  const displayInOffice = inOfficeColleagues;
- const filteredInOffice = displayInOffice.filter(c => searchQuery === '' || ((c.name ?? '').toLowerCase().includes(searchQuery.toLowerCase()) && !goldStarNames.has(c.name ?? '')));
+ const filteredInOffice = displayInOffice.filter(c => !goldStarNames.has(c.name ?? '') && (searchQuery === '' || (c.name ?? '').toLowerCase().includes(searchQuery.toLowerCase())));
  
  if ((day.isClosed || day.isOfficeClosed) && searchQuery === '') {
  return (
@@ -1748,7 +1748,7 @@ export default function DailyDetail({
  {/* Other colleagues Section */}
  {(() => {
  const displayOthers = allColleagues;
- const filteredOthers = displayOthers.filter(c => searchQuery === '' || ((c.name ?? '').toLowerCase().includes(searchQuery.toLowerCase()) && !goldStarNames.has(c.name ?? '')));
+ const filteredOthers = displayOthers.filter(c => !goldStarNames.has(c.name ?? '') && (searchQuery === '' || (c.name ?? '').toLowerCase().includes(searchQuery.toLowerCase())));
  
  if (filteredOthers.length === 0 && searchQuery !== '') return null;
  if (displayOthers.length === 0 && searchQuery === '') return null;
