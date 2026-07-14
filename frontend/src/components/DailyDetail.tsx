@@ -922,15 +922,18 @@ export default function DailyDetail({
  const handleApply = () => {
  // Check for last minute unbookings
  // If we are extending a NON-OFFICE status to a day that is currently OFFICE
- // AND it's a "last minute" (tomorrow, Oct 10th)
+ // AND it's "tomorrow" relative to the real current date.
+ const tomorrowObj = parseAppDate(todayStr);
+ tomorrowObj.setDate(tomorrowObj.getDate() + 1);
+ const tomorrowStr = toAppDateStr(tomorrowObj);
  const lastMinuteUnbookings = extendedDates.filter(dateStr => {
  const targetDay = allDays.find(ad => ad.date === dateStr);
  const isTargetOffice = targetDay?.status === WorkStatus.IN_OFFICE;
  const willBeOffice = isOffice; // isOffice is true if current day.status is IN_OFFICE
- 
+
  const isChangingFromOffice = isTargetOffice && !willBeOffice;
- const isTomorrow = dateStr === '2026-10-10'; // Hardcoded "last minute window" for this prototype
- 
+ const isTomorrow = dateStr === tomorrowStr;
+
  return isChangingFromOffice && isTomorrow;
  });
 
