@@ -2,9 +2,25 @@
 
 ## Stato Corrente
 
-**Branch:** nessun branch di lavoro corrente — **H-14 RISOLTO (causa trovata dal trace grezzo): PR #111 aperta, in attesa di merge**. Con questo, la categoria "test ambigui" è VUOTA: tutti i 52 test sono caratterizzati (sani, bug reale documentato, o fix in attesa di verifica). Consegnati all'utente due CSV: `full_test_report.csv` (53 righe per-test) e `bug_report.csv` (13 bug distinti B-01→B-13 con causa, punto di fix, test impattati — inclusi B-12/B-13 non catturati da alcun test).
-**PR corrente:** nessuna aperta — PR #111 mergiata (sha `92a0c9c`), batteria rilanciata, esito da verificare (focus: H-14, primo run che esercita DAVVERO il flusso extend — o passa, o riproduce il crash segnalato dal tester)
+**Branch:** `claude/track-claude-memory` (PR #113 aperta: CLAUDE_MEMORY.md tolto da .gitignore e ora TRACCIATO in git — da qui in poi ogni aggiornamento della memoria va anche committato/pushato). PR #111 (fix H-14) mergiata (sha `92a0c9c`), batteria rilanciata — esito da verificare (focus H-14: primo run che esercita DAVVERO il flusso extend; o passa, o riproduce il crash segnalato dal tester Damiano). Categoria "test ambigui" VUOTA: tutti i 52 test caratterizzati. **FASE NUOVA INIZIATA: fix dell'app** — letto `docs/remove_mockdata.md` (piano rimozione dati mock, preparato su altro branch `claude/mock-data-check-ow7g4h`), in attesa che l'utente decida da dove partire e cosa fare del Lab booking (completare vs rimuovere).
+**PR corrente:** PR #113 aperta (track CLAUDE_MEMORY.md), in attesa di merge
 **Ultima sessione:** 2026-07-14
+
+## Trentatreesimo giro: report finali consegnati, CLAUDE_MEMORY.md ora tracciato (PR #113), letto il piano remove_mockdata — inizio della fase "fix dell'app"
+
+**Due CSV consegnati all'utente** (scratchpad, via SendUserFile):
+- `full_test_report.csv` (53 righe per-test, aggiornato con gli esiti finali: H-40/H-27/H-28/H-26b/H-16 → OK; H-19 → BUG APP CONFERMATO; H-14 unico AMBIGUO al momento della consegna, poi risolto con PR #111)
+- `bug_report.csv` — **13 bug distinti B-01→B-13**, ciascuno con Area, Descrizione, Root cause (file/meccanismo), Punto di fix suggerito, Test impattati, Tipo, Stato. Include 2 bug NON catturati da alcun test: **B-12** (data hardcoded `2026-10-10` nel flusso Extend) e **B-13** (floor sintetico di 5 avatar in `processedDays`, mascherato attivamente dal mocked-fallback dei test). Mappa: B-01 colleagueAvatars (H-02/04/06/08), B-02 room non ripulito (H-10), B-03 extend "more than 2 weeks" resta leave (H-19), B-04 race check-in/undo (H-25), B-05 sick non blocca subito (H-30), B-06 offTime.type maiuscolo (H-31/32/33), B-07 isPast mai popolato (H-34→39+H-43, fix a maggior impatto), B-08 Lab booking feature mancante (H-44), B-09 Admin Room DB stale (H-45), B-10 RBAC room non validato server-side (H-45b), B-11 Management Room isActive:false (H-46), B-12 e B-13 senza test.
+
+**Domanda esplicita dell'utente sulla fiducia nei test verdi** — risposta data onestamente: disciplina mantenuta (mai attese cieche, mai asserzioni attenuate, mock sempre annotato via `mocked-fallback`), MA due rischi residui dichiarati: (1) i test che usano il mocked-fallback NON verificano il comportamento reale "ufficio pieno" (bypassato di proposito perché rotto — B-13); (2) i retry-click potrebbero in teoria mascherare qualcosa — rischio basso, mai auditato sistematicamente a posteriori.
+
+**CLAUDE_MEMORY.md ora tracciato in git** (richiesta esplicita dell'utente): tolto da `.gitignore`, committato su branch `claude/track-claude-memory`, PR #113 aperta. **NUOVA CONVENZIONE: ogni aggiornamento della memoria va anche committato e pushato.**
+
+**Letto `docs/remove_mockdata.md`** (piano preparato su branch separato `claude/mock-data-check-ow7g4h`, verifica del 2026-07-14) — 7 voci, incrocio con la lista bug:
+- Sovrapposte: floor sintetico `processedDays` = B-13 (il più impattante, consigliato come punto di partenza dal documento stesso); Lab booking 'Roberto' hardcoded = B-08; data `2026-10-10` = B-12.
+- NUOVE (non nella lista B): **waiting list count hardcoded a "7"** (`DailyDetail.tsx:1729`); **`isRoomFull` sempre `false` + `projectTeammatesCount` fake hash-based** (`DailyDetail.tsx:1238-1263`); **`POST /admin/seed` non gated da `ENABLE_DEV_LOGIN`** (`admin.routes.ts:154-167` — rischio reale: può cancellare dati con `fresh:true`, solo requireRole('owner') lo protegge); fallback `'Blue Room'` hardcoded (minore, `DayCard.tsx:175,265`, `App.tsx:902`).
+- **Nota di coordinamento test↔fix**: fixare B-13 impatterà i fixture e2e — il `mocked-fallback` esiste proprio per aggirarlo; una volta fixato, semplificare/rimuovere quel meccanismo e far verificare ai test il comportamento reale di "ufficio pieno".
+- **Decisioni aperte con l'utente**: (a) da dove partire (il documento consiglia B-13/processedDays), (b) Lab booking: completare con backend reale o rimuovere la feature (influenza anche il punto isRoomFull).
 
 ## Trentaduesimo giro: H-14 causa trovata dal trace grezzo — doppio bug del test (selettore + probe illimitata), PR #111
 
@@ -576,7 +592,12 @@ L'utente ha chiesto di approfondire H-10 specificamente. Tracciata tutta la cate
 
 ## Prossima sessione — inizia da qui
 
-**In corso: analisi trace-per-trace con l'utente** (ha scaricato l'artifact dell'ultima run, lo condivide un test alla volta) — H-14, H-19, H-25b, H-04 fatti (tutti fixati, PR #101 mergiata). Prossimo passo: verificare l'esito del run post-merge, poi continuare con altri test se l'utente ha altri trace da condividere (candidati: H-26b/H-27/H-30/H-40b per la race di capacità, H-46). Continuare da qui se la conversazione riprende a metà.
+**FASE: fix dell'app (la caratterizzazione della batteria di test è COMPLETA — zero test ambigui).**
+
+1. **Verificare l'esito della run post-PR#111** (sha `92a0c9c`) se non già fatto — focus H-14: primo run che esercita davvero il flusso extend (prima cliccava Cancel per un selettore sbagliato). Se fallisce in modo descrittivo, potrebbe riprodurre il crash/schermo bianco segnalato dal tester Damiano.
+2. **Mergiare PR #113** (track CLAUDE_MEMORY.md) se non già fatto.
+3. **Iniziare i fix dell'app** da `docs/remove_mockdata.md` + `bug_report.csv` (B-01→B-13). Il documento consiglia di partire dal floor sintetico in `processedDays` (=B-13); PRIMA chiarire con l'utente: Lab booking completare o rimuovere? Ricordare la nota di coordinamento: fixando B-13, aggiornare anche i fixture e2e (rimuovere/semplificare il mocked-fallback che lo aggira).
+4. I riferimenti completi dei 13 bug sono in `bug_report.csv` (scratchpad) e riassunti nel Trentatreesimo giro qui sopra.
 
 ### Bug reali trovati, NON fixati — da decidere insieme
 
