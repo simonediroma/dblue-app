@@ -62,9 +62,9 @@ test.describe('My Stats', () => {
 // Hits the real backend/DB (Railway dev environment) — no API mocking. See e2e/README.md.
 // ---------------------------------------------------------------------------------
 import type { Page } from '@playwright/test';
-import { loginAsOwner as csvLoginAsOwner } from '../fixtures/auth';
+import { loginAsOwner as csvLoginAsOwner, getAuthHeaders as csvGetAuthHeaders } from '../fixtures/auth';
 import { futureTestDate as csvFutureTestDate, prevMonthTestDate as csvPrevMonthTestDate } from '../fixtures/dates';
-import { simulateConfirm as csvSimulateConfirm } from '../fixtures/testAdmin';
+import { simulateConfirm as csvSimulateConfirm, resetStatus as csvResetStatus } from '../fixtures/testAdmin';
 import {
   openDayCard as csvOpenDayCard3,
   goToPlanningStep as csvGoToPlanningStep3,
@@ -75,22 +75,22 @@ import {
 const CSV_STATS_API_BASE = process.env.API_BASE_URL ?? 'http://localhost:4000';
 
 async function csvGetMyMonthlyStats(page: Page, month: string) {
-  const res = await page.request.get(`${CSV_STATS_API_BASE}/stats/monthly?month=${month}`);
+  const res = await page.request.get(`${CSV_STATS_API_BASE}/stats/monthly?month=${month}`, { headers: await csvGetAuthHeaders(page) });
   return res.json() as Promise<{ distribution: { mission: number; leave: number; sick: number } }>;
 }
 
 test.describe('CSV coverage — Stats Sanity Check', () => {
-  // The past-day section of this test (below, retrofitting pastDate) goes through
-  // goToPlanningStep's "Retrofit Working Status" branch, which requires day.isPast —
-  // a field never populated for real presence data (see e2e/tests/retrofit.spec.ts
-  // for the full root-cause trace: it's only set on seed/mock records, absent from
-  // GET /presence and never derived client-side). Marked fixme rather than a
-  // misleading "passing" test; revisit once isPast is actually populated.
-  test.fixme('[H-43] only confirmed statuses feed into My Stats', async ({ page }) => {
+  // Was fixme'd while day.isPast was never populated for real data (see
+  // e2e/tests/retrofit.spec.ts for the original trace) — now derived backend-side in
+  // getStatusForUser(). Same two catch-ups as the retrofit tests: auth headers on raw
+  // page.request calls, and resetStatus() on the deterministic dates (a leftover
+  // confirmed record from simulateConfirm/nightly cron would 409 the next retrofit).
+  test('[H-43] only confirmed statuses feed into My Stats', async ({ page }) => {
     await csvLoginAsOwner(page);
 
     // (a) a future Mission day must never count — it can't be confirmed yet.
     const futureDate = csvFutureTestDate('H-43-future');
+    await csvResetStatus('dev@dblue.it', futureDate);
     const futureMonth = futureDate.slice(0, 7);
     await csvOpenDayCard3(page, futureDate);
     await csvGoToPlanningStep3(page);
@@ -102,6 +102,7 @@ test.describe('CSV coverage — Stats Sanity Check', () => {
     // (c) a past Mission day, once genuinely confirmed (simulating the nightly cron),
     // must count. Uses retrofit (real) + simulateConfirm (time-passage simulation).
     const pastDate = csvPrevMonthTestDate('H-43-past');
+    await csvResetStatus('dev@dblue.it', pastDate);
     const pastMonth = pastDate.slice(0, 7);
     await page.click('[data-testid="month-selector-button"]');
     await expect(page.getByText('Select Month')).toBeVisible({ timeout: 3000 });
@@ -115,7 +116,7 @@ test.describe('CSV coverage — Stats Sanity Check', () => {
     await csvSelectStatus3(page, 'MISSION');
     await csvConfirmRetrofit3(page);
 
-    const meRes = await page.request.get(`${CSV_STATS_API_BASE}/auth/me`);
+    const meRes = await page.request.get(`${CSV_STATS_API_BASE}/auth/me`, { headers: await csvGetAuthHeaders(page) });
     const me = (await meRes.json()) as { id: string };
     await csvSimulateConfirm(me.id, pastDate);
 
