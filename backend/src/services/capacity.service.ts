@@ -75,16 +75,14 @@ export async function promoteFromWaitingList(date: string): Promise<void> {
   }
 }
 
-// Broadcast target for the live WebSocket update. Sockets aren't tied to an
-// authenticated user/role, so this reflects the same whole-office total every
-// authenticated GET /presence already shows an owner (all active rooms) — the
-// frontend (App.tsx's useWebSocket handler) unconditionally overwrites a day's
-// bookedCount/totalCapacity with whatever this returns, so scoping it to just
-// open_space rooms (as before) made the count visibly flip between the correct
-// per-role total and this narrower one the moment any booking triggered a
-// broadcast for that date.
-export async function getPresenceBreakdown(date: string): Promise<PresenceBreakdown> {
-  const rooms = await Room.find({ isActive: true }).lean();
+// Broadcast target for the live WebSocket update — must stay role-scoped, same as
+// the authenticated GET /presence (getStatusForUser): office capacity is "the rooms
+// this role can see" (getVisibleRooms), not a single whole-office number for
+// everyone. The websocket layer resolves each connection's role from its auth token
+// on subscribe (see websocket.service.ts) and calls this once per distinct role
+// among a date's subscribers.
+export async function getPresenceBreakdown(date: string, role: Role): Promise<PresenceBreakdown> {
+  const rooms = await getVisibleRooms(role);
 
   const roomOccupancies: RoomOccupancy[] = await Promise.all(
     rooms.map(async (room) => {
