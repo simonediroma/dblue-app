@@ -205,18 +205,29 @@ export async function upsertStatus(
     }
   }
 
-  const result = await WorkingStatus.findOneAndUpdate(
-    { userId, date },
-    {
-      $set: {
-        status: finalStatus,
-        ...(payload.isUsingDesk !== undefined && { isUsingDesk: payload.isUsingDesk }),
-        ...(payload.room !== undefined && { room: payload.room }),
-        isLastMinuteUnbooking,
-      },
-    },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
+  // When the new status isn't in_office/office_no_desk, clear any previously-booked
+  // room instead of leaving it untouched — otherwise a later return to In Office
+  // without re-picking a room shows the stale one as still "Planned".
+  const isOfficeStatus = (['in_office', 'office_no_desk'] as WorkingStatusValue[]).includes(
+    finalStatus as WorkingStatusValue
   );
+  const setFields: Record<string, unknown> = {
+    status: finalStatus,
+    ...(payload.isUsingDesk !== undefined && { isUsingDesk: payload.isUsingDesk }),
+    isLastMinuteUnbooking,
+  };
+  const update: Record<string, unknown> = { $set: setFields };
+  if (isOfficeStatus && payload.room !== undefined) {
+    setFields.room = payload.room;
+  } else if (!isOfficeStatus) {
+    update.$unset = { room: 1 };
+  }
+
+  const result = await WorkingStatus.findOneAndUpdate({ userId, date }, update, {
+    upsert: true,
+    new: true,
+    setDefaultsOnInsert: true,
+  });
 
   // Fire-and-forget promotion when a desk is freed
   if (wasOfficeBooked && isUnbooking) {
