@@ -57,9 +57,8 @@ test.describe('CSV coverage — Role-Specific Booking', () => {
       data: { date, status: 'in_office', room: 'Admin Room' },
       headers: await getAuthHeaders(page),
     });
-    // Bonus backend-level check (see F6 in the plan): upsertStatus does not currently
-    // cross-check `room` against the caller's role-permitted room types, so this is
-    // expected to currently fail (200 instead of 403) — a real, documented gap.
+    // upsertStatus() cross-checks `room` against the caller's role-permitted rooms
+    // (getVisibleRooms) before persisting — fixed as B-10.
     expect(res.status()).toBe(403);
   });
 
