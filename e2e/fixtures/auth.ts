@@ -6,10 +6,26 @@ const DEV_LOGIN_PASS = process.env.DEV_LOGIN_PASS ?? 'changeme';
 const DEV_LOGIN_EMPLOYEE_USER = process.env.DEV_LOGIN_EMPLOYEE_USER ?? 'employee@dblue.it';
 const DEV_LOGIN_EMPLOYEE_PASS = process.env.DEV_LOGIN_EMPLOYEE_PASS ?? 'changeme';
 
+// If `page` already carries a valid session (e.g. a test re-logs in on the same page
+// as a different role after test.beforeEach already logged it in once — H-39's exact
+// pattern, traced live: beforeEach logs `page` in as owner, the test body later calls
+// loginAsDirectorRole(page) on that same page, which just auto-redirects straight past
+// the login form to the still-authenticated owner's plan-page since the JWT is still in
+// localStorage — [data-testid="login-page"] never renders, hanging the wait below for
+// the full timeout), clear the stored token first so the login form reliably renders.
+async function clearStaleSession(page: Page) {
+  const hadToken = await page.evaluate(() => !!localStorage.getItem('auth_token')).catch(() => false);
+  if (hadToken) {
+    await page.evaluate(() => localStorage.removeItem('auth_token'));
+    await page.goto('/?dev=true');
+  }
+}
+
 export async function loginAsDirector(page: Page) {
   // ?dev=true forces the dev-login form to render even if the deployed frontend
   // wasn't built with VITE_DEV_LOGIN_ENABLED=true — see frontend/src/pages/Login.tsx.
   await page.goto('/?dev=true');
+  await clearStaleSession(page);
   await page.waitForSelector('[data-testid="login-page"]', { timeout: 10000 });
   await page.fill('input[type="email"]', DEV_LOGIN_USER);
   await page.fill('input[type="password"]', DEV_LOGIN_PASS);
@@ -23,6 +39,7 @@ export async function loginAsEmployee(page: Page) {
   // ?dev=true forces the dev-login form to render even if the deployed frontend
   // wasn't built with VITE_DEV_LOGIN_ENABLED=true — see frontend/src/pages/Login.tsx.
   await page.goto('/?dev=true');
+  await clearStaleSession(page);
   await page.waitForSelector('[data-testid="login-page"]', { timeout: 10000 });
   await page.fill('input[type="email"]', DEV_LOGIN_EMPLOYEE_USER);
   await page.fill('input[type="password"]', DEV_LOGIN_EMPLOYEE_PASS);
@@ -56,6 +73,7 @@ export async function loginAs(page: Page, role: DevRole) {
   // ?dev=true forces the dev-login form to render even if the deployed frontend
   // wasn't built with VITE_DEV_LOGIN_ENABLED=true — see frontend/src/pages/Login.tsx.
   await page.goto('/?dev=true');
+  await clearStaleSession(page);
   await page.waitForSelector('[data-testid="login-page"]', { timeout: 10000 });
   await page.fill('input[type="email"]', ROLE_EMAILS[role]);
   await page.fill('input[type="password"]', DEV_LOGIN_PASS);
