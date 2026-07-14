@@ -329,12 +329,15 @@ export async function runSeed(fresh = false): Promise<SeedSummary> {
   // harmless against the old default capacity (89 seats) but routinely "overbooks"
   // a day now that real room capacity is much smaller (4 seats/room) — demote the
   // overflow to waiting_list, same as upsertStatus() would for a real booking once
-  // capacity is hit. fullCapacityTestDate is excluded — it's already hand-built to
-  // its own exact numbers above.
+  // capacity is hit. Applies to fullCapacityTestDate too: that date's hand-built
+  // block above only force-assigns the first fullCapacityTestSeats+2 colleagues —
+  // everyone else still rolls their own independent random attendance for that same
+  // date, so without this cap the "guaranteed full" day can end up further over
+  // capacity than any organic day (confirmed live: 45 booked against a capacity of 24).
   const totalOfficeCapacity = await getTotalCapacity('owner');
   const byDate = new Map<string, StatusRecord[]>();
   for (const r of [...meRecords, ...colleagueRecordsByUser.flatMap((c) => c.records)]) {
-    if (r.date === fullCapacityTestDate || !OFFICE_STATUSES.includes(r.status)) continue;
+    if (!OFFICE_STATUSES.includes(r.status)) continue;
     const list = byDate.get(r.date) ?? [];
     list.push(r);
     byDate.set(r.date, list);
