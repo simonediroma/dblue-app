@@ -394,6 +394,16 @@ export default function App() {
  } else {
  setDays(prev => prev.map(d => d.date === date ? { ...d, isCheckedIn: true } : d));
 
+ // Undo must wait for the check-in POST to actually persist isConfirmed:true
+ // before calling undoCheckIn() — otherwise a fast Undo can reach the backend
+ // first, get rejected with 400 (isConfirmed still false), and the check-in
+ // that arrives afterward leaves isConfirmed:true with nothing left to undo it.
+ const checkInPromise = checkIn(date).catch((err) => {
+ setDays(prev => prev.map(d => d.date === date ? { ...d, isCheckedIn: false } : d));
+ setNotification({ message: "Check-in failed. Please try again.", date });
+ throw err;
+ });
+
  setNotification({
  message: "Successfully checked in",
  date: date,
@@ -402,19 +412,14 @@ export default function App() {
  setDays(prev => prev.map(d => d.date === date ? { ...d, isCheckedIn: false } : d));
  setNotification(null);
  setNotificationCountdown(null);
- undoCheckIn(date).catch((err) => console.error('undoCheckIn error:', err));
+ checkInPromise
+ .then(() => undoCheckIn(date))
+ .catch((err) => console.error('undoCheckIn error:', err));
  }
  });
 
  if (autoOpen) {
  if (day) handleOpenDay(day);
- }
-
- try {
-  await checkIn(date);
- } catch {
-  setDays(prev => prev.map(d => d.date === date ? { ...d, isCheckedIn: false } : d));
-  setNotification({ message: "Check-in failed. Please try again.", date });
  }
  }
  };
@@ -444,6 +449,20 @@ export default function App() {
  return newDays;
  });
 
+ // Same fire-and-forget undo race as handleCheckIn — see its comment. Undo must
+ // wait for this check-in POST to persist isConfirmed:true first.
+ const checkInPromise = checkIn(dateForRequest, isUsingDesk ? roomName : undefined, isUsingDesk).catch((err) => {
+ setDays(prev => prev.map(d => d.date === dateForRequest ? {
+ ...d,
+ isCheckedIn: false,
+ room: oldDaySnapshot.room,
+ isUsingDesk: oldDaySnapshot.isUsingDesk,
+ bookedCount: oldDaySnapshot.bookedCount
+ } : d));
+ setNotification({ message: "Check-in failed. Please try again.", date: dateForRequest });
+ throw err;
+ });
+
  setNotification({
  message: isUsingDesk ? `Successfully checked in in the ${roomName}` : `Successfully checked in`,
  date: dateForRequest,
@@ -458,25 +477,14 @@ export default function App() {
  } : d));
  setNotification(null);
  setNotificationCountdown(null);
- undoCheckIn(dateForRequest).catch((err) => console.error('undoCheckIn error:', err));
+ checkInPromise
+ .then(() => undoCheckIn(dateForRequest))
+ .catch((err) => console.error('undoCheckIn error:', err));
  }
  });
 
  setRoomSelectionDate(null);
  setSelectedDay(null);
-
- try {
- await checkIn(dateForRequest, isUsingDesk ? roomName : undefined, isUsingDesk);
- } catch {
- setDays(prev => prev.map(d => d.date === dateForRequest ? {
-  ...d,
-  isCheckedIn: false,
-  room: oldDaySnapshot.room,
-  isUsingDesk: oldDaySnapshot.isUsingDesk,
-  bookedCount: oldDaySnapshot.bookedCount
- } : d));
- setNotification({ message: "Check-in failed. Please try again.", date: dateForRequest });
- }
  };
 
  const isConsumingDesk = (status: WorkStatus, isUsingDesk?: boolean) => {
