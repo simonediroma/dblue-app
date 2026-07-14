@@ -47,6 +47,7 @@ export interface DayPresence {
   status: WorkStatus;
   bookedCount?: number;
   totalCapacity?: number;
+  waitingListCount?: number;
   projectTeammatesCount?: number;
   colleagueAvatars?: ColleagueAvatarInfo[];
   officeUserIds?: string[];

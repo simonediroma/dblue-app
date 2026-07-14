@@ -83,7 +83,7 @@ export async function getStatusForUser(
   const user = await User.findById(userId).lean();
   const role: Role = user?.role ?? 'employee';
 
-  const [userStatuses, allOfficeStatuses, totalCapacity, visibleRooms] = await Promise.all([
+  const [userStatuses, allOfficeStatuses, allWaitingListStatuses, totalCapacity, visibleRooms] = await Promise.all([
     WorkingStatus.find({ userId, date: { $gte: startDate, $lte: endDate } }).lean(),
     WorkingStatus.find({
       date: { $gte: startDate, $lte: endDate },
@@ -91,6 +91,10 @@ export async function getStatusForUser(
     })
       .populate('userId', 'name _id teammates')
       .lean(),
+    WorkingStatus.find({
+      date: { $gte: startDate, $lte: endDate },
+      status: 'waiting_list',
+    }).lean(),
     getTotalCapacity(role),
     getVisibleRooms(role),
   ]);
@@ -110,12 +114,18 @@ export async function getStatusForUser(
     officeByDate.set(ws.date, arr);
   }
 
+  const waitingListCountByDate = new Map<string, number>();
+  for (const ws of allWaitingListStatuses) {
+    waitingListCountByDate.set(ws.date, (waitingListCountByDate.get(ws.date) ?? 0) + 1);
+  }
+
   const todayStr = getTodayStr();
 
   return workingDays.map((date) => {
     const existing = userStatusByDate.get(date);
     const officeEntries = officeByDate.get(date) ?? [];
     const bookedCount = officeEntries.length;
+    const waitingListCount = waitingListCountByDate.get(date) ?? 0;
 
     // TODO (RBAC area filter): employee/lab_responsible/admin_member should only see colleagues
     // in their own area/floor. Director and owner see everyone. Add filter here once the
@@ -154,6 +164,7 @@ export async function getStatusForUser(
       isPast: date < todayStr,
       bookedCount,
       totalCapacity,
+      waitingListCount,
       colleagueAvatars,
       projectTeammatesCount,
       officeUserIds,
