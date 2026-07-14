@@ -806,9 +806,15 @@ export default function DailyDetail({
  const startExtensionDate = parseAppDate(day.date);
  let rangeDays = (isSpecialLeaveEligible && extendedSickType) ? 180 : 30;
 
- // Capacity for future dates is not available from the API per day; the backend
- // enforces the capacity gate at booking time (auto-downgrade to waiting_list).
- const isOfficeFullForDate = (_date: string) => false;
+ // allDays carries bookedCount/totalCapacity per day for the whole queried month
+ // (getStatusForUser() computes it for every working day, not just past/present
+ // ones) — look it up the same way dayPresence is looked up below. Falls back to
+ // "not full" if the date isn't in the currently-loaded month (the backend still
+ // enforces the real capacity gate at booking time regardless).
+ const isOfficeFullForDate = (dateForFullness: string) => {
+ const p = allDays.find(ad => ad.date === dateForFullness);
+ return (p?.bookedCount ?? 0) >= (p?.totalCapacity ?? Infinity);
+ };
 
  // Generate selectable business days
  const selectableDates: Array<{
@@ -1245,11 +1251,13 @@ export default function DailyDetail({
  const dayLabel = getFictionalDayName(d, 'short');
  const dateLabel = `${months[d.getMonth()].slice(0, 3)} ${d.getDate()}`;
  const currentConfig = extendedOfficeConfigs[dateStr] || { room: day.room || '', isUsingDesk: day.isUsingDesk };
- const isRoomFull = false;
- 
- // Deterministic project teammates logic for mock
- const tHash = dateStr.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
- const projectTeammatesCount = (tHash % 6) + 1;
+ const isRoomFull = isOfficeFullForDate(dateStr);
+
+ // Real per-day count from the backend (getStatusForUser() computes it from
+ // officeUserIds ∩ the user's teammates), same field DayCard/other views use —
+ // not the room-assignment-loop's own hash-based mock. Falls back to 0 if the
+ // date isn't in the currently-loaded month.
+ const projectTeammatesCount = allDays.find(ad => ad.date === dateStr)?.projectTeammatesCount ?? 0;
 
  return (
  <div key={dateStr} className={`bg-surface-container-lowest rounded-[24px] p-5 shadow-sm border ${isRoomFull ? 'border-red-500/20 bg-red-50/10' : 'border-outline-variant/10'} hover:border-outline-variant/30 transition-all flex flex-col sm:flex-row gap-6`}>
