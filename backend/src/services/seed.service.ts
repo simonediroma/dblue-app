@@ -113,12 +113,17 @@ type ColleagueProfile = {
   sickProb: number;
 };
 
+// officeProb tuned so the pool's average (~0.16) keeps a typical day's organic
+// attendance well under the real office capacity (24) — with the old values
+// (tuned for the previous 89-seat default) nearly every day organically exceeded
+// the new, much smaller capacity, making the daily cap above flatten every single
+// day to "full" instead of just the one day meant to demonstrate it.
 function generateColleagueProfile(seed: number): ColleagueProfile {
   const rng = seededRandom(seed);
   const r = rng();
-  if (r < 0.2) return { officeProb: 0.7, remoteProb: 0.2, sickProb: 0.03 };
-  if (r < 0.5) return { officeProb: 0.55, remoteProb: 0.35, sickProb: 0.03 };
-  return { officeProb: 0.35, remoteProb: 0.55, sickProb: 0.03 };
+  if (r < 0.2) return { officeProb: 0.25, remoteProb: 0.65, sickProb: 0.03 };
+  if (r < 0.5) return { officeProb: 0.18, remoteProb: 0.72, sickProb: 0.03 };
+  return { officeProb: 0.12, remoteProb: 0.78, sickProb: 0.03 };
 }
 
 interface StatusRecord {
@@ -265,17 +270,18 @@ export async function runSeed(fresh = false): Promise<SeedSummary> {
   })();
   const colleaguesDays = workingDaysInRange(colleaguesStartDate, meEndDate);
 
-  // Guarantee a fully-booked future day so the waiting-list flow can be tested:
-  // organic random office attendance never reaches total office capacity on its own.
-  // Filling to the 'employee' baseline (open_space only, the smallest per-role total)
-  // guarantees it's always achievable regardless of the seeded colleague pool size.
+  // Guarantee ONE fully-booked future day so the waiting-list flow can always be
+  // tested, without every other day also reading as full: officeProb below is tuned
+  // so organic attendance normally stays comfortably under capacity, so this date
+  // needs the real total office capacity ('owner' scope, all rooms) force-assigned
+  // directly, not just the smaller employee-visible subset used before.
   const fullCapacityTestDate = colleaguesDays.find((d) => d > todayStr) ?? null;
-  const fullCapacityTestSeats = await getTotalCapacity('employee');
+  const fullCapacityTestSeats = await getTotalCapacity('owner');
 
   const meRecords = buildStatusForUser(
     meUser._id as Types.ObjectId,
     meDays,
-    { officeProb: 0.58, remoteProb: 0.30, sickProb: 0.04 },
+    { officeProb: 0.30, remoteProb: 0.58, sickProb: 0.04 },
     3,
     42,
     todayStr,
