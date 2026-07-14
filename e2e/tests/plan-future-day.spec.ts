@@ -154,7 +154,16 @@ test.describe('CSV coverage — Plan a Future Day', () => {
     await expect(page.locator('[data-testid="daily-detail"]').getByText(/extend status/i)).toBeVisible({ timeout: 5000 });
 
     const detail = page.locator('[data-testid="daily-detail"]');
-    const chips = detail.locator('button:not([disabled]):not([data-testid])').filter({ hasNot: page.locator('svg') });
+    // The EXTEND step's day chips carry data-testid="extend-day-chip" (same shared JSX
+    // regardless of the source status — SICK included). The previous generic selector
+    // here (button:not([disabled]):not([data-testid]), hasNot svg) deliberately EXCLUDED
+    // testid'd buttons, so it never matched a real chip: its .first() resolved to the
+    // modal header's "Cancel" button instead — confirmed by this test's raw trace. The
+    // native click then genuinely clicked Cancel, exiting the EXTEND step entirely, and
+    // the isEnabled() probe below (bare, timeout 0) hung forever on the now-nonexistent
+    // extend-confirm — THE silent full-test timeout this test showed on every run,
+    // unaffected by every click-mechanics fix.
+    const chips = detail.locator('[data-testid="extend-day-chip"]:not([disabled])');
     const chipCount = await chips.count();
     if (chipCount > 0) {
       const firstChip = chips.first();
@@ -168,7 +177,9 @@ test.describe('CSV coverage — Plan a Future Day', () => {
       await firstChip.evaluate((el) => el.scrollIntoView({ block: 'center' }));
       await firstChip.evaluate((el) => (el as HTMLElement).click());
       const confirmBtn = page.locator('[data-testid="extend-confirm"]');
-      if (await confirmBtn.isEnabled().catch(() => false)) {
+      // Bounded: a bare isEnabled() (no actionTimeout configured) waits forever if the
+      // element never appears — the exact silent-hang mechanism described above.
+      if (await confirmBtn.isEnabled({ timeout: 10000 }).catch(() => false)) {
         await expect(confirmBtn).toBeVisible({ timeout: 10000 });
         await confirmBtn.click();
       }
