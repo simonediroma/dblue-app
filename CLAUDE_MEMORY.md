@@ -2,8 +2,8 @@
 
 ## Stato Corrente
 
-**Branch:** `claude/fix-b07-ispast` — **PRIMO FIX DELL'APP: B-07 (isPast) in PR #114, aperta in attesa di merge**. PR #113 (track memoria) mergiata. Run post-PR#111 verificata (sha `92a0c9c`): H-14 PASSA, batteria in stato "ideale" (30 passed, 13 failed tutti mappati sui bug noti, 9 skipped). `bug_report.csv` esteso a 17 bug (B-01→B-17). Decisioni prese con l'utente (AskUserQuestion): si parte da B-07 (raccomandato), decisione Lab booking (B-08/B-15) RIMANDATA.
-**PR corrente:** PR #114 aperta (fix B-07 isPast + riabilitazione 7 test), in attesa di merge
+**Branch:** nessun branch di lavoro corrente — **PR #114 (fix B-07 isPast + riabilitazione 7 test) MERGIATA (sha `9d36762`), batteria rilanciata** — esito da verificare: H-34→H-39 + H-43 girano per la prima volta in assoluto. ATTENZIONE: fix backend — se la run parte prima che Railway completi il redeploy, i test retrofit falliranno ancora sul bottone mancante (backend vecchio); in quel caso rilanciare. PR #113 (track memoria) mergiata. Run post-PR#111 verificata (sha `92a0c9c`): H-14 PASSA, batteria in stato "ideale" (30 passed, 13 failed tutti mappati sui bug noti, 9 skipped). `bug_report.csv` esteso a 17 bug (B-01→B-17). Decisioni prese con l'utente (AskUserQuestion): si parte da B-07 (raccomandato), decisione Lab booking (B-08/B-15) RIMANDATA.
+**PR corrente:** nessuna aperta
 **Ultima sessione:** 2026-07-14
 
 ## Trentaquattresimo giro: fix B-07 (isPast) — primo fix applicativo della nuova fase (PR #114)
