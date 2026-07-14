@@ -2,7 +2,7 @@
 
 ## Stato Corrente
 
-**Branch:** `claude/track-claude-memory` (PR #113 aperta: CLAUDE_MEMORY.md tolto da .gitignore e ora TRACCIATO in git — da qui in poi ogni aggiornamento della memoria va anche committato/pushato). PR #111 (fix H-14) mergiata (sha `92a0c9c`), batteria rilanciata — esito da verificare (focus H-14: primo run che esercita DAVVERO il flusso extend; o passa, o riproduce il crash segnalato dal tester Damiano). Categoria "test ambigui" VUOTA: tutti i 52 test caratterizzati. **FASE NUOVA INIZIATA: fix dell'app** — letto `docs/remove_mockdata.md` (piano rimozione dati mock, preparato su altro branch `claude/mock-data-check-ow7g4h`), in attesa che l'utente decida da dove partire e cosa fare del Lab booking (completare vs rimuovere).
+**Branch:** `claude/track-claude-memory` (PR #113 aperta: CLAUDE_MEMORY.md ora tracciato in git). **Run post-PR#111 verificata (sha `92a0c9c`): H-14 PASSA** — unico cambiamento nel diff, batteria in stato "ideale": 30 passed, 13 failed (TUTTI mappati 1:1 sui bug noti B-01/02/03/05/06/09/10/11), 9 skipped (H-09 difensivo + 7 fixme per B-07 isPast + H-44 per B-08). Il crash/schermo bianco di H-14 segnalato dal tester NON si è riprodotto al primo vero esercizio del flusso extend — probabilmente già risolto nel build corrente. `bug_report.csv` esteso a **17 bug (B-01→B-17)** con le 4 voci uniche di `remove_mockdata.md` (B-14 waiting list "7", B-15 isRoomFull fake, B-16 /admin/seed non gated, B-17 Blue Room fallback). **FASE FIX DELL'APP pronta a partire** — decisioni aperte: partire da B-13 (processedDays)? Lab booking completare o rimuovere?
 **PR corrente:** PR #113 aperta (track CLAUDE_MEMORY.md), in attesa di merge
 **Ultima sessione:** 2026-07-14
 
