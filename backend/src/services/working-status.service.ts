@@ -41,6 +41,11 @@ function getWorkingDaysOfMonth(month: string): string[] {
 
 const OFFICE_STATUSES: WorkingStatusValue[] = ['in_office', 'office_no_desk'];
 
+// retrofit exists to backfill payroll-relevant absence categories on a past day
+// (Mission/Leave/Sick/Parental Leave) — it must not be usable to retroactively
+// claim attendance-location statuses that grant real capacity/desk usage.
+const RETROFIT_ALLOWED_STATUSES: WorkingStatusValue[] = ['mission', 'leave', 'sick', 'parental_leave'];
+
 // Colleague avatar derivation — MUST stay in sync with the frontend's own derivation in
 // frontend/src/hooks/useColleagues.ts (mapUserToColleague): same palette, same hash, same
 // initials rule, keyed on the same user id string. If they drift, the same person renders
@@ -288,6 +293,15 @@ export async function retrofitStatus(
     throw err;
   }
 
+  const normalizedStatus = payload.status.toLowerCase() as WorkingStatusValue;
+  if (!RETROFIT_ALLOWED_STATUSES.includes(normalizedStatus)) {
+    const err = Object.assign(
+      new Error(`Retrofit non consentito per lo status "${payload.status}" — solo mission/leave/sick/parental_leave`),
+      { statusCode: 400 }
+    );
+    throw err;
+  }
+
   const existing = await WorkingStatus.findOne({ userId, date });
   if (existing?.isConfirmed) {
     const err = Object.assign(new Error('Status già confermato, non modificabile'), { statusCode: 409 });
@@ -298,7 +312,7 @@ export async function retrofitStatus(
     { userId, date },
     {
       $set: {
-        status: payload.status.toLowerCase(),
+        status: normalizedStatus,
         isRetrofit: true,
         ...(payload.offTime !== undefined && { offTime: payload.offTime }),
       },
