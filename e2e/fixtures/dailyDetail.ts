@@ -118,33 +118,27 @@ export async function selectStatus(page: Page, status: StatusKey, date?: string)
 
 // Fallback for when the real office is full for `date`, instead of skipping the test.
 //
-// Two independent problems have to be solved, not one:
-// 1. The backend enforces capacity itself, server-side, on the booking POST
-//    (working-status.service.ts upsertStatus: if the office is genuinely full it silently
-//    downgrades an in_office request to waiting_list — correct, intended behavior, and NOT
-//    something a browser-side page.route() mock can influence, since it runs entirely in
-//    the backend process against the real database). So step one is to genuinely free real
-//    capacity first, via the dev-only /admin/test/free-office-capacity endpoint — after
-//    this, the eventual booking is a REAL in_office booking, not a fake-looking one. What
-//    got removed is queued (officeCapacityQueue.ts) and restored by that test's own
-//    test.afterEach(flushOfficeCapacityQueue) — not right after this function returns,
-//    since the office needs to stay free for the rest of THIS test's own interactions with
-//    the date (the real booking POST happens later, in confirmRoom(), called by the test
-//    after selectStatus() returns).
-// 2. Even with real capacity freed, the UI's own "should I show plain In Office" check can
-//    still say "full": App.tsx's `processedDays` recomputes bookedCount client-side as
-//    `Math.max(day.bookedCount, finalAvatars.length)`, padding finalAvatars to at least 5
-//    synthetic "in office" colleagues for every future day (a demo/visual affordance, see
-//    App.tsx ~L872-888 — a real app bug, documented there, not fixed here). On this
-//    environment real room capacity is smaller than that synthetic floor, so the button
-//    would still read "full" even with zero real bookings. Patching totalCapacity in the
-//    /presence response (large enough to clear the synthetic floor) sidesteps just that
-//    UI quirk — it doesn't change what actually gets persisted, since (1) already
-//    guarantees that's real.
+// The backend enforces capacity itself, server-side, on the booking POST
+// (working-status.service.ts upsertStatus: if the office is genuinely full it silently
+// downgrades an in_office request to waiting_list — correct, intended behavior). So the
+// fallback genuinely frees real capacity via the dev-only /admin/test/free-office-capacity
+// endpoint — after this, the eventual booking is a REAL in_office booking, not a
+// fake-looking one. What got removed is queued (officeCapacityQueue.ts) and restored by
+// that test's own test.afterEach(flushOfficeCapacityQueue) — not right after this function
+// returns, since the office needs to stay free for the rest of THIS test's own
+// interactions with the date (the real booking POST happens later, in confirmRoom(),
+// called by the test after selectStatus() returns).
+//
+// This used to ALSO patch totalCapacity/bookedCount in the /presence response, because
+// App.tsx's processedDays padded every future day with a synthetic minimum of 5 "in
+// office" avatars and force-raised bookedCount to match — making the UI read "full" even
+// with zero real bookings on environments whose real capacity is below 5. That app bug
+// was fixed for real (B-13, PR #116): the UI now reflects real occupancy, so freeing real
+// capacity + reloading is enough on its own, and what the UI shows afterwards is the
+// genuine "office not full" rendering, unmocked.
 //
 // Clearly flagged via a test annotation so the CSV summary report and HTML report both
-// surface that this run needed the real-capacity + UI fallback instead of finding room
-// on its own.
+// surface that this run needed the capacity fallback instead of finding room on its own.
 //
 // `plainInOffice` is a live Locator (not a DOM snapshot), so it stays valid to
 // re-evaluate against the page after the reload below — no need to re-create it.
@@ -156,32 +150,9 @@ async function installOfficeCapacityFallbackAndRetry(
   const { snapshot } = await freeOfficeCapacity(date);
   queuePendingRestore(snapshot);
 
-  const month = date.slice(0, 7);
-  const presencePattern = `**/presence?month=${month}`;
-  await page.route(presencePattern, async (route) => {
-    // The app sends Authorization: Bearer + credentials: 'include' cross-origin, which
-    // triggers a CORS preflight (OPTIONS) request to this exact same URL before the real
-    // GET. page.route() matches by URL regardless of method, so an unfiltered handler (or
-    // one limited to `{ times: 1 }`) can end up patching the preflight's empty body instead
-    // of the real response — letting the actual (still-full) GET through unmocked. Only
-    // touch GET; let everything else (OPTIONS, and any other method) pass through as-is.
-    if (route.request().method() !== 'GET') {
-      await route.continue();
-      return;
-    }
-    const response = await route.fetch();
-    const json = await response.json();
-    const day = Array.isArray(json) ? json.find((d: { date: string }) => d.date === date) : undefined;
-    if (day) {
-      day.bookedCount = 0;
-      day.totalCapacity = 9999;
-    }
-    await route.fulfill({ response, json });
-  });
-
   test.info().annotations.push({
     type: 'mocked-fallback',
-    description: `Office was at capacity for ${date} on the shared dev environment — real bookings were cleared via /admin/test/free-office-capacity (a genuine, persisted booking, not a fake one) and totalCapacity was additionally patched in the UI's /presence response to work around App.tsx's synthetic-avatar-count bug so the IN_OFFICE button was actually clickable.`,
+    description: `Office was at capacity for ${date} on the shared dev environment — real bookings were cleared via /admin/test/free-office-capacity (the eventual booking is a genuine, persisted one) and the page reloaded so the UI reflects the freed capacity.`,
   });
 
   await page.reload();
@@ -191,14 +162,6 @@ async function installOfficeCapacityFallbackAndRetry(
 
   await expect(plainInOffice).toBeVisible({ timeout: 5000 });
   await plainInOffice.click();
-
-  // The route handler's only job was getting past the "office full" display for this
-  // one click — page.route() handlers otherwise persist across page.reload() (they're
-  // bound to the Page, not a navigation), so leaving it registered would keep forcing
-  // bookedCount to 0 on every later /presence fetch for this date, including a
-  // deliberate post-booking reload a test might do to verify the REAL persisted state
-  // (e.g. H-40b) — silently masking the very thing being checked.
-  await page.unroute(presencePattern);
 }
 
 export async function confirmRoom(page: Page, roomName: string | RegExp) {

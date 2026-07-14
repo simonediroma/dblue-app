@@ -96,37 +96,13 @@ test.describe('CSV coverage — Capacity & Waiting List', () => {
     queuePendingRestore(snapshot);
     await fillCapacity(date, realCapacity - 1);
     try {
-      // The owner books the last real seat — should succeed as In Office.
-      //
-      // App.tsx's processedDays pads bookedCount to at least 5 synthetic "in office"
-      // colleagues for every future day (a real, documented app bug — see
-      // dailyDetail.ts's installOfficeCapacityFallbackAndRetry). On this environment
-      // real room capacity is smaller than that synthetic floor, so the plain
-      // "In Office" button would stay hidden even with only realCapacity-1 real
-      // bookings, well below true capacity — selectStatus('IN_OFFICE') without a date
-      // would just skip. Patch ONLY totalCapacity (never bookedCount, which stays real)
-      // in the /presence response so the UI's own "is it full" check reflects the true
-      // state fillCapacity() just set up — same technique as the generic fallback, but
-      // scoped to this one click (not calling freeOfficeCapacity again, which would
-      // wipe the realCapacity-1 seats above) so it doesn't mask the real occupancy
-      // assertion below.
-      const month = date.slice(0, 7);
-      const presencePattern = `**/presence?month=${month}`;
-      await page.route(presencePattern, async (route) => {
-        if (route.request().method() !== 'GET') {
-          await route.continue();
-          return;
-        }
-        const response = await route.fetch();
-        const json = await response.json();
-        const day = Array.isArray(json) ? json.find((d: { date: string }) => d.date === date) : undefined;
-        if (day) day.totalCapacity = 9999;
-        await route.fulfill({ response, json });
-      });
-      // The month's /presence data was already fetched (and cached in app state) by the
-      // login navigation above, before this route existed — registering a route alone
-      // doesn't retroactively patch data already in memory. Reload so the next fetch
-      // actually goes through the route, same as installOfficeCapacityFallbackAndRetry.
+      // The owner books the last real seat — should succeed as In Office. With one seat
+      // genuinely free (realCapacity-1 filled above), the plain "In Office" option must
+      // render on its own: the synthetic avatar floor that used to make every future day
+      // read "full" regardless of real occupancy was fixed for real (B-13, PR #116) —
+      // this test previously had to patch totalCapacity in the /presence response and
+      // reload to get past it. The month's data was fetched at login, before
+      // fillCapacity() above ran — reload so the UI reflects the seats just filled.
       await page.reload();
       await waitForSplashGone(page);
 
@@ -135,7 +111,6 @@ test.describe('CSV coverage — Capacity & Waiting List', () => {
       const plainInOffice = page.locator('[data-testid="daily-detail"]').getByText(/^in office$/i);
       await expect(plainInOffice).toBeVisible({ timeout: 10000 });
       await plainInOffice.click();
-      await page.unroute(presencePattern);
       await confirmRoom(page, /./);
 
       const card = page.locator(`[data-testid="day-card"][data-date="${date}"]`);

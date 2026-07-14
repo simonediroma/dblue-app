@@ -1,5 +1,5 @@
 import { test, expect, Page, APIRequestContext, Browser } from '@playwright/test';
-import { loginAsOwner, loginAsDirectorRole, ROLE_EMAILS } from '../fixtures/auth';
+import { loginAsOwner, loginAsDirectorRole } from '../fixtures/auth';
 import { resetOnboarding, resetStatus } from '../fixtures/testAdmin';
 import { futureTestDate } from '../fixtures/dates';
 import { openDayCard, goToPlanningStep, selectStatus, confirmRoom } from '../fixtures/dailyDetail';
@@ -173,11 +173,25 @@ async function saveTeammates(page: Page) {
   await expect(page.locator('[data-testid="teammate-save"]')).not.toBeVisible({ timeout: 5000 });
 }
 
+// Every account selectable as a teammate in these tests (KNOWN_TEAMMATES) is a dev-login
+// account. futureTestDate() is deterministic per calendar day, so a leftover in-office
+// booking by ANY of them on the shared target date (left by another test earlier in the
+// same run/day) adds an extra real avatar to the day card, breaking the exact-count
+// assertions (seen live on H-04 once avatars became real: Expected 1, Received 2).
+const TEAMMATE_EMAILS = [
+  'mario.rossi@dblue.it',
+  'sara.ferrari@dblue.it',
+  'luca.esposito@dblue.it',
+  'giulia.bianchi@dblue.it',
+  'marco.conti@dblue.it',
+];
+
 // Sets Giulia Bianchi's own real status for a date, so surfacing can be checked from
 // another account's Plan view / DailyDetail. Uses its own browser context so it never
 // collides with whatever account the test's main `page` is (or will be) logged in as.
 async function setGiuliaStatus(browser: Browser, date: string, status: 'IN_OFFICE' | 'REMOTE') {
-  await resetStatus(ROLE_EMAILS.director, date);
+  // Clear all potential-teammate accounts for this date, not just Giulia — see above.
+  for (const email of TEAMMATE_EMAILS) await resetStatus(email, date);
   const context = await browser.newContext();
   const page = await context.newPage();
   await loginAsDirectorRole(page);
