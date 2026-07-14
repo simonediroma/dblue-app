@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { loginAsAdminMember, loginAsDirectorRole, loginAsEmployee, loginAsLabResponsible, ROLE_EMAILS, getAuthHeaders } from '../fixtures/auth';
 import { futureTestDate } from '../fixtures/dates';
 import { resetStatus } from '../fixtures/testAdmin';
-import { openDayCard, goToPlanningStep, selectStatus } from '../fixtures/dailyDetail';
+import { openDayCard, goToPlanningStep, selectStatus, confirmRoom } from '../fixtures/dailyDetail';
 import { flushOfficeCapacityQueue } from '../fixtures/officeCapacityQueue';
 
 /**
@@ -38,13 +38,12 @@ test.describe('CSV coverage — Role-Specific Booking', () => {
     await goToPlanningStep(page);
     await selectStatus(page, 'IN_OFFICE', date);
 
-    const detail = page.locator('[data-testid="daily-detail"]');
-    const adminRoomOption = detail.locator('[data-testid="room-option"]').filter({ hasText: /admin room/i });
-    // The office-capacity fallback above does a full page.reload() + reopens the day card
-    // + re-enters planning before this point — GET /rooms restarts from scratch on that
-    // fresh mount, so 5s can be tight on the shared environment's variable network latency.
-    await expect(adminRoomOption).toBeVisible({ timeout: 15000 });
-    await adminRoomOption.click();
+    // confirmRoom() waits for the real POST /presence response before returning —
+    // handleRoomSelect (DailyDetail.tsx) fires onUpdateStatus() without awaiting it,
+    // same fire-and-forget class already fixed for other room-selection flows
+    // (PR #104/#109). A bare click()+immediate API check here raced that persist and
+    // read `room: undefined` back.
+    await confirmRoom(page, /admin room/i);
 
     const res = await page.request.get(`${API_BASE}/presence?month=${date.slice(0, 7)}`, { headers: await getAuthHeaders(page) });
     const days = (await res.json()) as Array<{ date: string; room?: string }>;
@@ -73,11 +72,8 @@ test.describe('CSV coverage — Role-Specific Booking', () => {
     await goToPlanningStep(page);
     await selectStatus(page, 'IN_OFFICE', date);
 
-    const detail = page.locator('[data-testid="daily-detail"]');
-    const managementRoomOption = detail.locator('[data-testid="room-option"]').filter({ hasText: /management room/i });
-    // Same reload-then-refetch timing concern as H-45 above.
-    await expect(managementRoomOption).toBeVisible({ timeout: 15000 });
-    await managementRoomOption.click();
+    // See H-45's comment: confirmRoom() waits for the real POST /presence response.
+    await confirmRoom(page, /management room/i);
 
     const res = await page.request.get(`${API_BASE}/presence?month=${date.slice(0, 7)}`, { headers: await getAuthHeaders(page) });
     const days = (await res.json()) as Array<{ date: string; room?: string }>;

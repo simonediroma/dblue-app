@@ -378,13 +378,21 @@ test.describe('CSV coverage — Teammates', () => {
     await page.click('[data-testid="nav-plan-desktop"]');
     await page.waitForSelector('[data-testid="plan-page"]');
 
+    // selectFillerTeammates(4, ...) picks the first 4 non-KNOWN_TEAMMATES candidates —
+    // real synthetic colleagues whose own organic seeded status for these dates is
+    // never controlled by this test, unlike Giulia's (set explicitly above via
+    // setGiuliaStatus). A raw avatar-count assertion is only a proxy for "is Giulia's
+    // real presence surfacing" (this file's own stated intent — see header comment)
+    // and breaks whenever a filler happens to organically land in_office on the same
+    // date (observed: received 3, not 1). Assert Giulia specifically (initials "GB",
+    // nameInitials() in working-status.service.ts) instead of the total count.
     const officeCard = page.locator(`[data-testid="day-card"][data-date="${officeDate}"]`);
     await officeCard.scrollIntoViewIfNeeded();
-    await expect(officeCard.locator('[data-testid="daycard-teammate-avatar"]')).toHaveCount(1, { timeout: 10000 });
+    await expect(officeCard.locator('[data-testid="daycard-teammate-avatar"]').filter({ hasText: 'GB' })).toBeVisible({ timeout: 10000 });
 
     const remoteCard = page.locator(`[data-testid="day-card"][data-date="${remoteDate}"]`);
     await remoteCard.scrollIntoViewIfNeeded();
-    await expect(remoteCard.locator('[data-testid="daycard-teammate-avatar"]')).toHaveCount(0);
+    await expect(remoteCard.locator('[data-testid="daycard-teammate-avatar"]').filter({ hasText: 'GB' })).toHaveCount(0);
   });
 
   test('[H-07] edit teammates — replace a couple of people', async ({ page, request }) => {
