@@ -1734,8 +1734,8 @@ export default function DailyDetail({
  <h3 className="font-sans text-[11px] font-bold text-on-surface-variant/60 uppercase tracking-widest">In the office</h3>
  <span className="font-sans text-[11px] font-bold text-on-surface-variant/40">
  {day.bookedCount || 20}/{day.totalCapacity || 23}
- {(day.bookedCount ?? 0) >= (day.totalCapacity ?? 23) && (
- <span className="ml-1">| 7 in waiting list</span>
+ {(day.waitingListCount ?? 0) > 0 && (
+ <span className="ml-1">| {day.waitingListCount} in waiting list</span>
  )}
  </span>
  </div>
