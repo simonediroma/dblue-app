@@ -235,9 +235,13 @@ export async function upsertStatus(
   const isOfficeStatus = (['in_office', 'office_no_desk'] as WorkingStatusValue[]).includes(
     finalStatus as WorkingStatusValue
   );
+  // Sick leave for today is meant to auto-confirm and lock the day immediately (the
+  // CSV requirement's own wording), not wait for the nightly auto-confirm scheduler
+  // like every other status — same pair of fields the scheduler itself sets.
   const setFields: Record<string, unknown> = {
     status: finalStatus,
     ...(payload.isUsingDesk !== undefined && { isUsingDesk: payload.isUsingDesk }),
+    ...(finalStatus === 'sick' && { isConfirmed: true, confirmedAt: new Date() }),
     isLastMinuteUnbooking,
   };
   const update: Record<string, unknown> = { $set: setFields };
