@@ -75,12 +75,14 @@ export async function promoteFromWaitingList(date: string): Promise<void> {
   }
 }
 
-// Broadcast target for the live WebSocket update: sockets aren't tied to an
-// authenticated user/role, so this can only reflect the capacity baseline
-// everyone shares (open_space). Per-role extra rooms are only reflected in
-// the authenticated GET/POST /presence responses (getStatusForUser/upsertStatus).
-export async function getPresenceBreakdown(date: string): Promise<PresenceBreakdown> {
-  const rooms = await Room.find({ type: 'open_space', isActive: true }).lean();
+// Broadcast target for the live WebSocket update — must stay role-scoped, same as
+// the authenticated GET /presence (getStatusForUser): office capacity is "the rooms
+// this role can see" (getVisibleRooms), not a single whole-office number for
+// everyone. The websocket layer resolves each connection's role from its auth token
+// on subscribe (see websocket.service.ts) and calls this once per distinct role
+// among a date's subscribers.
+export async function getPresenceBreakdown(date: string, role: Role): Promise<PresenceBreakdown> {
+  const rooms = await getVisibleRooms(role);
 
   const roomOccupancies: RoomOccupancy[] = await Promise.all(
     rooms.map(async (room) => {
