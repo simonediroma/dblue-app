@@ -197,9 +197,26 @@ async function setGiuliaStatus(browser: Browser, date: string, status: 'IN_OFFIC
   await loginAsDirectorRole(page);
   await openDayCard(page, date);
   await goToPlanningStep(page);
-  await selectStatus(page, status, date);
   if (status === 'IN_OFFICE') {
+    // confirmRoom() already waits for the real POST /presence response.
+    await selectStatus(page, status, date);
     await confirmRoom(page, /./);
+  } else {
+    // selectStatus()'s generic branch (REMOTE here) clicks the status option, whose
+    // onClick (DailyDetail.tsx's handleStatusSelect) fires onUpdateStatus WITHOUT
+    // awaiting it — fire-and-forget, same class already fixed for confirmRoom()
+    // (PR #109). This helper closes the browser context right after, which can abort
+    // the still-in-flight request before it reaches the server (root cause found for
+    // H-42's identical setColleagueStatus helper). Safe to wait for the real response
+    // here specifically: this always uses futureTestDate(), never today/tomorrow, so
+    // isLastMinute() never gates this status change behind the unbooking-confirmation
+    // modal instead of an immediate POST.
+    const responsePromise = page.waitForResponse(
+      (res) => res.request().method() === 'POST' && res.url().includes('/presence'),
+      { timeout: 15000 }
+    ).catch(() => null);
+    await selectStatus(page, status, date);
+    await responsePromise;
   }
   await context.close();
 }
