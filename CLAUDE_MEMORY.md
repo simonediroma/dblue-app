@@ -2,9 +2,20 @@
 
 ## Stato Corrente
 
-**Branch:** `claude/e2e-h04-reset-and-fallback-cleanup` — follow-up e2e post-B-01/B-13, PR aperta in attesa di merge. PR #115 (memoria) e PR #116 (B-01+B-13) MERGIATE — esito da verificare: H-34→H-39 + H-43 girano per la prima volta in assoluto. ATTENZIONE: fix backend — se la run parte prima che Railway completi il redeploy, i test retrofit falliranno ancora sul bottone mancante (backend vecchio); in quel caso rilanciare. PR #113 (track memoria) mergiata. Run post-PR#111 verificata (sha `92a0c9c`): H-14 PASSA, batteria in stato "ideale" (30 passed, 13 failed tutti mappati sui bug noti, 9 skipped). `bug_report.csv` esteso a 17 bug (B-01→B-17). Decisioni prese con l'utente (AskUserQuestion): si parte da B-07 (raccomandato), decisione Lab booking (B-08/B-15) RIMANDATA.
+**Branch:** `claude/fix-h42-h39-race` — analisi e fix per H-42 (causa trovata: race fire-and-forget), H-39 lasciato come flake isolato non riprodotto. PR #117 (e2e cleanup + fix H-04) MERGIATA, batteria verificata: H-04 passa, retrofit riabilitato mostra 2 NUOVI bug reali (B-18 retrofit non persiste, B-19 non blocca status non-payroll) oltre a confermare B-06 anche su retrofit. bug_report.csv e full_test_report.csv rigenerati e consegnati (19 bug, 53 righe test). PR #115 (memoria) e PR #116 (B-01+B-13) MERGIATE — esito da verificare: H-34→H-39 + H-43 girano per la prima volta in assoluto. ATTENZIONE: fix backend — se la run parte prima che Railway completi il redeploy, i test retrofit falliranno ancora sul bottone mancante (backend vecchio); in quel caso rilanciare. PR #113 (track memoria) mergiata. Run post-PR#111 verificata (sha `92a0c9c`): H-14 PASSA, batteria in stato "ideale" (30 passed, 13 failed tutti mappati sui bug noti, 9 skipped). `bug_report.csv` esteso a 17 bug (B-01→B-17). Decisioni prese con l'utente (AskUserQuestion): si parte da B-07 (raccomandato), decisione Lab booking (B-08/B-15) RIMANDATA.
 **PR corrente:** nessuna aperta
 **Ultima sessione:** 2026-07-14
+
+## Trentasettesimo giro: H-42 causa reale trovata (stessa classe di H-25/room-select), H-39 flake isolato non riprodotto — PR #118
+
+**H-42 — causa reale, non solo ipotesi generica**: letto `setColleagueStatus` (colleague-visibility.spec.ts) e `handleStatusSelect` in DailyDetail.tsx — confermato che il ramo generico (REMOTE/LEAVE/MISSION/PARENTAL_LEAVE, tutti gli status usati da H-42) chiama `onUpdateStatus` SENZA attenderlo, esattamente la stessa classe di bug fire-and-forget gia' trovata e fixata per `confirmRoom()` (PR #109) ma mai applicata a questo secondo punto di chiamata. `setColleagueStatus` chiude il browser context subito dopo `selectStatus()` — puo' interrompere la richiesta POST /presence ancora in volo prima che raggiunga il server, spiegando perche' lo status REMOTE di Mario non risultava sempre persistito.
+
+**Fix (PR #118)**: `setColleagueStatus` e il gemello `setGiuliaStatus` (teammates.spec.ts) ora aspettano la vera risposta POST /presence prima di chiudere il context, per gli status non-IN_OFFICE (IN_OFFICE gia' coperto da confirmRoom()). Sicuro renderlo incondizionato qui specificamente (a differenza dell'helper condiviso selectStatus(), usato altrove su date oggi/domani dove isLastMinute() puo' deviare lo stesso click verso il modal di conferma invece di un POST immediato): questi due helper usano sempre futureTestDate(), mai oggi/domani.
+
+**H-39 — NON fixato, flake isolato**: singolo timeout di login (waitForSelector su login-page) dentro un context employee usa e getta. loginAs()/loginAsEmployee() sono usati da praticamente ogni test della suite senza un pattern di fallimento ricorrente — trattato come flakiness di rete isolata sull'ambiente Railway condiviso, non un bug riproducibile. Nessun fix speculativo applicato — da riverificare col prossimo run.
+
+- Validato: `npx playwright test --list` invariato (113 test), diff limitato ai 2 file.
+- PR #118 aperta — in attesa di conferma dell'utente per merge + rilancio.
 
 ## Trentaseiesimo giro: B-01+B-13 CONFERMATI dal run (H-02/06/08 passano, mocked-fallback 20->0) — follow-up e2e per H-04 e pulizia mock
 
