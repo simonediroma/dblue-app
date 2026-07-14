@@ -24,6 +24,7 @@ const statusColors: Record<string, string> = {
  [WorkStatus.LEAVE]: '#E879F9',
  [WorkStatus.SICK]: '#F87171',
  [WorkStatus.PARENTAL_LEAVE]: '#6366F1',
+ [WorkStatus.LONG_TERM_LEAVE]: '#8B5CF6',
  [WorkStatus.PENDING]: '#CBD5E1',
  [WorkStatus.WAITING_LIST]: '#FBBF24',
 };

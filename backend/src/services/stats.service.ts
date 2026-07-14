@@ -54,7 +54,7 @@ export async function getMonthlyStats(userId: string, month: string): Promise<Mo
     remote: statuses.filter((ws) => ws.status === 'remote' && ws.isConfirmed).length,
     mission: statuses.filter((ws) => ws.status === 'mission' && ws.isConfirmed).length,
     leave: statuses.filter(
-      (ws) => (ws.status === 'leave' || ws.status === 'parental_leave') && ws.isConfirmed
+      (ws) => (ws.status === 'leave' || ws.status === 'parental_leave' || ws.status === 'long_term_leave') && ws.isConfirmed
     ).length,
     sick: statuses.filter((ws) => ws.status === 'sick' && ws.isConfirmed).length,
   };

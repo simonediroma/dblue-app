@@ -12,7 +12,8 @@ import {
  Headset,
  Monitor,
  Heart as Crib,
- RotateCcw
+ RotateCcw,
+ CalendarClock
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import React from 'react';
@@ -39,6 +40,7 @@ const statusConfig = {
  [WorkStatus.LEAVE]: { color: 'bg-fuchsia-500/10 text-fuchsia-500', icon: Palmtree },
  [WorkStatus.SICK]: { color: 'bg-red-500/10 text-red-500', icon: Thermometer },
  [WorkStatus.PARENTAL_LEAVE]: { color: 'bg-indigo-500/10 text-indigo-500', icon: Crib },
+ [WorkStatus.LONG_TERM_LEAVE]: { color: 'bg-violet-500/10 text-violet-500', icon: CalendarClock },
  [WorkStatus.PENDING]: { color: 'bg-on-surface-variant/10 text-on-surface-variant', icon: null },
  [WorkStatus.WAITING_LIST]: { color: 'bg-amber-500/10 text-amber-500', icon: null, emoji: '⌛' },
  [WorkStatus.OFFICE_NO_DESK]: { color: 'bg-primary/10 text-primary', icon: Headset },

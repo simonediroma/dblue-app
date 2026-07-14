@@ -34,6 +34,7 @@ function mapBackendStatus(s: string): WorkStatus {
     leave: WorkStatus.LEAVE,
     sick: WorkStatus.SICK,
     parental_leave: WorkStatus.PARENTAL_LEAVE,
+    long_term_leave: WorkStatus.LONG_TERM_LEAVE,
     pending: WorkStatus.PENDING,
     waiting_list: WorkStatus.WAITING_LIST,
     office_no_desk: WorkStatus.OFFICE_NO_DESK,
@@ -63,7 +64,8 @@ import {
  Trash2,
  ArrowRight,
  Heart as Crib,
- AlertTriangle
+ AlertTriangle,
+ CalendarClock
 } from 'lucide-react';
 
 
@@ -188,6 +190,8 @@ export default function DailyDetail({
  role = 'On a sick leave';
  } else if (item.status === 'parental_leave') {
  role = 'Parental Leave';
+ } else if (item.status === 'long_term_leave') {
+ role = 'Long-Term Leave';
  } else if (item.status === 'waiting_list') {
  role = 'Waiting List';
  }
@@ -307,6 +311,7 @@ export default function DailyDetail({
  [WorkStatus.LEAVE]: { label: 'On Leave (Vacation)', icon: Palmtree, color: 'bg-fuchsia-500/10 text-fuchsia-500', emoji: '🏖️' },
  [WorkStatus.SICK]: { label: 'On a sick leave', icon: Thermometer, color: 'bg-red-500/10 text-red-500', emoji: '🤒' },
  [WorkStatus.PARENTAL_LEAVE]: { label: 'Parental Leave', icon: Crib, color: 'bg-indigo-500/10 text-indigo-500', emoji: '👶' },
+ [WorkStatus.LONG_TERM_LEAVE]: { label: 'Long-Term Leave', icon: CalendarClock, color: 'bg-violet-500/10 text-violet-500', emoji: '🗓️' },
  [WorkStatus.PENDING]: { label: 'Pending', icon: null, color: 'bg-surface-container text-on-surface-variant', emoji: '⏳' },
  [WorkStatus.WAITING_LIST]: { label: 'Waiting List', icon: null, color: 'bg-amber-500/10 text-amber-500', emoji: '⏳' },
  [WorkStatus.OFFICE_NO_DESK]: { label: 'Office (No Desk)', icon: Headset, color: 'bg-primary/10 text-primary', emoji: '🏢' },
@@ -953,8 +958,9 @@ export default function DailyDetail({
  }
  onClose();
  } else {
- const isParental = extendedSickType === 'MATERNITY';
- const finalStatus = isParental ? WorkStatus.PARENTAL_LEAVE : day.status;
+ const finalStatus = extendedSickType === 'MATERNITY' ? WorkStatus.PARENTAL_LEAVE
+ : extendedSickType === 'LONG_TERM' ? WorkStatus.LONG_TERM_LEAVE
+ : day.status;
 
  if (onUpdateBulkStatus) {
  onUpdateBulkStatus(extendedDates.map(date => ({
@@ -1772,11 +1778,12 @@ export default function DailyDetail({
  {c.initials}
  </div>
  {(c.status || c.showQuestionMark || c.remind) && (
- <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 sm:w-5 sm:h-5 rounded-full flex items-center justify-center border border-surface-container-lowest shadow-sm z-10 ${ status === WorkStatus.REMOTE ? 'bg-green-500 text-white' : status === WorkStatus.LEAVE ? 'bg-fuchsia-500 text-white' : status === WorkStatus.SICK ? 'bg-red-500 text-white' : status === WorkStatus.PARENTAL_LEAVE ? 'bg-indigo-500 text-white' : status === WorkStatus.MISSION ? 'bg-orange-500 text-white' : 'bg-surface-container text-on-surface-variant/40' }`}>
+ <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 sm:w-5 sm:h-5 rounded-full flex items-center justify-center border border-surface-container-lowest shadow-sm z-10 ${ status === WorkStatus.REMOTE ? 'bg-green-500 text-white' : status === WorkStatus.LEAVE ? 'bg-fuchsia-500 text-white' : status === WorkStatus.SICK ? 'bg-red-500 text-white' : status === WorkStatus.PARENTAL_LEAVE ? 'bg-indigo-500 text-white' : status === WorkStatus.LONG_TERM_LEAVE ? 'bg-violet-500 text-white' : status === WorkStatus.MISSION ? 'bg-orange-500 text-white' : 'bg-surface-container text-on-surface-variant/40' }`}>
  {status === WorkStatus.REMOTE && <Home className={`w-1.5 sm:w-2.5 h-1.5 sm:h-2.5`}/>}
  {status === WorkStatus.LEAVE && <Palmtree className="w-1.5 sm:w-2.5 h-1.5 sm:h-2.5"/>}
  {status === WorkStatus.SICK && <Thermometer className="w-1.5 sm:w-2.5 h-1.5 sm:h-2.5"/>}
  {status === WorkStatus.PARENTAL_LEAVE && <Crib className="w-1.5 sm:w-2.5 h-1.5 sm:h-2.5"/>}
+ {status === WorkStatus.LONG_TERM_LEAVE && <CalendarClock className="w-1.5 sm:w-2.5 h-1.5 sm:h-2.5"/>}
  {status === WorkStatus.MISSION && <Plane className="w-1.5 sm:w-2.5 h-1.5 sm:h-2.5"/>}
  {(c.showQuestionMark || (c.remind && !c.status)) && <span className="text-[8px] sm:text-[10px] font-bold">?</span>}
  </div>
@@ -1880,14 +1887,16 @@ function ColleagueItem({ name, role, status, initials, color, workspaceIcon, has
  status === WorkStatus.LEAVE ? Palmtree : 
  status === WorkStatus.SICK ? Thermometer : 
  status === WorkStatus.PARENTAL_LEAVE ? Crib :
+ status === WorkStatus.LONG_TERM_LEAVE ? CalendarClock :
  status === WorkStatus.MISSION ? Plane :
  Building2
  ) : null;
- const colorClass = 
- status === WorkStatus.REMOTE ? 'bg-green-500/10 text-green-500' : 
- status === WorkStatus.LEAVE ? 'bg-fuchsia-500/10 text-fuchsia-500' : 
- status === WorkStatus.SICK ? 'bg-red-500/10 text-red-500' : 
+ const colorClass =
+ status === WorkStatus.REMOTE ? 'bg-green-500/10 text-green-500' :
+ status === WorkStatus.LEAVE ? 'bg-fuchsia-500/10 text-fuchsia-500' :
+ status === WorkStatus.SICK ? 'bg-red-500/10 text-red-500' :
  status === WorkStatus.PARENTAL_LEAVE ? 'bg-indigo-500/10 text-indigo-500' :
+ status === WorkStatus.LONG_TERM_LEAVE ? 'bg-violet-500/10 text-violet-500' :
  status === WorkStatus.MISSION ? 'bg-orange-500/10 text-orange-500' :
  'bg-primary/10 text-primary';
 

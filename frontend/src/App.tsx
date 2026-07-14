@@ -55,6 +55,7 @@ const statusLabels: Record<string, string> = {
  [WorkStatus.LEAVE]: 'On Leave (Vacation)',
  [WorkStatus.SICK]: 'On a sick leave',
  [WorkStatus.PARENTAL_LEAVE]: 'Parental Leave',
+ [WorkStatus.LONG_TERM_LEAVE]: 'Long-Term Leave',
  [WorkStatus.WAITING_LIST]: 'Waiting List',
  [WorkStatus.OFFICE_NO_DESK]: 'Office (No Desk)',
 };
@@ -134,7 +135,7 @@ export default function App() {
  return {
  office: relevantDays.filter(d => d.status === WorkStatus.IN_OFFICE || d.status === WorkStatus.OFFICE_NO_DESK).length,
  remote: relevantDays.filter(d => d.status === WorkStatus.REMOTE).length,
- leave: relevantDays.filter(d => d.status === WorkStatus.LEAVE || d.status === WorkStatus.PARENTAL_LEAVE).length,
+ leave: relevantDays.filter(d => d.status === WorkStatus.LEAVE || d.status === WorkStatus.PARENTAL_LEAVE || d.status === WorkStatus.LONG_TERM_LEAVE).length,
  mission: relevantDays.filter(d => d.status === WorkStatus.MISSION).length,
  sick: relevantDays.filter(d => d.status === WorkStatus.SICK).length,
  };

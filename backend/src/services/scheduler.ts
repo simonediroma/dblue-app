@@ -6,7 +6,7 @@ async function autoConfirmStatuses(): Promise<void> {
   const result = await WorkingStatus.updateMany(
     {
       date: today,
-      status: { $in: ['mission', 'leave', 'sick', 'parental_leave'] },
+      status: { $in: ['mission', 'leave', 'sick', 'parental_leave', 'long_term_leave'] },
       isConfirmed: false,
     },
     { $set: { isConfirmed: true, confirmedAt: new Date() } }

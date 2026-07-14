@@ -9,6 +9,7 @@ const STATUS_MAP: Record<string, WorkStatus> = {
   leave: WorkStatus.LEAVE,
   sick: WorkStatus.SICK,
   parental_leave: WorkStatus.PARENTAL_LEAVE,
+  long_term_leave: WorkStatus.LONG_TERM_LEAVE,
   pending: WorkStatus.PENDING,
   waiting_list: WorkStatus.WAITING_LIST,
   office_no_desk: WorkStatus.OFFICE_NO_DESK,

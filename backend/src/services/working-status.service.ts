@@ -42,9 +42,9 @@ function getWorkingDaysOfMonth(month: string): string[] {
 const OFFICE_STATUSES: WorkingStatusValue[] = ['in_office', 'office_no_desk'];
 
 // retrofit exists to backfill payroll-relevant absence categories on a past day
-// (Mission/Leave/Sick/Parental Leave) — it must not be usable to retroactively
-// claim attendance-location statuses that grant real capacity/desk usage.
-const RETROFIT_ALLOWED_STATUSES: WorkingStatusValue[] = ['mission', 'leave', 'sick', 'parental_leave'];
+// (Mission/Leave/Sick/Parental Leave/Long-term Leave) — it must not be usable to
+// retroactively claim attendance-location statuses that grant real capacity/desk usage.
+const RETROFIT_ALLOWED_STATUSES: WorkingStatusValue[] = ['mission', 'leave', 'sick', 'parental_leave', 'long_term_leave'];
 
 // Colleague avatar derivation — MUST stay in sync with the frontend's own derivation in
 // frontend/src/hooks/useColleagues.ts (mapUserToColleague): same palette, same hash, same
