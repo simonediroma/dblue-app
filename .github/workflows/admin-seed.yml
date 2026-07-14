@@ -1,0 +1,60 @@
+name: Admin Seed
+
+# One-off manual trigger to (re)populate the shared Railway dev DB via
+# POST /admin/seed (owner-only, gated by ENABLE_DEV_LOGIN). Not part of the
+# regular test battery — run manually when the seed data itself needs to
+# change (e.g. DEFAULT_ROOMS updates). This workflow's own runner has network
+# access to Railway; local dev sandboxes used for code changes may not.
+
+on:
+  workflow_dispatch:
+    inputs:
+      fresh:
+        description: 'Wipe and fully regenerate WorkingStatus/Room/User (true) vs. upsert existing docs only (false)'
+        required: true
+        type: boolean
+        default: false
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    steps:
+      # RAILWAY_BACKEND_URL has a trailing slash (copied from Railway's own env var
+      # config) — same normalization as the other workflows.
+      - name: Normalize API_BASE_URL
+        run: echo "API_BASE_URL=$(echo '${{ secrets.RAILWAY_BACKEND_URL }}' | sed 's:/*$::')" >> "$GITHUB_ENV"
+
+      - name: Log in as owner
+        env:
+          DEV_LOGIN_USER: ${{ secrets.DEV_LOGIN_USER }}
+          DEV_LOGIN_PASS: ${{ secrets.DEV_LOGIN_PASS }}
+        run: |
+          RESPONSE=$(curl -sS -X POST "$API_BASE_URL/auth/dev-login" \
+            -H "Content-Type: application/json" \
+            -d "{\"username\":\"$DEV_LOGIN_USER\",\"password\":\"$DEV_LOGIN_PASS\"}")
+          TOKEN=$(echo "$RESPONSE" | jq -r '.token // empty')
+          if [ -z "$TOKEN" ]; then
+            echo "::error::Login failed: $RESPONSE"
+            exit 1
+          fi
+          echo "::add-mask::$TOKEN"
+          echo "TOKEN=$TOKEN" >> "$GITHUB_ENV"
+
+      - name: Call POST /admin/seed
+        run: |
+          RESPONSE=$(curl -sS -w '\n%{http_code}' -X POST "$API_BASE_URL/admin/seed" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $TOKEN" \
+            -d "{\"fresh\": ${{ inputs.fresh }}}")
+          STATUS=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          echo "$BODY" | jq . 2>/dev/null || echo "$BODY"
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::Seed failed with status $STATUS"
+            exit 1
+          fi
+
+      - name: Verify room capacities
+        run: |
+          RESPONSE=$(curl -sS "$API_BASE_URL/rooms" -H "Authorization: Bearer $TOKEN")
+          echo "$RESPONSE" | jq .
