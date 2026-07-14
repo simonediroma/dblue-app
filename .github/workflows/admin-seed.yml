@@ -14,6 +14,11 @@ on:
         required: true
         type: boolean
         default: false
+      dry_run:
+        description: 'Only log in and dump current state — skip the POST /admin/seed call entirely'
+        required: true
+        type: boolean
+        default: false
 
 jobs:
   seed:
@@ -40,7 +45,21 @@ jobs:
           echo "::add-mask::$TOKEN"
           echo "TOKEN=$TOKEN" >> "$GITHUB_ENV"
 
+      # Read-only — confirms the backend is actually healthy (not mid-restart/mid a
+      # still-running previous seed) and shows current occupancy for today before we
+      # commit to another long mutating call. Two concurrent /admin/seed(fresh:true)
+      # calls earlier corrupted today's occupancy count (it kept growing on its own —
+      # 22 -> 30 -> 37 — because the per-user delete-then-insert isn't atomic against
+      # a second overlapping run). Checking here lets us bail before making it worse.
+      - name: Check current state (no mutation)
+        run: |
+          TODAY=$(date -u +%Y-%m-%d)
+          MONTH=$(date -u +%Y-%m)
+          RESPONSE=$(curl -sS "$API_BASE_URL/presence?month=$MONTH" -H "Authorization: Bearer $TOKEN")
+          echo "$RESPONSE" | jq --arg today "$TODAY" '.[] | select(.date == $today)' 2>/dev/null || echo "$RESPONSE"
+
       - name: Call POST /admin/seed
+        if: inputs.dry_run != true
         run: |
           RESPONSE=$(curl -sS -w '\n%{http_code}' -X POST "$API_BASE_URL/admin/seed" \
             -H "Content-Type: application/json" \
