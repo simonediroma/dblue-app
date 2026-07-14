@@ -79,6 +79,8 @@ export async function getStatusForUser(
     officeByDate.set(ws.date, arr);
   }
 
+  const todayStr = getTodayStr();
+
   return workingDays.map((date) => {
     const existing = userStatusByDate.get(date);
     const officeEntries = officeByDate.get(date) ?? [];
@@ -108,6 +110,10 @@ export async function getStatusForUser(
 
     return {
       ...base,
+      // Never persisted, always derived: the "Retrofit Working Status" flow in the
+      // frontend gates on this flag, which previously only ever existed in seed/mock
+      // data — making retrofit unreachable for real days.
+      isPast: date < todayStr,
       bookedCount,
       totalCapacity,
       colleagueAvatars,

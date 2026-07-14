@@ -302,8 +302,9 @@ import {
   loginAsEmployee as csvLoginAsEmployee,
   loginAsDirectorRole as csvLoginAsDirectorRole,
 } from '../fixtures/auth';
+import { getAuthHeaders } from '../fixtures/auth';
 import { prevMonthTestDate } from '../fixtures/dates';
-import { simulateConfirm } from '../fixtures/testAdmin';
+import { simulateConfirm, resetStatus } from '../fixtures/testAdmin';
 import {
   openDayCard as csvOpenDayCard,
   goToPlanningStep as csvGoToPlanningStep,
@@ -340,53 +341,53 @@ test.describe('CSV coverage — Retrofitting', () => {
     await csvLoginAsOwner(page);
   });
 
-  // [H-34]->[H-39] Retrofit entry point is unreachable for any real (non-seed) day:
-  // DailyDetail.tsx's "Retrofit Working Status" button only renders when `day.isPast`
-  // is true, but that field is never populated for real data — it's absent from the
-  // GET /presence response (backend/src/routes/presence.routes.ts,
-  // backend/src/services/working-status.service.ts), never derived client-side
-  // (frontend/src/services/api.ts, frontend/src/hooks/usePresence.ts), and only ever
-  // set on seed/mock records (backend/src/services/seed.service.ts, App.tsx's
-  // hardcoded INITIAL_DAYS) — frontend/src/types.ts even declares it optional. So for
-  // a real past day, `goToPlanningStep` finds neither the retrofit button nor the
-  // pencil-edit fallback (which requires !day.isPast to render in the first place)
-  // and times out. Marked fixme rather than a misleading "passing" test; revisit once
-  // isPast is actually populated for real presence data.
-  test.fixme('[H-34] retrofit a past day — On a Mission', async ({ page }) => {
+  // [H-34]->[H-39] were fixme'd while `day.isPast` was never populated for real data
+  // (making the "Retrofit Working Status" entry point unreachable) — now derived
+  // backend-side in getStatusForUser() (working-status.service.ts). Two catch-ups these
+  // tests missed while parked as fixme: auth headers on raw page.request calls (the JWT
+  // lives in localStorage, which page.request doesn't inherit — same fix as PR #76
+  // everywhere else), and a resetStatus() per test (dates are deterministic per calendar
+  // day, and the nightly cron confirms past days — a leftover confirmed record would make
+  // retrofitStatus 409 on the next same-day run).
+  test('[H-34] retrofit a past day — On a Mission', async ({ page }) => {
     const date = prevMonthTestDate('H-34');
+    await resetStatus('dev@dblue.it', date);
     await csvRetrofitStatus(page, date, 'MISSION');
 
-    const res = await page.request.get(`${CSV_API_BASE}/presence?month=${date.slice(0, 7)}`);
+    const res = await page.request.get(`${CSV_API_BASE}/presence?month=${date.slice(0, 7)}`, { headers: await getAuthHeaders(page) });
     const days = (await res.json()) as Array<{ date: string; status: string; isRetrofit: boolean }>;
     const entry = days.find((d) => d.date === date);
     expect(entry?.status).toBe('mission');
     expect(entry?.isRetrofit).toBe(true);
   });
 
-  test.fixme('[H-35] retrofit a past day — On Leave', async ({ page }) => {
+  test('[H-35] retrofit a past day — On Leave', async ({ page }) => {
     const date = prevMonthTestDate('H-35');
+    await resetStatus('dev@dblue.it', date);
     await csvRetrofitStatus(page, date, 'LEAVE');
 
-    const res = await page.request.get(`${CSV_API_BASE}/presence?month=${date.slice(0, 7)}`);
+    const res = await page.request.get(`${CSV_API_BASE}/presence?month=${date.slice(0, 7)}`, { headers: await getAuthHeaders(page) });
     const days = (await res.json()) as Array<{ date: string; status: string; isRetrofit: boolean }>;
     const entry = days.find((d) => d.date === date);
     expect(entry?.status).toBe('leave');
     expect(entry?.isRetrofit).toBe(true);
   });
 
-  test.fixme('[H-36] retrofit a past day — On Sick Leave', async ({ page }) => {
+  test('[H-36] retrofit a past day — On Sick Leave', async ({ page }) => {
     const date = prevMonthTestDate('H-36');
+    await resetStatus('dev@dblue.it', date);
     await csvRetrofitStatus(page, date, 'SICK');
 
-    const res = await page.request.get(`${CSV_API_BASE}/presence?month=${date.slice(0, 7)}`);
+    const res = await page.request.get(`${CSV_API_BASE}/presence?month=${date.slice(0, 7)}`, { headers: await getAuthHeaders(page) });
     const days = (await res.json()) as Array<{ date: string; status: string; isRetrofit: boolean }>;
     const entry = days.find((d) => d.date === date);
     expect(entry?.status).toBe('sick');
     expect(entry?.isRetrofit).toBe(true);
   });
 
-  test.fixme('[H-37] retrofit — add Permesso hours to a past day', async ({ page }) => {
+  test('[H-37] retrofit — add Permesso hours to a past day', async ({ page }) => {
     const date = prevMonthTestDate('H-37');
+    await resetStatus('dev@dblue.it', date);
     await csvNavigateToPrevMonth(page);
     await csvOpenDayCard(page, date);
     await csvGoToPlanningStep(page);
@@ -395,14 +396,15 @@ test.describe('CSV coverage — Retrofitting', () => {
     await page.locator('[data-testid="offtime-morning"]').click();
     await page.waitForTimeout(500);
 
-    const res = await page.request.get(`${CSV_API_BASE}/presence?month=${date.slice(0, 7)}`);
+    const res = await page.request.get(`${CSV_API_BASE}/presence?month=${date.slice(0, 7)}`, { headers: await getAuthHeaders(page) });
     const days = (await res.json()) as Array<{ date: string; offTime?: { type: string } }>;
     const entry = days.find((d) => d.date === date);
     expect(entry?.offTime?.type).toBe('morning');
   });
 
-  test.fixme('[H-38] retrofit — non-payroll statuses (In Office / Remote) are blocked', async ({ page }) => {
+  test('[H-38] retrofit — non-payroll statuses (In Office / Remote) are blocked', async ({ page }) => {
     const date = prevMonthTestDate('H-38');
+    await resetStatus('dev@dblue.it', date);
     await csvNavigateToPrevMonth(page);
     await csvOpenDayCard(page, date);
     await csvGoToPlanningStep(page);
@@ -415,18 +417,20 @@ test.describe('CSV coverage — Retrofitting', () => {
     // Backend: a direct retrofit call for a non-payroll status must be rejected.
     const res = await page.request.post(`${CSV_API_BASE}/presence/${date}/retrofit`, {
       data: { status: 'in_office' },
+      headers: await getAuthHeaders(page),
     });
     expect(res.status()).toBe(400);
   });
 
-  test.fixme('[H-39] retrofit — visible to other users (colleague and Director/Owner)', async ({ page, browser }) => {
+  test('[H-39] retrofit — visible to other users (colleague and Director/Owner)', async ({ page, browser }) => {
     const date = prevMonthTestDate('H-39');
+    await resetStatus('mario.rossi@dblue.it', date);
 
     const employeeContext = await browser.newContext();
     const employeePage = await employeeContext.newPage();
     await csvLoginAsEmployee(employeePage);
     await csvRetrofitStatus(employeePage, date, 'MISSION');
-    const meRes = await employeePage.request.get(`${CSV_API_BASE}/auth/me`);
+    const meRes = await employeePage.request.get(`${CSV_API_BASE}/auth/me`, { headers: await getAuthHeaders(employeePage) });
     const me = (await meRes.json()) as { id: string };
     await employeeContext.close();
 
@@ -436,7 +440,7 @@ test.describe('CSV coverage — Retrofitting', () => {
 
     await csvLoginAsDirectorRole(page);
     const month = date.slice(0, 7);
-    const statsRes = await page.request.get(`${CSV_API_BASE}/admin/stats/${me.id}/monthly?month=${month}`);
+    const statsRes = await page.request.get(`${CSV_API_BASE}/admin/stats/${me.id}/monthly?month=${month}`, { headers: await getAuthHeaders(page) });
     expect(statsRes.status()).toBe(200);
     const stats = (await statsRes.json()) as { distribution: { mission: number } };
     expect(stats.distribution.mission).toBeGreaterThanOrEqual(1);
