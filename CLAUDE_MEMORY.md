@@ -2,6 +2,12 @@
 
 ## Stato Corrente
 
+**Sessione notturna autonoma (utente è andato a dormire, "fixa gli altri bug")**: procedo in autonomia sulla lista bug rimanente (B-16, B-02, B-12, B-14, B-17, B-10, B-15, B-04, B-05, in ordine di complessità/rischio crescente), una PR per bug, merge immediato dopo validazione (`tsc`/`playwright test --list`), verifica finale con batteria completa a fine lista. **B-08 (Lab Booking) deliberatamente SALTATO** — è una feature da costruire da zero (modello dati, endpoint, conflict resolution), non un bug fixabile, fuori scope per un giro notturno autonomo senza supervisione.
+
+**B-16 fixato**: `POST /admin/seed` in `admin.routes.ts` ora gated dietro `ENABLE_DEV_LOGIN` (stesso guard di `admin-test.routes.ts` e `/auth/dev-login`), solo su questa singola route — non sull'intero router (che ha altri endpoint legittimi in produzione: retrofit, users, stats). Verificato che non rompe il mio stesso workflow `admin-seed.yml`: `/auth/dev-login` (che uso con successo da inizio sessione) ha lo stesso guard, quindi `ENABLE_DEV_LOGIN` è già impostato su questo ambiente Railway. Validato: `tsc --noEmit` pulito sul backend.
+
+## Giro precedente (contesto)
+
 **Branch:** `claude/fix-onboarding-setoninsert-scope`. **PR #130 + PR #131 (fix onboardingCompleted, con follow-up) ENTRAMBE MERGIATE, CONFERMATE dal run finale**: 42 passed, 8 failed, 2 skipped (da 35/15/2 iniziale). **Il cluster storico di 12 test in timeout muto (mai spiegato in ~15 giri precedenti) è definitivamente CHIUSO — zero occorrenze di `timedOut` in tutta la run.** H-01/H-02 (regrediti temporaneamente dal fix di PR #130) confermati di nuovo `passed` dopo il fix di scope in PR #131 (`$setOnInsert` invece di `$set`). **Risultato più importante della sessione**: per la prima volta, OGNI singolo fallimento residuo (8/52) ha una causa reale e diagnosticabile — zero hang misteriosi in tutta la batteria.
 
 **8 fallimenti residui — indagati uno per uno, 3 fixati (test-side), 1 documentato come bug applicativo reale non fixato**:

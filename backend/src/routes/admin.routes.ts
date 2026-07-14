@@ -151,9 +151,20 @@ router.get(
   }
 );
 
-// POST /admin/seed — Owner only, popola il DB con dati di test
+// POST /admin/seed — Owner only, popola il DB con dati di test. fresh:true cancella
+// User/Room/WorkingStatus prima di ripopolare — gated dietro ENABLE_DEV_LOGIN come
+// gli endpoint di admin-test.routes.ts, così un token owner compromesso (o un env
+// mal configurato) non può cancellare dati reali in un ambiente di produzione dove
+// quel flag non è impostato.
 router.post(
   '/seed',
+  (_req: Request, res: Response, next): void => {
+    if (!process.env.ENABLE_DEV_LOGIN) {
+      res.status(404).end();
+      return;
+    }
+    next();
+  },
   requireRole('owner'),
   async (req: Request, res: Response): Promise<void> => {
     const { fresh } = req.body as { fresh?: boolean };
