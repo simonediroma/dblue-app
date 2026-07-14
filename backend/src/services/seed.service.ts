@@ -3,6 +3,7 @@ import { User } from '../models/user.model';
 import { Room, seedDefaultRooms } from '../models/room.model';
 import { WorkingStatus, WorkingStatusValue } from '../models/working-status.model';
 import { getTotalCapacity } from './capacity.service';
+import { DEV_ACCOUNTS } from '../routes/auth.routes';
 
 // ─── Seeded pseudo-random (riproducibile) ────────────────────────────────────
 
@@ -233,6 +234,21 @@ export async function runSeed(fresh = false): Promise<SeedSummary> {
     meData,
     { upsert: true, new: true, setDefaultsOnInsert: true }
   );
+
+  // The other 5 fixed dev-login accounts (mario.rossi, sara.ferrari, etc.) are
+  // normally upserted lazily on first /auth/dev-login, not by this function — after
+  // a fresh:true reseed (which wipes every User), that leaves them nonexistent until
+  // something logs in as them. Create them here too, same upsert shape dev-login
+  // itself uses, so they're immediately usable right after a reseed instead of only
+  // after their first login.
+  for (const account of DEV_ACCOUNTS) {
+    if (account.email === meData.email) continue;
+    await User.findOneAndUpdate(
+      { email: account.email },
+      { $setOnInsert: { googleId: `dev-login:${account.email}`, email: account.email, name: account.name }, $set: { role: account.role } },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+  }
 
   const colleagueUsers = [];
   for (let i = 0; i < COLLEAGUES.length; i++) {

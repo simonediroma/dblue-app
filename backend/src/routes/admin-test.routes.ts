@@ -178,7 +178,12 @@ router.post('/reset-status', async (req: Request, res: Response): Promise<void> 
   try {
     const user = await User.findOne({ email }).select('_id').lean();
     if (!user) {
-      res.status(404).json({ error: 'Utente non trovato' });
+      // Dev-login accounts are upserted lazily on first login (auth.routes.ts) —
+      // right after a fresh reseed (runSeed(fresh:true) wipes all Users), one of
+      // these 5 fixed accounts may not exist yet if no test has logged in as it
+      // in this run. There's trivially no WorkingStatus to delete for a user that
+      // doesn't exist, so this is a no-op success, not an error.
+      res.json({ ok: true, deletedCount: 0 });
       return;
     }
     const result = await WorkingStatus.deleteOne({ userId: user._id, date });
