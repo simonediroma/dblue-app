@@ -2,7 +2,7 @@
 
 ## Infrastructure context — read this first
 
-This application is part of **Deep Blue's internal tool infrastructure**. It operates under the `*.dblue.it` subdomain and integrates with a shared backend service called `dblue-office` (running at `tool.dblue.it`).
+This application is part of **Deep Blue's internal tool infrastructure**. It operates under the `*.dblue.it` subdomain and integrates with a shared backend service called `dblue-office` (running at `tools.dblue.it`).
 
 **Unlike the standard Deep Blue template, this application has its own login screen.** Users do not go to dblue-office to log in. Instead:
 
@@ -10,9 +10,11 @@ This application is part of **Deep Blue's internal tool infrastructure**. It ope
 2. **External users** (non-@dblue.it) sign in via **email + password**. Their accounts are created by an admin in dblue-office with `login_method: "email"`, and they receive a password reset email to set their password.
 
 **What the backend does during login:**
-- For Google: the frontend sends a GIS ID token → backend verifies it with `google-auth-library` (checks `hd === "dblue.it"`) → proxies to `dblue-office POST /auth/google/signin` with the verified email → receives a dblue-office JWT → sets it as the app's own cookie.
-- For email/password: backend proxies directly to `dblue-office POST /auth/email/signin` → receives JWT → sets cookie.
-- The JWT is a dblue-office JWT (signed with the shared `JWT_SECRET`). The `isLoggedIn` middleware verifies it identically to the standard template.
+- For Google: the frontend sends a GIS ID token → backend verifies it with `google-auth-library` (checks `hd === "dblue.it"`) → proxies to `dblue-office POST /auth/google/signin` with the verified email → receives the full user profile → signs a **booking-app JWT** via `signBookingToken` (embeds profile fields, stamps `profileSyncedAt`) → sets it as an `httpOnly` cookie.
+- For email/password: backend proxies directly to `dblue-office POST /auth/email/signin` → receives full profile → same `signBookingToken` flow.
+- The cookie contains the **booking-app's own JWT**, signed with `JWT_SECRET` (must match dblue-office's `JWT_SECRET` for server-to-server `check-app-access` verification). The `isLoggedIn` middleware decodes all embedded profile fields into `req.user`.
+- `space_access` is intentionally **not** embedded in the JWT — it is fetched live via `GET /api/v1/office/users/space-access/:uid`.
+- On `GET /api/v1/auth/me`: always calls dblue-office `check-app-access` (catches deactivation immediately); re-fetches full profile once per 24 hours and re-issues the cookie; all other calls return profile from the JWT with no extra network call.
 
 **dblue-office** is still the source of truth for **user data, rooms, office closures**. This application does not manage users — it reads them via proxy routes.
 
@@ -66,11 +68,13 @@ JWT_SECRET=<same value as dblue-office>
 ### 5. dblue-office API URL
 ```
 DBLUE_OFFICE_API_URL=http://localhost:3000/api/v1   # development
-DBLUE_OFFICE_API_URL=https://tool.dblue.it/api/v1  # staging/production
+DBLUE_OFFICE_API_URL=https://tools.dblue.it/api/v1  # staging/production
 ```
 
-### 6. Brand colors and theme
-`frontend/src/styles/global.scss` defines CSS variables for the entire application's color palette (backgrounds, text, borders, brand accents, status colors) and SCSS breakpoint mixins. **This file is an example — you are expected to replace the color values with your own brand palette.** The variable names and structure should stay the same (they are referenced by SCSS modules throughout the app), but the actual color values are yours to define freely.
+### 6. Brand colors, typography, and responsive layout
+`frontend/src/styles/global.scss` defines CSS variables for the entire application's color palette (backgrounds, text, borders, brand accents, status colors) and SCSS breakpoint mixins. **This file is an example — you are expected to replace the color values, typography settings, and responsive breakpoints with your own application's design.** The variable names and structure should stay the same (they are referenced by SCSS modules throughout the app), but all visual values are yours to define freely.
+
+Responsive design targets are **laptop (min-width: 1024px) and tablet (min-width: 768px)**. Adjust the breakpoint mixins in `global.scss` to match the application's intended viewport range. The application's maximum content width and layout behaviour at each breakpoint should reflect the specific app's design, not the template defaults.
 
 ---
 
@@ -153,11 +157,16 @@ app.use("/api/v1/my-feature", myRoutes);
 import { useAuth } from "../../contexts/authContext";
 
 const { session } = useAuth();
-// session.id       — MongoDB _id from dblue-office
-// session.email    — user email
-// session.name     — user display name
-// session.role     — "user" | "admin"
-// session.tool_access — string[]
+// session.id                    — dblue-office user ID
+// session.email                 — user email
+// session.name                  — user display name
+// session.role                  — role string from dblue-office
+// session.employment_type       — e.g. "full_time"
+// session.job_title             — job title from dblue-office
+// session.mandatory_presence_days — required in-office days per month (null if not set)
+// session.tool_access           — string[] of tools this user can access
+// session.image_url             — avatar URL (nullable)
+// session.login_method          — "google" | "email"
 ```
 
 ## Frontend — making API calls
@@ -176,14 +185,17 @@ const res = await axios.get(`${API_URL}/my-feature/items`, { withCredentials: tr
 | Route | Returns | Mock data source |
 |---|---|---|
 | `GET /api/v1/office/users/list` | All employees | `backend/data/mockedUsers.ts` |
+| `GET /api/v1/office/users/space-access/:uid` | Room categories + rooms for a user | `mockedUsers.ts` + `mockedRooms.ts` + `mockedRoomCategories.ts` |
 | `GET /api/v1/office/rooms/list` | All rooms | `backend/data/mockedRooms.ts` |
 | `GET /api/v1/office/closures/list` | Office closures | `backend/data/mockedClosures.ts` |
 
-With `IS_AUTHENTICATED=true`, these routes return the mocked data automatically.
+With `IS_AUTHENTICATED=true`, these routes return the mocked data automatically. See `OFFICE_API.md` for full request/response documentation and usage notes for each route.
 
-**mockedUsers fields:** `_id, name, email, role, employment_type, job_title`
+**mockedUsers fields:** `_id, name, email, role, employment_type, job_title, space_access, image_url, status, login_method`
 
-**mockedRooms fields:** `_id, name, category, capacity, features, status`
+**mockedRooms fields:** `_id, name, category, capacity, features, status, color`
+
+**mockedRoomCategories fields:** `_id, category` (maps room category IDs to display labels)
 
 **mockedClosures fields:** `_id, motivation, start, end, range` (start/end are `YYYY-MM-DD` strings; range is the full array of dates in between)
 
@@ -283,31 +295,47 @@ Both endpoints are public (no auth required). Accounts must already exist in dbl
 ```
 booking-app/
 ├── backend/
-│   ├── app.ts                  ← entry point, route mounting
-│   ├── config/coreDb.ts        ← MongoDB connection
-│   ├── config/socketHandler.ts ← socket.io server
+│   ├── app.ts                          ← entry point, route mounting
+│   ├── cron-jobs.ts                    ← standalone cron runner (separate process)
+│   ├── config/coreDb.ts               ← MongoDB connection
+│   ├── config/socketHandler.ts        ← socket.io server
 │   ├── services/changeStream.service.ts ← MongoDB change streams
 │   ├── controllers/
-│   │   ├── authController.ts   ← DO NOT MODIFY — login proxy + session
-│   │   └── officeController.ts ← DO NOT MODIFY — users/rooms proxy
-│   ├── middlewares/user.ts     ← DO NOT MODIFY — JWT + dev bypass
+│   │   ├── authController.ts          ← DO NOT MODIFY — login proxy + session
+│   │   └── officeController.ts        ← DO NOT MODIFY — users/rooms/closures proxy
+│   ├── middlewares/user.ts            ← DO NOT MODIFY — JWT + dev bypass
 │   ├── data/
-│   │   ├── mockedUsers.ts      ← dev mock data for users
-│   │   └── mockedRooms.ts      ← dev mock data for rooms
+│   │   ├── mockedUsers.ts             ← dev mock data for users
+│   │   ├── mockedRooms.ts             ← dev mock data for rooms
+│   │   ├── mockedRoomCategories.ts    ← dev mock data for room categories
+│   │   └── mockedClosures.ts          ← dev mock data for closures
 │   ├── routes/
-│   │   ├── auth.ts             ← login, logout, me, forgot/reset password
-│   │   └── office.ts           ← users/list, rooms/list
-│   └── types/express.d.ts      ← AuthenticatedRequest type
+│   │   ├── auth.ts                    ← login, logout, me, forgot/reset password
+│   │   └── office.ts                  ← users/list, space-access, rooms/list, closures/list
+│   └── types/express.d.ts             ← AuthenticatedRequest type
 ├── frontend/
 │   ├── src/
-│   │   ├── App.tsx             ← routing (LandingProtection + Layout pattern)
-│   │   ├── main.tsx            ← GoogleOAuthProvider setup — DO NOT MODIFY
-│   │   ├── contexts/authContext.tsx  ← DO NOT MODIFY
+│   │   ├── App.tsx                    ← routing (LandingProtection + Layout pattern)
+│   │   ├── main.tsx                   ← GoogleOAuthProvider setup — DO NOT MODIFY
+│   │   ├── contexts/authContext.tsx   ← DO NOT MODIFY
 │   │   ├── pages/
-│   │   │   ├── landing/        ← Landing, ForgetPassword, ResetPassword
-│   │   │   └── home/           ← main app page — extend this
-│   │   └── styles/             ← global.scss (example color vars + mixins — customize freely), style.scss (resets)
+│   │   │   ├── landing/               ← Landing, ForgetPassword, ResetPassword
+│   │   │   └── home/                  ← main app page — extend this
+│   │   └── styles/
+│   │       ├── global.scss            ← CSS variables + breakpoints (customize for your app)
+│   │       └── style.scss             ← base resets and typography
 │   └── .env.development
-├── .env.development            ← backend dev config (GOOGLE_CLIENT_ID, JWT_SECRET, etc.)
+├── .env.development                   ← backend dev config (GOOGLE_CLIENT_ID, JWT_SECRET, etc.)
+├── AGENTS.md                          ← this file
+├── MIGRATION.md                       ← step-by-step guide for migrating an existing app to this infrastructure
+├── OFFICE_API.md                      ← dblue-office proxy route reference
 └── package.json
 ```
+
+---
+
+## Migrating an existing application
+
+If you are migrating an existing Deep Blue internal app (e.g. dblue-app) to this infrastructure, read **`MIGRATION.md`** before making any changes. It contains phase-by-phase instructions covering: project structure, authentication rewrite, user model changes, route prefix, office data integration, WebSocket → socket.io, cron job separation, and frontend updates.
+
+Reference **`OFFICE_API.md`** for the full request/response specification of all four dblue-office proxy routes.
