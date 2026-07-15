@@ -20,6 +20,10 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     video: 'on',
     trace: 'retain-on-failure',
+    // Slows every Playwright action (click, fill, ...) by this many ms — makes the
+    // recorded videos actually watchable instead of a blur of instant actions. Adds
+    // real wall-clock time to the run (52 tests, several actions each).
+    launchOptions: { slowMo: 300 },
   },
   projects: [
     {
