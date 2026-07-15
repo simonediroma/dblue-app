@@ -1,9 +1,9 @@
 import { test, expect, Page, APIRequestContext, Browser } from '@playwright/test';
 import { loginAsOwner, loginAsDirectorRole } from '../fixtures/auth';
-import { resetOnboarding, resetStatus } from '../fixtures/testAdmin';
+import { resetOnboarding, resetStatus, freeOfficeCapacity } from '../fixtures/testAdmin';
 import { futureTestDate } from '../fixtures/dates';
 import { openDayCard, goToPlanningStep, selectStatus, confirmRoom } from '../fixtures/dailyDetail';
-import { flushOfficeCapacityQueue } from '../fixtures/officeCapacityQueue';
+import { flushOfficeCapacityQueue, queuePendingRestore } from '../fixtures/officeCapacityQueue';
 
 /**
  * CSV coverage — Teammates (H-01 -> H-08)
@@ -198,6 +198,19 @@ async function setGiuliaStatus(browser: Browser, date: string, status: 'IN_OFFIC
   await openDayCard(page, date);
   await goToPlanningStep(page);
   if (status === 'IN_OFFICE') {
+    // confirmRoom(page, /./) below picks whichever room-option renders first, not a
+    // specific one — if the office is already at capacity for `date` on this shared
+    // dev environment (real bookings from other tests/accounts), the backend can
+    // silently downgrade Giulia's booking to waiting_list even though the UI still
+    // shows a clickable room-option (same race documented for
+    // installOfficeCapacityFallbackAndRetry in dailyDetail.ts). A waiting_list
+    // booking never surfaces as a colleague avatar for ANY viewer — confirmed as the
+    // cause of an intermittent H-02/H-06 failure where Giulia's avatar was missing
+    // even for the owner viewer (who can see every room, ruling out a room-visibility
+    // explanation). Free real capacity first so the booking that follows is
+    // deterministically in_office, not a coin flip on shared-environment timing.
+    const { snapshot } = await freeOfficeCapacity(date);
+    queuePendingRestore(snapshot);
     // confirmRoom() already waits for the real POST /presence response.
     await selectStatus(page, status, date);
     await confirmRoom(page, /./);
@@ -446,12 +459,17 @@ test.describe('CSV coverage — Teammates', () => {
     await page.waitForSelector('[data-testid="plan-page"]');
 
     // Giulia was untouched by the substitution — she should still surface correctly.
+    // Same fragility as H-06 (see its comment): selectFillerTeammates(1, ...) picks a
+    // real synthetic colleague whose own organic seeded status for these dates isn't
+    // controlled by this test — a raw avatar-count assertion breaks whenever that
+    // filler happens to organically land in_office on the same date. Assert Giulia
+    // specifically (initials "GB") instead of the total count.
     const officeCard = page.locator(`[data-testid="day-card"][data-date="${officeDate}"]`);
     await officeCard.scrollIntoViewIfNeeded();
-    await expect(officeCard.locator('[data-testid="daycard-teammate-avatar"]')).toHaveCount(1, { timeout: 10000 });
+    await expect(officeCard.locator('[data-testid="daycard-teammate-avatar"]').filter({ hasText: 'GB' })).toBeVisible({ timeout: 10000 });
 
     const remoteCard = page.locator(`[data-testid="day-card"][data-date="${remoteDate}"]`);
     await remoteCard.scrollIntoViewIfNeeded();
-    await expect(remoteCard.locator('[data-testid="daycard-teammate-avatar"]')).toHaveCount(0);
+    await expect(remoteCard.locator('[data-testid="daycard-teammate-avatar"]').filter({ hasText: 'GB' })).toHaveCount(0);
   });
 });
