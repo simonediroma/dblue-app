@@ -1,7 +1,8 @@
 # Migration Risks & Critical Points — Presence App → Deep Blue Infrastructure
 
 > Companion to `docs/migration-plan.md`. Read before estimating or committing to a schedule — several items here change phase order or effort in the plan.
-> Grounded in this repository's actual code and history (`CLAUDE_MEMORY.md`), not only in the two client documents, since several risks only become visible by reading the current implementation.
+> Grounded in this repository's actual code and history (`CLAUDE_MEMORY.md`), not only in the client documents, since several risks only become visible by reading the current implementation.
+> Updated after receiving `AGENTS.md` and `OFFICE_API.md` (now vendored in `docs/boooking-app-template-main/`) — several items below are new or corrected as a result; the previous revision's `OFFICE_API.md` availability risk (§2.4) is resolved and replaced.
 
 ---
 
@@ -19,6 +20,8 @@
 `MIGRATION.md` Phase 7 says to replace `websocket.service.ts` with the template's `config/socketHandler.ts` + `services/changeStream.service.ts`. But the current `websocket.service.ts` is not generic — it implements a **per-connection, role-aware capacity breakdown** (`resolveRole()`, `getVisibleRooms()`), the direct result of a real bug fix shipped in this codebase (a role-visibility issue where a director's booking in a role-restricted room wasn't correctly reflected for other roles). If the template's socket.io handler broadcasts one shared, role-blind payload per date, a verbatim copy silently reintroduces that bug.
 **Mitigation:** treat Phase 8 as "port the existing role-aware logic onto socket.io's transport", not "swap files". Verification must explicitly test two sessions with *different* roles receiving *different* breakdowns for the same date.
 
+**Additional detail from `AGENTS.md`:** the template's `changeStream.service.ts`/`watchCollection()` helper does support scoping a broadcast to a channel derived from a field on the changed document (e.g. group by room or date) — but the current role-aware logic needs a projection that varies **per viewer**, not per document field, since the same date's capacity legitimately looks different to a director than to an employee. The channel mechanism doesn't solve that by itself; the role-aware computation still needs to happen at emit time (or be recomputed client-side from a role-blind broadcast). Also note the server boot sequence itself changes: `AGENTS.md` states the app "already runs as a socket server" (`server.listen` on an explicit `http.Server`, not `app.listen` directly) — a change to `index.ts`, not only to the websocket service file.
+
 ### 2.2 The user model migration lands exactly on three already-documented app bugs
 Phase 3 (`teammates: ObjectId[] → String[]`, `dblueOfficeId`, removing `googleId`) touches the same code paths as:
 - `colleagueAvatars` sending `User.avatar` (a Google-OAuth-only field, always empty for dev accounts) instead of `{initials, color}` — teammate avatars never render.
@@ -32,9 +35,25 @@ None of these are in either client document; they were found through this projec
 Today, capacity lives on the local `Room` model and several capacity/waiting-list behaviours have been debugged extensively in this codebase (per-room vs. aggregate capacity caps, synthetic seed data overshooting real capacity, waiting-list promotion races). Phase 5 moves capacity to `GET /api/v1/office/users/space-access/:uid`'s `roomlist`. If the semantics differ even slightly (e.g. whether a room's capacity includes reserved/blocked seats, whether inactive rooms are excluded, how role-restricted rooms are represented), the waiting-list and capacity-gate logic — already fragile enough to have needed multiple fix rounds — can silently misbehave again.
 **Mitigation:** do not assume `roomlist.capacity` means the same thing as the current `Room.capacity` — verify against `OFFICE_API.md` and a real staging response before wiring `isCapacityAvailable()`/`upsertStatus()` to it. Add a focused test for the exact scenario that caused the original per-room capacity bug (aggregate total capacity looking fine while a single room is oversubscribed).
 
-### 2.4 `OFFICE_API.md` is referenced but not in hand
-Both client documents point to `OFFICE_API.md` for the four proxy routes' request/response shapes. It is **not** among the files vendored into `docs/boooking-app-template-main/` in this repo (only `AGENTS.md` is present). Phases 5 and 6 of the plan cannot be implemented correctly without it — guessing the shape risks a rework once the real document arrives.
-**Mitigation:** treat this as a Phase 0 blocker, not a "nice to have before Phase 5" — see `docs/migration-plan.md` §5.
+### 2.4 `roomlist`'s documented example is missing the one field it tells you to use
+`OFFICE_API.md` instructs: *"sum the `capacity` of all rooms in `roomlist`"* to derive total office capacity — but the example JSON response for `/users/space-access/:uid` shows `roomlist` entries as `{id, name, space, color}`, with no `capacity` key. The sibling `/rooms/list` endpoint's example *does* include `capacity` (and `features`, `status`) for what looks like the same kind of room object. Most likely the `space-access` example is simply incomplete and the real response includes `capacity` too — but Phase 6 (capacity fallback fix) must not be built on that assumption without checking one real response first.
+**Mitigation:** request one real (or realistic staging) response for `/users/space-access/:uid` before writing the capacity-summing code in Phase 6.
+
+### 2.4b `/users/list`'s documented response doesn't include `space_access`, despite `AGENTS.md`'s mock field list mentioning it
+`AGENTS.md` lists `space_access` among "mockedUsers fields", but `OFFICE_API.md`'s actual `/users/list` response sample does not include it (only `_id, name, email, role, employment_type, job_title, image_url, login_method, status`). Room/space access for a given user is obtained separately via `/users/space-access/:uid`. If the teammate picker or any per-teammate presence UI is written assuming `space_access` arrives inline with the employee list, it will silently be `undefined`.
+**Mitigation:** always fetch room access per-user via the dedicated endpoint; do not assume it rides along with `/users/list`.
+
+### 2.4c Room references change from name-keyed to ID-keyed — a wider ripple than a data-source swap
+`OFFICE_API.md` is explicit that bookings should record the dblue-office room **ID** from `roomlist`, not a name. Today `WorkingStatus.room` is a bare string storing the room **name** (`"Blue Room"`, etc.), and this repository's own bug history shows several places compare by that name directly: `DailyDetail.tsx`'s `isSelectedRoom` (`room.name === day.room`) and `isRoomFull`, and the RBAC server-side room-visibility check. Every one of these needs to move from string-equality-on-name to equality-on-dblue-office-ID — not just "fetch rooms from a new source," a change in what value is stored and compared throughout the codebase. If only some sites are updated, rooms will appear to book correctly in one view and show as unselected/mismatched in another.
+**Mitigation:** grep for every place `.room`/`room.name`/`day.room` is compared, not just the four documented hardcoded values, when implementing Phase 5. Treat it as a rename-with-semantic-change, not a rename.
+
+### 2.4d The auth JWT is booking-app-signed, embedding profile data — not a forwarded dblue-office token
+`AGENTS.md` clarifies a detail neither the client discussion document nor `MIGRATION.md` states explicitly: on login, the backend calls `signBookingToken` to sign its **own** JWT (embedding the profile fields dblue-office returned, plus `profileSyncedAt`), rather than simply relaying dblue-office's token. This still requires the shared `JWT_SECRET` (for dblue-office's `check-app-access` server-to-server check to work), but if an implementation instead tries to literally store/forward dblue-office's JWT unmodified, the profile-embedding and 24-hour re-sync behaviour (`GET /api/v1/auth/me`) won't work as documented, and any field the app itself relies on (e.g. `mandatory_presence_days`) may go stale between logins instead of refreshing on the documented cadence.
+**Mitigation:** implement Phase 4 exactly per `AGENTS.md`'s `signBookingToken`/`profileSyncedAt`/24h-resync description, not per a literal reading of the sequence diagram's "httpOnly JWT cookie" label alone.
+
+### 2.4e Node 22 and Vite 8 are stated as fixed constraints, not just "recommended updates"
+Neither the client discussion document nor `MIGRATION.md` mentions runtime/build-tool versions — but `AGENTS.md`'s technology-constraints table pins **Node 22** (current `backend/Dockerfile` uses `node:20-alpine`) and **Vite 8** (current `frontend/package.json` pins `^6.2.0`, a two-major-version jump). These are easy to miss because they don't appear in the two documents this plan was originally built from.
+**Mitigation:** budget an explicit compatibility pass for the Vite bump (config format, plugin versions) rather than treating it as a version-number edit; confirm the deployment container actually uses Node 22 at runtime, not just in `package.json engines`.
 
 ### 2.5 Auth cutover invalidates all existing sessions and, if data isn't mapped, all existing local records
 Moving from a locally-issued JWT (keyed on the local MongoDB `_id`) to a dblue-office-issued JWT tied to `dblueOfficeId` means no existing token or local user record carries over automatically. Anyone testing against a staging environment that already has dev/seed data will see everyone "logged out" and, on next login, get **new** local records unless `dblueOfficeId` is explicitly backfilled for existing users.
@@ -83,7 +102,8 @@ Phase 12 is explicitly optional and the client document itself calls it "the mos
 | `fetch` → axios | Low | Isolated to `services/api.ts` and call sites |
 | Route prefix rename | Low, but easy to miss a spot | Purely mechanical; verify with a full grep pass, not sampling |
 | Accessibility: `<div>` → `<button>` | Medium | Changes DOM structure that current e2e selectors and CSS may target directly; batch with Phase 10 (e2e rewrite) rather than doing it independently, to avoid touching test selectors twice |
-| RBAC granularity (5 roles today) | Medium | Confirm dblue-office's role/`tool_access` model can actually express all 5 current roles (`employee`, `lab_responsible`, `admin_member`, `director`, `owner`) before assuming a 1:1 mapping exists |
+| RBAC granularity (5 roles today) | **Resolved, keep in mind** | Confirmed by the client discussion document (§5d): the 5-role RBAC stays app-managed, read from the local User record, not from dblue-office's `session.role`/`tool_access`. `AGENTS.md`'s generic template convention (role/tool_access sourced from dblue-office) does **not** apply here unless the client explicitly changes that instruction — don't let the generic template docs override the app-specific one on this point. |
+| Password reset flow (email/password users) | Low, now fully specified | `AGENTS.md` gives exact routes (`POST /forgot-password`, `PUT /reset-password`) and pages — straightforward copy from the template, no design work needed |
 
 ---
 
