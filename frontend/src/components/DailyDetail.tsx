@@ -425,12 +425,12 @@ export default function DailyDetail({
 
  if (step === 'PLANNING') {
  return (
- <div data-testid="daily-detail" className="fixed inset-0 bg-surface z-[110] flex flex-col overflow-y-auto pb-10 font-sans">
+ <div data-testid="daily-detail" role="dialog" aria-modal="true" aria-label={day.isPast ? "Retrofit working status" : "Plan working status"} className="fixed inset-0 bg-surface z-[110] flex flex-col overflow-y-auto pb-10 font-sans">
  <ModalHeader title={day.isPast ? "retrofit" : "planning"}/>
 
  <main className="pt-24 px-6 max-w-xl mx-auto w-full">
  <div className="flex items-center justify-between mb-8">
- <button onClick={() => onNavigate('prev')}
+ <button onClick={() => onNavigate('prev')} aria-label="Previous day"
  className="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container-lowest border border-outline-variant/20 shadow-sm hover:bg-surface-container-low transition-colors"
  >
  <ChevronLeft className="w-5 h-5 text-on-surface"/>
@@ -438,7 +438,7 @@ export default function DailyDetail({
  <div className="font-headline font-bold text-lg text-on-surface">
  {day.dayName}, {dayNumDisplay} {displayMonth}
  </div>
- <button onClick={() => onNavigate('next')}
+ <button onClick={() => onNavigate('next')} aria-label="Next day"
  className="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container-lowest border border-outline-variant/20 shadow-sm hover:bg-surface-container-low transition-colors text-on-surface hover:bg-surface-container-low transition-colors"
  >
  <ChevronLeft className="w-5 h-5 rotate-180"/>
@@ -550,11 +550,11 @@ export default function DailyDetail({
  <motion.div initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} onClick={() => setRetrofitConfirmation(null)}
  className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[200]"
  />
- <motion.div initial={{opacity: 0, scale: 0.9, y: 20}} animate={{opacity: 1, scale: 1, y: 0}} exit={{opacity: 0, scale: 0.9, y: 20}} className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-48px)] max-w-sm bg-surface-container-lowest rounded-[32px] p-8 z-[201] shadow-2xl overflow-hidden">
+ <motion.div role="dialog" aria-modal="true" aria-label="Retrofitting status" initial={{opacity: 0, scale: 0.9, y: 20}} animate={{opacity: 1, scale: 1, y: 0}} exit={{opacity: 0, scale: 0.9, y: 20}} className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-48px)] max-w-sm bg-surface-container-lowest rounded-[32px] p-8 z-[201] shadow-2xl overflow-hidden">
  <div className="w-16 h-16 bg-amber-500/10 rounded-2xl flex items-center justify-center mb-6 mx-auto">
  <Clock className="w-8 h-8 text-amber-600"/>
  </div>
- 
+
  <h3 className="font-headline text-xl font-bold text-on-surface text-center mb-3">Retrofitting status</h3>
  <p className="font-sans text-sm text-on-surface-variant text-center mb-8 px-2 leading-relaxed">
  Are you sure you want to retrofit this working status?
@@ -586,7 +586,7 @@ export default function DailyDetail({
  <motion.div initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} onClick={() => setShowUnbookingModal(false)}
  className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[200]"
  />
- <motion.div data-testid="daily-detail-unbooking-warning" initial={{opacity: 0, scale: 0.9, y: 20}} animate={{opacity: 1, scale: 1, y: 0}} exit={{opacity: 0, scale: 0.9, y: 20}} className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-48px)] max-w-sm bg-surface-container-lowest rounded-[32px] p-8 z-[201] shadow-2xl overflow-hidden">
+ <motion.div data-testid="daily-detail-unbooking-warning" role="dialog" aria-modal="true" aria-label="Last-minute change" initial={{opacity: 0, scale: 0.9, y: 20}} animate={{opacity: 1, scale: 1, y: 0}} exit={{opacity: 0, scale: 0.9, y: 20}} className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-48px)] max-w-sm bg-surface-container-lowest rounded-[32px] p-8 z-[201] shadow-2xl overflow-hidden">
  <div className="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center mb-6 mx-auto">
  <AlertTriangle className="w-8 h-8 text-red-600"/>
  </div>
@@ -630,7 +630,7 @@ export default function DailyDetail({
 
  if (step === 'HOURS_OFF') {
  return (
- <div data-testid="daily-detail" className="fixed inset-0 bg-surface z-[125] flex flex-col overflow-y-auto pb-10 font-sans">
+ <div data-testid="daily-detail" role="dialog" aria-modal="true" aria-label="Hours off" className="fixed inset-0 bg-surface z-[125] flex flex-col overflow-y-auto pb-10 font-sans">
  <ModalHeader title="Time Off"/>
 
  <main className="pt-24 px-6 max-w-xl mx-auto w-full">
@@ -707,7 +707,7 @@ export default function DailyDetail({
  const formattedDate = formatAppDate(day.date, 'long').toUpperCase();
 
  return (
- <div data-testid="daily-detail" className="fixed inset-0 bg-surface z-[120] flex flex-col overflow-y-auto font-sans">
+ <div data-testid="daily-detail" role="dialog" aria-modal="true" aria-label="Select workspace" className="fixed inset-0 bg-surface z-[120] flex flex-col overflow-y-auto font-sans">
  <ModalHeader title="Workspace Use"/>
 
  <div className={`pt-24 max-w-xl mx-auto w-full text-center px-6 pb-20`}>
@@ -987,7 +987,7 @@ export default function DailyDetail({
 
  const auxLabel = day.isUsingDesk ? `Using a desk in ${day.room}` : 'Not using a desk';
  return (
- <div data-testid="daily-detail" className="fixed inset-0 bg-surface z-[130] flex flex-col font-sans overflow-y-auto pb-40">
+ <div data-testid="daily-detail" role="dialog" aria-modal="true" aria-label="Extend status" className="fixed inset-0 bg-surface z-[130] flex flex-col font-sans overflow-y-auto pb-40">
  <ModalHeader title="Extend status"/>
 
  <main className="pt-24 px-6 max-w-xl mx-auto w-full pb-10">
@@ -1366,7 +1366,7 @@ export default function DailyDetail({
  <motion.div initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} onClick={() => setShowUnbookingModal(false)}
  className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[200]"
  />
- <motion.div data-testid="daily-detail-unbooking-warning" initial={{opacity: 0, scale: 0.9, y: 20}} animate={{opacity: 1, scale: 1, y: 0}} exit={{opacity: 0, scale: 0.9, y: 20}} className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-48px)] max-w-sm bg-surface-container-lowest rounded-[32px] p-8 z-[201] shadow-2xl overflow-hidden">
+ <motion.div data-testid="daily-detail-unbooking-warning" role="dialog" aria-modal="true" aria-label="Last-minute change" initial={{opacity: 0, scale: 0.9, y: 20}} animate={{opacity: 1, scale: 1, y: 0}} exit={{opacity: 0, scale: 0.9, y: 20}} className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-48px)] max-w-sm bg-surface-container-lowest rounded-[32px] p-8 z-[201] shadow-2xl overflow-hidden">
  <div className="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center mb-6 mx-auto">
  <AlertTriangle className="w-8 h-8 text-red-600"/>
  </div>
@@ -1415,7 +1415,7 @@ export default function DailyDetail({
  const monthDisplay = months[parseAppDate(day.date).getMonth()];
  
  return (
- <div data-testid="daily-detail" className="fixed inset-0 bg-surface z-[130] flex flex-col font-sans overflow-hidden">
+ <div data-testid="daily-detail" role="dialog" aria-modal="true" aria-label="All colleagues" className="fixed inset-0 bg-surface z-[130] flex flex-col font-sans overflow-hidden">
  <ModalHeader title={`All colleagues' plans for ${dayDisplay} ${monthDisplay}`}/>
 
  <main className="pt-24 px-6 max-w-xl mx-auto w-full pb-10 overflow-y-auto h-full">
@@ -1432,7 +1432,7 @@ export default function DailyDetail({
  );
  }
  return (
- <div data-testid="daily-detail" className="fixed inset-0 bg-surface z-[100] flex flex-col overflow-y-auto pb-10 font-sans">
+ <div data-testid="daily-detail" role="dialog" aria-modal="true" aria-label="Day details" className="fixed inset-0 bg-surface z-[100] flex flex-col overflow-y-auto pb-10 font-sans">
  <ModalHeader title=""/>
 
  <header className="pt-24 pb-6 px-6 relative">
@@ -1442,7 +1442,7 @@ export default function DailyDetail({
  )}
  <div className="flex items-center justify-center gap-6">
  {!isMandatory && (
- <button onClick={() => onNavigate('prev')}
+ <button onClick={() => onNavigate('prev')} aria-label="Previous day"
  className="p-1 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant"
  >
  <ChevronLeft className="w-6 h-6 text-on-surface/40 hover:text-on-surface transition-colors"/>
@@ -1453,7 +1453,7 @@ export default function DailyDetail({
  {months[parseAppDate(day.date).getMonth()]}
  </h1>
  {!isMandatory && (
- <button onClick={() => onNavigate('next')}
+ <button onClick={() => onNavigate('next')} aria-label="Next day"
  className="p-1 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant"
  >
  <ChevronLeft className="w-6 h-6 rotate-180 text-on-surface/40 hover:text-on-surface transition-colors"/>
@@ -1548,7 +1548,7 @@ export default function DailyDetail({
  Retrofit Working Status
  </button>
  ) : !day.isCheckedIn && !isMandatory && (
- <button onClick={() => setStep('PLANNING')}
+ <button onClick={() => setStep('PLANNING')} aria-label="Edit status"
  className="p-2 text-primary hover:bg-primary/5 rounded-full transition-colors shrink-0"
  >
  <Edit2 className="w-5 h-5 shadow-sm"/>
@@ -1648,6 +1648,7 @@ export default function DailyDetail({
  }}
  className="p-6 text-red-500 hover:bg-red-500/5 transition-colors"
  title="Remove booking"
+ aria-label="Remove lab booking"
  >
  <Trash2 className="w-5 h-5"/>
  </button>
@@ -1669,7 +1670,7 @@ export default function DailyDetail({
  className="w-full bg-surface-container-lowest border border-outline-variant/10 rounded-2xl py-3 pl-11 pr-4 font-sans text-sm focus:border-primary outline-none shadow-sm transition-all placeholder:text-on-surface-variant/30"
  />
  {searchQuery && (
- <button onClick={() => setSearchQuery('')}
+ <button onClick={() => setSearchQuery('')} aria-label="Clear search"
  className="absolute right-4 top-1/2 -translate-y-1/2 p-1 hover:bg-surface-container-low rounded-full transition-colors"
  >
  <X className="w-3 h-3 text-on-surface-variant/40"/>
@@ -1815,7 +1816,7 @@ export default function DailyDetail({
  <motion.div initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} onClick={() => setShowLabConfirmModal(false)}
  className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[200]"
  />
- <motion.div initial={{opacity: 0, scale: 0.9, y: 20}} animate={{opacity: 1, scale: 1, y: 0}} exit={{opacity: 0, scale: 0.9, y: 20}} className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-48px)] max-w-sm bg-surface-container-lowest rounded-[32px] p-8 z-[201] shadow-2xl overflow-hidden">
+ <motion.div role="dialog" aria-modal="true" aria-label="Book Innovation Lab" initial={{opacity: 0, scale: 0.9, y: 20}} animate={{opacity: 1, scale: 1, y: 0}} exit={{opacity: 0, scale: 0.9, y: 20}} className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-48px)] max-w-sm bg-surface-container-lowest rounded-[32px] p-8 z-[201] shadow-2xl overflow-hidden">
  <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 mx-auto">
  <Beaker className="w-8 h-8 text-primary"/>
  </div>
