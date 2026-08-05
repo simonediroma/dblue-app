@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useId } from 'react';
 import RoomConfigMock from './RoomConfigMock';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -115,7 +115,7 @@ function MemberActionSheet({
  };
 
  return (
- <div className="fixed inset-0 z-[250] flex items-end md:items-center justify-center">
+ <div role="dialog" aria-modal="true" aria-label={`Actions for ${member.name}`} className="fixed inset-0 z-[250] flex items-end md:items-center justify-center">
  {/* Backdrop */}
  <motion.div initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} onClick={onClose} className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"/>
 
@@ -172,7 +172,7 @@ function MemberActionSheet({
  ) : (
  <motion.div key="step2" initial={{opacity: 0, x: 20}} animate={{opacity: 1, x: 0}} exit={{opacity: 0, x: 20}} className="flex flex-col max-h-[70vh] md:max-h-[500px]">
  <header className="p-6 border-b border-outline-variant/10 flex items-center gap-4">
- <button onClick={() => setStep(1)}
+ <button onClick={() => setStep(1)} aria-label="Back"
  className="p-2 -ml-2 hover:bg-surface-container rounded-full transition-colors"
  >
  <ChevronLeft className="w-5 h-5 text-on-surface"/>
@@ -211,29 +211,32 @@ function MemberActionSheet({
 }
 
 function AccessibilityCard({ icon, label, description, isActive, onToggle }: { icon: React.ReactNode, label: string, description: string, isActive: boolean, onToggle: () => void }) {
+ const labelId = useId();
+ const descId = useId();
  return (
  <div className={`relative p-5 rounded-3xl border transition-all duration-200 shadow-sm flex flex-col gap-4 ${isActive ? 'bg-surface-container-lowest border-primary ring-4 ring-primary/5' : 'bg-surface-container-lowest border-outline-variant/10'}`}>
  <div className="flex items-start justify-between">
  <div className="p-3 bg-primary/5 rounded-2xl">
  {icon}
  </div>
- <button onClick={onToggle} className={`relative w-12 h-6 rounded-full transition-colors duration-200 outline-none shrink-0 ${isActive ? 'bg-primary' : 'bg-outline-variant/30'}`}>
+ <button onClick={onToggle} role="switch" aria-checked={isActive} aria-labelledby={labelId} aria-describedby={descId} className={`relative w-12 h-6 rounded-full transition-colors duration-200 outline-none shrink-0 ${isActive ? 'bg-primary' : 'bg-outline-variant/30'}`}>
  <motion.div animate={{x: isActive ? 26 : 2}} initial={false} transition={{type: "spring", stiffness: 500, damping: 30}} className="absolute top-1 left-0 w-4 h-4 bg-white rounded-full shadow-sm"/>
  </button>
  </div>
  <div>
- <h4 className="font-bold text-on-surface leading-tight mb-1">{label}</h4>
- <p className="text-xs text-on-surface-variant/70 leading-relaxed font-medium">{description}</p>
+ <h4 id={labelId} className="font-bold text-on-surface leading-tight mb-1">{label}</h4>
+ <p id={descId} className="text-xs text-on-surface-variant/70 leading-relaxed font-medium">{description}</p>
  </div>
  </div>
  );
 }
 
 function NotificationToggle({ label, isActive, onToggle }: { label: string, isActive: boolean, onToggle: () => void }) {
+ const labelId = useId();
  return (
  <div className="flex items-center justify-between p-5 gap-4 hover:bg-on-surface/[0.02] transition-colors">
- <p className="text-sm font-medium text-on-surface leading-snug">{label}</p>
- <button onClick={onToggle} className={`relative w-12 h-6 rounded-full transition-colors duration-200 outline-none shrink-0 ${isActive ? 'bg-primary' : 'bg-outline-variant/30'}`}>
+ <p id={labelId} className="text-sm font-medium text-on-surface leading-snug">{label}</p>
+ <button onClick={onToggle} role="switch" aria-checked={isActive} aria-labelledby={labelId} className={`relative w-12 h-6 rounded-full transition-colors duration-200 outline-none shrink-0 ${isActive ? 'bg-primary' : 'bg-outline-variant/30'}`}>
  <motion.div animate={{x: isActive ? 26 : 2}} initial={false} transition={{type: "spring", stiffness: 500, damping: 30}} className="absolute top-1 left-0 w-4 h-4 bg-white rounded-full shadow-sm"/>
  </button>
  </div>
@@ -410,7 +413,7 @@ export default function Profile({
  return (
  <motion.div initial={{opacity: 0, x: 20}} animate={{opacity: 1, x: 0}} exit={{opacity: 0, x: -20}} className="fixed inset-0 bg-surface z-[200] flex flex-col font-sans">
  <header className="px-6 py-4 bg-surface-container-lowest border-b border-outline-variant/10 flex items-center gap-4 shadow-sm">
- <button onClick={() => setActiveView('main')}
+ <button onClick={() => setActiveView('main')} aria-label="Close"
  className="p-2 hover:bg-surface-container rounded-full transition-colors shrink-0"
  >
  <X className="w-5 h-5 text-on-surface"/>
@@ -466,7 +469,7 @@ export default function Profile({
  return (
  <motion.div initial={{opacity: 0, x: 20}} animate={{opacity: 1, x: 0}} exit={{opacity: 0, x: -20}} className="fixed inset-0 bg-surface z-[200] flex flex-col font-sans">
  <header className="px-6 py-4 bg-surface-container-lowest border-b border-outline-variant/10 flex items-center gap-4 shadow-sm">
- <button onClick={() => setActiveView('main')}
+ <button onClick={() => setActiveView('main')} aria-label="Close"
  className="p-2 hover:bg-surface-container rounded-full transition-colors shrink-0"
  >
  <X className="w-5 h-5 text-on-surface"/>
@@ -485,7 +488,7 @@ export default function Profile({
  <div key={area} className="bg-surface-container-lowest rounded-3xl p-5 border border-outline-variant/10 shadow-sm relative overflow-visible">
  <div className="flex items-center justify-between mb-4">
  <h3 className="font-bold text-on-surface">{area}</h3>
- <button onClick={() => setActiveSearchArea(activeSearchArea === area ? null : area)}
+ <button onClick={() => setActiveSearchArea(activeSearchArea === area ? null : area)} aria-label={`Add member to ${area}`}
  className="p-1.5 hover:bg-surface-container rounded-full transition-colors text-primary"
  >
  <Plus className="w-5 h-5"/>
@@ -525,7 +528,7 @@ export default function Profile({
  {member.initials}
  </div>
  <span className="text-xs font-bold text-on-surface pr-1">{member.name}</span>
- <button onClick={() => setActionSheetData({ area, member })}
+ <button onClick={() => setActionSheetData({ area, member })} aria-label={`More options for ${member.name}`}
  className="p-1 hover:bg-white/50 rounded-full transition-colors"
  >
  <MoreVertical className="w-3.5 h-3.5 text-on-surface-variant"/>
@@ -547,7 +550,7 @@ export default function Profile({
  <div key={area} className="bg-surface-container-lowest rounded-3xl p-5 border border-outline-variant/10 shadow-sm relative overflow-visible">
  <div className="flex items-center justify-between mb-4">
  <h3 className="font-bold text-on-surface">{area}</h3>
- <button onClick={() => setActiveSearchArea(activeSearchArea === area ? null : area)}
+ <button onClick={() => setActiveSearchArea(activeSearchArea === area ? null : area)} aria-label={`Add member to ${area}`}
  className="p-1.5 hover:bg-surface-container rounded-full transition-colors text-primary"
  >
  <Plus className="w-5 h-5"/>
@@ -583,7 +586,7 @@ export default function Profile({
  {member.initials}
  </div>
  <span className="text-xs font-bold text-on-surface pr-1">{member.name}</span>
- <button onClick={() => setActionSheetData({ area, member })}
+ <button onClick={() => setActionSheetData({ area, member })} aria-label={`More options for ${member.name}`}
  className="p-1 hover:bg-white/50 rounded-full transition-colors"
  >
  <MoreVertical className="w-3.5 h-3.5 text-on-surface-variant"/>
