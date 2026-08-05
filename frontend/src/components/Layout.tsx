@@ -21,36 +21,36 @@ export default function Layout({ children, activeTab, onTabChange, isSimplifiedV
  </div>
 
  {/* Desktop Nav - Centered on LG, Right on MD */}
- <div className="hidden md:flex lg:absolute lg:left-1/2 lg:-translate-x-1/2 items-center gap-4 lg:gap-8">
- <button data-testid="nav-plan-desktop" onClick={() => onTabChange('plan')}
+ <nav aria-label="Primary navigation" className="hidden md:flex lg:absolute lg:left-1/2 lg:-translate-x-1/2 items-center gap-4 lg:gap-8">
+ <button data-testid="nav-plan-desktop" onClick={() => onTabChange('plan')} aria-current={activeTab === 'plan' ? 'page' : undefined}
  className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${activeTab === 'plan' ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-surface-container'}`}
  >
  <CalendarDays className={`w-5 h-5 ${activeTab === 'plan' ? 'fill-current' : ''}`}/>
  <span className="font-headline text-sm font-bold tracking-wide uppercase">Plan</span>
  </button>
  {!isSimplifiedView && (
- <button data-testid="nav-stats-desktop" onClick={() => onTabChange('stats')}
+ <button data-testid="nav-stats-desktop" onClick={() => onTabChange('stats')} aria-current={activeTab === 'stats' ? 'page' : undefined}
  className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${activeTab === 'stats' ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-surface-container'}`}
  >
  <BarChart3 className={`w-5 h-5 ${activeTab === 'stats' ? 'fill-current' : ''}`}/>
  <span className="font-headline text-sm font-bold tracking-wide uppercase">My stats</span>
  </button>
  )}
- <button data-testid="nav-profile-desktop" onClick={() => onTabChange('profile')}
+ <button data-testid="nav-profile-desktop" onClick={() => onTabChange('profile')} aria-current={activeTab === 'profile' ? 'page' : undefined}
  className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${activeTab === 'profile' ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-surface-container'}`}
  >
  <User className={`w-5 h-5 ${activeTab === 'profile' ? 'fill-current' : ''}`}/>
  <span className="font-headline text-sm font-bold tracking-wide uppercase">Profile</span>
  </button>
  {isDirector && (
- <button data-testid="nav-organisation-desktop" onClick={() => onTabChange('organisation')}
+ <button data-testid="nav-organisation-desktop" onClick={() => onTabChange('organisation')} aria-current={activeTab === 'organisation' ? 'page' : undefined}
  className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${activeTab === 'organisation' ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-surface-container'}`}
  >
  <Landmark className={`w-5 h-5 ${activeTab === 'organisation' ? 'fill-current' : ''}`}/>
  <span className="font-headline text-sm font-bold tracking-wide uppercase">Organisation</span>
  </button>
  )}
- </div>
+ </nav>
 
  {/* Right side spacer for desktop layout balance only on LG */}
  <div className="hidden lg:flex flex-1 justify-end"/>
@@ -62,29 +62,29 @@ export default function Layout({ children, activeTab, onTabChange, isSimplifiedV
  </main>
 
  {/* Navigation Bar - Mobile Only */}
- <nav className="fixed bottom-0 left-0 right-0 bg-surface-container-lowest/90 backdrop-blur-md border-t border-outline-variant/30 px-6 py-4 flex justify-around items-center z-50 md:hidden">
- <button data-testid="nav-plan" onClick={() => onTabChange('plan')}
+ <nav aria-label="Primary navigation" className="fixed bottom-0 left-0 right-0 bg-surface-container-lowest/90 backdrop-blur-md border-t border-outline-variant/30 px-6 py-4 flex justify-around items-center z-50 md:hidden">
+ <button data-testid="nav-plan" onClick={() => onTabChange('plan')} aria-current={activeTab === 'plan' ? 'page' : undefined}
  className="flex flex-col items-center gap-1 group transition-all"
  >
  <CalendarDays className={`w-6 h-6 transition-all ${activeTab === 'plan' ? 'text-primary fill-current' : 'text-on-surface-variant group-hover:text-primary'}`}/>
  <span className={`font-headline text-[10px] font-bold tracking-wide uppercase transition-all ${activeTab === 'plan' ? 'text-primary' : 'text-on-surface-variant group-hover:text-primary'}`}>PLAN</span>
  </button>
  {!isSimplifiedView && (
- <button data-testid="nav-stats" onClick={() => onTabChange('stats')}
+ <button data-testid="nav-stats" onClick={() => onTabChange('stats')} aria-current={activeTab === 'stats' ? 'page' : undefined}
  className="flex flex-col items-center gap-1 group transition-all"
  >
  <BarChart3 className={`w-6 h-6 transition-all ${activeTab === 'stats' ? 'text-primary fill-current' : 'text-on-surface-variant group-hover:text-primary'}`}/>
  <span className={`font-headline text-[10px] font-bold tracking-wide uppercase transition-all ${activeTab === 'stats' ? 'text-primary' : 'text-on-surface-variant group-hover:text-primary'}`}>MY STATS</span>
  </button>
  )}
- <button data-testid="nav-profile" onClick={() => onTabChange('profile')}
+ <button data-testid="nav-profile" onClick={() => onTabChange('profile')} aria-current={activeTab === 'profile' ? 'page' : undefined}
  className="flex flex-col items-center gap-1 group transition-all"
  >
  <User className={`w-6 h-6 transition-all ${activeTab === 'profile' ? 'text-primary fill-current' : 'text-on-surface-variant group-hover:text-primary'}`}/>
  <span className={`font-headline text-[10px] font-bold tracking-wide uppercase transition-all ${activeTab === 'profile' ? 'text-primary' : 'text-on-surface-variant group-hover:text-primary'}`}>PROFILE</span>
  </button>
  {isDirector && (
- <button data-testid="nav-organisation" onClick={() => onTabChange('organisation')}
+ <button data-testid="nav-organisation" onClick={() => onTabChange('organisation')} aria-current={activeTab === 'organisation' ? 'page' : undefined}
  className="flex flex-col items-center gap-1 group transition-all"
  >
  <Landmark className={`w-6 h-6 transition-all ${activeTab === 'organisation' ? 'text-primary fill-current' : 'text-on-surface-variant group-hover:text-primary'}`}/>

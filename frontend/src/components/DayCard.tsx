@@ -34,17 +34,39 @@ interface DayCardProps {
 }
 
 const statusConfig = {
- [WorkStatus.IN_OFFICE]: { color: 'bg-primary/10 text-primary', icon: Building2 },
- [WorkStatus.REMOTE]: { color: 'bg-green-500/10 text-green-500', icon: Home },
- [WorkStatus.MISSION]: { color: 'bg-orange-500/10 text-orange-500', icon: Plane },
- [WorkStatus.LEAVE]: { color: 'bg-fuchsia-500/10 text-fuchsia-500', icon: Palmtree },
- [WorkStatus.SICK]: { color: 'bg-red-500/10 text-red-500', icon: Thermometer },
- [WorkStatus.PARENTAL_LEAVE]: { color: 'bg-indigo-500/10 text-indigo-500', icon: Crib },
- [WorkStatus.LONG_TERM_LEAVE]: { color: 'bg-violet-500/10 text-violet-500', icon: CalendarClock },
- [WorkStatus.PENDING]: { color: 'bg-on-surface-variant/10 text-on-surface-variant', icon: null },
- [WorkStatus.WAITING_LIST]: { color: 'bg-amber-500/10 text-amber-500', icon: null, emoji: '⌛' },
- [WorkStatus.OFFICE_NO_DESK]: { color: 'bg-primary/10 text-primary', icon: Headset },
+ [WorkStatus.IN_OFFICE]: { color: 'bg-primary/10 text-primary', icon: Building2, label: 'In Office' },
+ [WorkStatus.REMOTE]: { color: 'bg-green-500/10 text-green-500', icon: Home, label: 'Remote' },
+ [WorkStatus.MISSION]: { color: 'bg-orange-500/10 text-orange-500', icon: Plane, label: 'On a mission' },
+ [WorkStatus.LEAVE]: { color: 'bg-fuchsia-500/10 text-fuchsia-500', icon: Palmtree, label: 'On leave' },
+ [WorkStatus.SICK]: { color: 'bg-red-500/10 text-red-500', icon: Thermometer, label: 'On a sick leave' },
+ [WorkStatus.PARENTAL_LEAVE]: { color: 'bg-indigo-500/10 text-indigo-500', icon: Crib, label: 'Parental leave' },
+ [WorkStatus.LONG_TERM_LEAVE]: { color: 'bg-violet-500/10 text-violet-500', icon: CalendarClock, label: 'Long-term leave' },
+ [WorkStatus.PENDING]: { color: 'bg-on-surface-variant/10 text-on-surface-variant', icon: null, label: 'Status not set' },
+ [WorkStatus.WAITING_LIST]: { color: 'bg-amber-500/10 text-amber-500', icon: null, emoji: '⌛', label: 'Waiting list' },
+ [WorkStatus.OFFICE_NO_DESK]: { color: 'bg-primary/10 text-primary', icon: Headset, label: 'Office (no desk)' },
 };
+
+function buildDayCardAriaLabel(day: DayPresence): string {
+ const parts = [`${day.dayName}, ${day.date}`];
+
+ if (day.isClosed) {
+ parts.push('No working day');
+ } else if (day.isOfficeClosed) {
+ parts.push('Office closed, remote booking only');
+ } else {
+ const label = statusConfig[day.status]?.label;
+ if (label) parts.push(label);
+ if ((day.status === WorkStatus.IN_OFFICE || day.status === WorkStatus.OFFICE_NO_DESK) && day.room) {
+ parts.push(day.room);
+ }
+ if (day.isCheckedIn) parts.push('checked in');
+ if (!day.isPast && day.bookedCount != null && day.totalCapacity != null) {
+ parts.push(`${day.bookedCount} of ${day.totalCapacity} booked`);
+ }
+ }
+
+ return parts.join(', ');
+}
 
 export default function DayCard({ day, onClick, onDoubleClick, onCheckIn, isSimplified: _isSimplified, index, projectTeammates = [], showWeekSeparator, hasMondayInRow }: DayCardProps) {
  const [isVisible, setIsVisible] = useState(false);
@@ -106,7 +128,7 @@ export default function DayCard({ day, onClick, onDoubleClick, onCheckIn, isSimp
 
  if (day.isHighlighted) {
  return (
- <div data-testid="day-card" data-date={day.date} ref={containerRef} className={`w-full relative group rounded-[24px] sm:rounded-[28px] overflow-hidden dynamic-border-card mb-2 sm:mb-4 ${marginClass} ${isClosed ? 'opacity-40 pointer-events-none' : 'cursor-pointer'} animate-card-entrance ${isVisible ? 'is-visible' : ''} ${shouldWillChange ? 'will-change' : ''}`} style={{...cardStyle, '--angle-start-delay': `${cardStartTime - 100}ms` } as any} onClick={onClick} onDoubleClick={(!isClosed && !isOfficeClosed) ? onDoubleClick : undefined}>
+ <div data-testid="day-card" data-date={day.date} ref={containerRef} role="button" tabIndex={isClosed ? -1 : 0} aria-label={buildDayCardAriaLabel(day)} className={`w-full relative group rounded-[24px] sm:rounded-[28px] overflow-hidden dynamic-border-card mb-2 sm:mb-4 ${marginClass} ${isClosed ? 'opacity-40 pointer-events-none' : 'cursor-pointer'} animate-card-entrance ${isVisible ? 'is-visible' : ''} ${shouldWillChange ? 'will-change' : ''}`} style={{...cardStyle, '--angle-start-delay': `${cardStartTime - 100}ms` } as any} onClick={onClick} onDoubleClick={(!isClosed && !isOfficeClosed) ? onDoubleClick : undefined} onKeyDown={(e) => { if (isClosed) return; if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.(); } }}>
  {showWeekSeparator && (
  <div className="absolute -top-7 sm:-top-8 left-1 right-0 flex items-center gap-3 z-20 pointer-events-none">
  <span className="font-sans text-[10px] sm:text-[11px] font-bold text-[#AEBECF] tracking-wider uppercase">New week</span>
@@ -138,9 +160,9 @@ export default function DayCard({ day, onClick, onDoubleClick, onCheckIn, isSimp
  )}
  <div className={`${day.isPast ? 'bg-surface-container-high text-on-surface-variant' : config.color} rounded-full w-7 h-7 sm:w-9 sm:h-9 flex items-center justify-center shadow-sm animate-content-fade-in`} style={{animationDelay: `${cardStartTime + 60}ms`}}>
  {StatusIcon ? (
- <StatusIcon className="w-4 h-4 sm:w-5 sm:h-5 fill-current"/>
+ <StatusIcon aria-hidden="true" className="w-4 h-4 sm:w-5 sm:h-5 fill-current"/>
  ) : (
- <span className="text-lg sm:text-xl">{(config as any).emoji || "\u2753"}</span>
+ <span aria-hidden="true" className="text-lg sm:text-xl">{(config as any).emoji || "\u2753"}</span>
  )}
  </div>
  </div>
@@ -186,7 +208,7 @@ export default function DayCard({ day, onClick, onDoubleClick, onCheckIn, isSimp
  <div className="flex items-end justify-between mt-auto">
  {(!isClosed && !isOfficeClosed) ? (
  <div className="flex items-center gap-3 w-full">
- <div className="flex -space-x-1.5 sm:-space-x-2">
+ <div aria-hidden="true" className="flex -space-x-1.5 sm:-space-x-2">
  {(() => {
  let avatarsToDisplay: Array<{initials: string, color: string}> = [];
 
@@ -244,7 +266,7 @@ export default function DayCard({ day, onClick, onDoubleClick, onCheckIn, isSimp
  }
 
  return (
- <div data-testid="day-card" data-date={day.date} ref={containerRef} className={`bg-surface-container-lowest rounded-xl sm:rounded-2xl p-3 sm:p-4 flex flex-col justify-between h-28 sm:h-36 shadow-ambient hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 border border-transparent hover:border-outline-variant/30 relative ${marginClass} ${isClosed ? 'opacity-40 pointer-events-none' : 'cursor-pointer'} animate-card-entrance ${isVisible ? 'is-visible' : ''} ${shouldWillChange ? 'will-change' : ''}`} style={{...cardStyle, animationDelay: `${cardStartTime}ms`}} onClick={onClick} onDoubleClick={(!isClosed && !isOfficeClosed) ? onDoubleClick : undefined}>
+ <div data-testid="day-card" data-date={day.date} ref={containerRef} role="button" tabIndex={isClosed ? -1 : 0} aria-label={buildDayCardAriaLabel(day)} className={`bg-surface-container-lowest rounded-xl sm:rounded-2xl p-3 sm:p-4 flex flex-col justify-between h-28 sm:h-36 shadow-ambient hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 border border-transparent hover:border-outline-variant/30 relative ${marginClass} ${isClosed ? 'opacity-40 pointer-events-none' : 'cursor-pointer'} animate-card-entrance ${isVisible ? 'is-visible' : ''} ${shouldWillChange ? 'will-change' : ''}`} style={{...cardStyle, animationDelay: `${cardStartTime}ms`}} onClick={onClick} onDoubleClick={(!isClosed && !isOfficeClosed) ? onDoubleClick : undefined} onKeyDown={(e) => { if (isClosed) return; if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.(); } }}>
  {showWeekSeparator && (
  <div className="absolute -top-6 left-1 right-0 flex items-center gap-3 z-0 pointer-events-none">
  <span className="font-sans text-[10px] sm:text-[11px] font-bold text-[#AEBECF] tracking-wider uppercase shrink-0">New week</span>
@@ -305,9 +327,9 @@ export default function DayCard({ day, onClick, onDoubleClick, onCheckIn, isSimp
  )}
  <div className={`${day.isPast ? 'bg-surface-container-high text-on-surface-variant' : config.color} rounded-full w-[30px] h-[30px] flex items-center justify-center shadow-sm shrink-0 animate-content-fade-in`} style={{animationDelay: `${cardStartTime + 60}ms`}}>
  {StatusIcon ? (
- <StatusIcon className="w-[14px] h-[14px] fill-current"/>
+ <StatusIcon aria-hidden="true" className="w-[14px] h-[14px] fill-current"/>
  ) : (
- <span className="text-[10px] sm:text-sm">{(config as any).emoji || "\u2753"}</span>
+ <span aria-hidden="true" className="text-[10px] sm:text-sm">{(config as any).emoji || "\u2753"}</span>
  )}
  </div>
  {day.isCheckedIn && (
@@ -326,7 +348,7 @@ export default function DayCard({ day, onClick, onDoubleClick, onCheckIn, isSimp
  <div className="mt-auto">
  {(!isClosed && !isOfficeClosed) ? (
  <div className="flex items-center justify-between w-full pt-1.5 sm:pt-2">
- <div className="flex -space-x-2 sm:space-x-[-7px]">
+ <div aria-hidden="true" className="flex -space-x-2 sm:space-x-[-7px]">
  {(() => {
  let avatarsToDisplay: Array<{initials: string, color: string}> = [];
 
