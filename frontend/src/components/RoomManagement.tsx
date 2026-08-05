@@ -117,14 +117,14 @@ export default function RoomManagement({ onBack, onRoomsChanged }: RoomManagemen
   return createPortal(
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="fixed inset-0 bg-surface z-[200] flex flex-col font-sans">
       <header className="px-6 py-4 bg-surface-container-lowest border-b border-outline-variant/10 flex items-center gap-4 shadow-sm">
-        <button onClick={onBack} className="p-2 hover:bg-surface-container rounded-full transition-colors shrink-0">
+        <button onClick={onBack} aria-label="Back" className="p-2 hover:bg-surface-container rounded-full transition-colors shrink-0">
           <ChevronLeft className="w-5 h-5 text-on-surface"/>
         </button>
         <div className="flex-grow">
           <h1 className="font-headline text-lg font-bold text-on-surface">Gestisci Stanze</h1>
           <p className="text-xs text-on-surface-variant">Solo owner &middot; nome, colore e capienza</p>
         </div>
-        <button onClick={startCreate} className="p-2 bg-primary/10 hover:bg-primary/20 rounded-full transition-colors text-primary">
+        <button onClick={startCreate} aria-label="Add room" className="p-2 bg-primary/10 hover:bg-primary/20 rounded-full transition-colors text-primary">
           <Plus className="w-5 h-5"/>
         </button>
       </header>
@@ -133,7 +133,7 @@ export default function RoomManagement({ onBack, onRoomsChanged }: RoomManagemen
         {error && (
           <div className="bg-red-50 border border-red-200 p-4 rounded-2xl mb-2 flex items-center justify-between">
             <p className="text-xs font-medium text-red-700">{error}</p>
-            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600">
+            <button onClick={() => setError(null)} aria-label="Dismiss error" className="text-red-400 hover:text-red-600">
               <X className="w-4 h-4"/>
             </button>
           </div>
@@ -240,15 +240,15 @@ export default function RoomManagement({ onBack, onRoomsChanged }: RoomManagemen
 
                 <div className="flex items-center gap-1">
                   {editingId === room.id ? (
-                    <button onClick={handleSave} className="p-2 hover:bg-green-50 text-green-600 rounded-full transition-colors">
+                    <button onClick={handleSave} aria-label="Save room" className="p-2 hover:bg-green-50 text-green-600 rounded-full transition-colors">
                       <Check className="w-5 h-5"/>
                     </button>
                   ) : (
                     <>
-                      <button onClick={() => handleEdit(room)} className="p-2 hover:bg-surface-container rounded-full transition-colors text-on-surface-variant">
+                      <button onClick={() => handleEdit(room)} aria-label={`Edit ${room.name}`} className="p-2 hover:bg-surface-container rounded-full transition-colors text-on-surface-variant">
                         <Edit2 className="w-4 h-4"/>
                       </button>
-                      <button onClick={() => handleDelete(room)} className="p-2 hover:bg-red-50 text-red-600 rounded-full transition-colors">
+                      <button onClick={() => handleDelete(room)} aria-label={`Delete ${room.name}`} className="p-2 hover:bg-red-50 text-red-600 rounded-full transition-colors">
                         <Trash2 className="w-4 h-4"/>
                       </button>
                     </>

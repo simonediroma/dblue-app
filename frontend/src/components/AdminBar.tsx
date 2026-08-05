@@ -76,6 +76,7 @@ export default function AdminBar({ onRoomsChanged }: AdminBarProps) {
       {(state.status === 'success' || state.status === 'error') && (
         <button
           onClick={() => setState({ status: 'idle' })}
+          aria-label="Dismiss"
           className="text-slate-500 hover:text-slate-300 shrink-0"
         >
           ✕
