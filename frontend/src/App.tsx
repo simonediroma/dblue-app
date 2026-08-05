@@ -1320,9 +1320,9 @@ export default function App() {
  
  {/* Responsive Container */}
  <div className="fixed inset-0 z-[101] flex items-end sm:items-center justify-center p-0 sm:p-6 pointer-events-none">
- <motion.div data-testid="last-minute-warning" initial={{y: '100%', opacity: 0}} animate={{y: 0, opacity: 1}} exit={{y: '100%', opacity: 0}} transition={{type: 'spring', damping: 25, stiffness: 300}} className="w-full sm:max-w-md bg-surface-container-lowest sm:rounded-[32px] rounded-t-[32px] p-8 sm:p-10 shadow-2xl pointer-events-auto border-t sm:border border-outline-variant/20 flex flex-col items-center text-center relative">
+ <motion.div data-testid="last-minute-warning" role="dialog" aria-modal="true" aria-label="Last-minute change" initial={{y: '100%', opacity: 0}} animate={{y: 0, opacity: 1}} exit={{y: '100%', opacity: 0}} transition={{type: 'spring', damping: 25, stiffness: 300}} className="w-full sm:max-w-md bg-surface-container-lowest sm:rounded-[32px] rounded-t-[32px] p-8 sm:p-10 shadow-2xl pointer-events-auto border-t sm:border border-outline-variant/20 flex flex-col items-center text-center relative">
  {/* Close Button */}
- <button onClick={() => setLastMinuteWarning(null)}
+ <button onClick={() => setLastMinuteWarning(null)} aria-label="Close"
  className="absolute top-6 right-6 p-2 hover:bg-surface-container rounded-full transition-colors text-on-surface-variant"
  >
  <X className="w-5 h-5"/>

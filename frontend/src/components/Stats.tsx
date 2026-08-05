@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useId } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
 import { WorkStatus, DayPresence, OffTimeType } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -56,6 +56,7 @@ export default function Stats({ currentMonth, projectTeammates = [], onAddTeamma
  const [selectedMonth, setSelectedMonth] = useState(defaultMonth);
  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
  const [showTooltip, setShowTooltip] = useState(false);
+ const tooltipId = useId();
  const [monthlyStats, setMonthlyStats] = useState<MonthlyStats | null>(null);
  const [annualStats, setAnnualStats] = useState<AnnualStats | null>(null);
  const [presenceDays, setPresenceDays] = useState<DayPresence[]>([]);
@@ -210,14 +211,15 @@ export default function Stats({ currentMonth, projectTeammates = [], onAddTeamma
  <button onMouseEnter={() => setShowTooltip(true)}
  onMouseLeave={() => setShowTooltip(false)}
  onClick={() => setShowTooltip(!showTooltip)}
+ aria-label="More info" aria-expanded={showTooltip} aria-describedby={showTooltip ? tooltipId : undefined}
  className="p-0.5 hover:bg-on-surface/5 rounded-full transition-colors"
  >
  <Info className="w-3 h-3 text-on-surface-variant/40"/>
  </button>
- 
+
  <AnimatePresence>
  {showTooltip && (
- <motion.div initial={{opacity: 0, y: 5}} animate={{opacity: 1, y: 0}} exit={{opacity: 0, y: 5}} className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-on-surface text-surface text-[9px] font-medium rounded-lg shadow-xl z-50 text-center">
+ <motion.div id={tooltipId} initial={{opacity: 0, y: 5}} animate={{opacity: 1, y: 0}} exit={{opacity: 0, y: 5}} className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-on-surface text-surface text-[9px] font-medium rounded-lg shadow-xl z-50 text-center">
  How many of your declared teammates were also in the office on the days you came in this month.
  <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-on-surface"/>
  </motion.div>
