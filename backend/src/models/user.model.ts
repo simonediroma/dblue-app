@@ -29,6 +29,11 @@ export interface IUser extends Document {
     };
   };
   onboardingCompleted: boolean;
+  // Popolati solo se l'integrazione dblue-office è attiva (vedi settings.service.ts) —
+  // dblueOfficeId lega questo utente al suo record su dblue-office, lastSyncedAt
+  // traccia l'ultimo sync riuscito (usato per il fallback su dato stale se l'API è giù).
+  dblueOfficeId?: string;
+  lastSyncedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -74,6 +79,8 @@ const userSchema = new Schema<IUser>(
       },
     },
     onboardingCompleted: { type: Boolean, default: false },
+    dblueOfficeId: { type: String, unique: true, sparse: true },
+    lastSyncedAt: { type: Date },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );

@@ -8,6 +8,7 @@ const DEV_LOGIN_ENABLED = import.meta.env.VITE_DEV_LOGIN_ENABLED === 'true'
 export default function Login() {
   const [searchParams] = useSearchParams();
   const isUnauthorized = searchParams.get('error') === 'unauthorized';
+  const isServiceUnavailable = searchParams.get('error') === 'service-unavailable';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -54,6 +55,12 @@ export default function Login() {
         {isUnauthorized && (
           <div className="w-full rounded-xl bg-error/10 border border-error/20 px-4 py-3 text-sm text-error text-center">
             Accesso riservato agli utenti @dblue.it
+          </div>
+        )}
+
+        {isServiceUnavailable && (
+          <div className="w-full rounded-xl bg-error/10 border border-error/20 px-4 py-3 text-sm text-error text-center">
+            Servizio momentaneamente non disponibile. Riprova tra qualche minuto.
           </div>
         )}
 

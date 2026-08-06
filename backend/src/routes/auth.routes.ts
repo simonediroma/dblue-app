@@ -29,25 +29,32 @@ router.get('/google', (req: Request, res: Response, next) => {
   passport.authenticate('google', { session: false, scope: ['profile', 'email'] })(req, res, next);
 });
 
-router.get(
-  '/google/callback',
-  (req: Request, res: Response, next) => {
-    if (!googleStrategyAvailable) {
-      res.redirect(`${process.env.APP_URL ?? '/'}/login?error=oauth_not_configured`);
-      return;
-    }
-    passport.authenticate('google', {
-      session: false,
-      failureRedirect: `${process.env.APP_URL}/login?error=unauthorized`,
-    })(req, res, next);
-  },
-  (req: Request, res: Response) => {
-    const user = req.user as IUser;
-    const token = signToken(String(user._id));
-    setAuthCookie(res, String(user._id));
-    res.redirect(`${process.env.APP_URL ?? '/'}?token=${token}`);
+router.get('/google/callback', (req: Request, res: Response, next) => {
+  if (!googleStrategyAvailable) {
+    res.redirect(`${process.env.APP_URL ?? '/'}/login?error=oauth_not_configured`);
+    return;
   }
-);
+  passport.authenticate(
+    'google',
+    { session: false },
+    (err: Error | null, user: IUser | false, info?: { message?: string }) => {
+      if (err) return next(err);
+      if (!user) {
+        // Distingue un accesso negato (dominio/dblue-office 403) da un servizio
+        // dblue-office momentaneamente non raggiungibile (nessun sync pregresso da cui
+        // procedere) — vedi syncUserFromDblueOfficeIfEnabled in userSync.service.ts.
+        const errorCode = info?.message?.startsWith('Servizio dblue-office')
+          ? 'service-unavailable'
+          : 'unauthorized';
+        res.redirect(`${process.env.APP_URL ?? '/'}/login?error=${errorCode}`);
+        return;
+      }
+      const token = signToken(String(user._id));
+      setAuthCookie(res, String(user._id));
+      res.redirect(`${process.env.APP_URL ?? '/'}?token=${token}`);
+    }
+  )(req, res, next);
+});
 
 router.post('/logout', (_req: Request, res: Response) => {
   res.clearCookie('token');

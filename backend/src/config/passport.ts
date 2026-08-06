@@ -1,6 +1,12 @@
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { User } from '../models/user.model';
+import { isDblueOfficeIntegrationEnabled } from '../services/settings.service';
+import {
+  syncUserFromDblueOfficeIfEnabled,
+  DblueOfficeAccessDeniedError,
+  DblueOfficeSyncUnavailableError,
+} from '../services/userSync.service';
 
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   passport.use(
@@ -13,7 +19,15 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
       async (_accessToken, _refreshToken, profile, done) => {
         try {
           const email = profile.emails?.[0]?.value;
-          if (!email?.endsWith('@dblue.it')) {
+          if (!email) {
+            return done(null, false, { message: 'Email non disponibile dal profilo Google' });
+          }
+
+          // Finché l'integrazione dblue-office non è attivata dall'owner (AdminBar),
+          // l'app si comporta esattamente come prima: whitelist locale sul dominio.
+          // Una volta attiva, l'accesso è deciso da dblue-office (403 di /booking-app/session).
+          const integrationEnabled = await isDblueOfficeIntegrationEnabled();
+          if (!integrationEnabled && !email.endsWith('@dblue.it')) {
             return done(null, false, { message: 'Accesso riservato a @dblue.it' });
           }
 
@@ -29,8 +43,16 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
             await user.save();
           }
 
+          await syncUserFromDblueOfficeIfEnabled(user);
+
           return done(null, user);
         } catch (err) {
+          if (err instanceof DblueOfficeAccessDeniedError) {
+            return done(null, false, { message: err.message });
+          }
+          if (err instanceof DblueOfficeSyncUnavailableError) {
+            return done(null, false, { message: 'Servizio dblue-office non disponibile, riprova più tardi' });
+          }
           return done(err as Error);
         }
       }

@@ -252,6 +252,21 @@ export function triggerSeed(fresh = false): Promise<{ ok: boolean; summary: Seed
   });
 }
 
+export interface AdminSettings {
+  dblueOfficeIntegrationEnabled: boolean;
+}
+
+export function getAdminSettings(): Promise<AdminSettings> {
+  return request<AdminSettings>('/admin/settings');
+}
+
+export function setDblueOfficeIntegrationEnabled(enabled: boolean): Promise<AdminSettings> {
+  return request<AdminSettings>('/admin/settings', {
+    method: 'PATCH',
+    body: JSON.stringify({ dblueOfficeIntegrationEnabled: enabled }),
+  });
+}
+
 export interface ColleaguePresenceItem {
   userId: string;
   name: string;
