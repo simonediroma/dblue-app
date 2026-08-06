@@ -156,12 +156,14 @@ Questo è il passaggio più delicato per un junior.
 | Ambiente | Soluzione | Perché |
 |---|---|---|
 | **Locale** | Docker (già configurato) | Zero costi, zero latenza |
-| **Dev/Staging** | Railway MongoDB plugin | Incluso nel progetto Railway, zero config |
+| **Dev/Staging** | MongoDB Atlas M0 | Free tier, replica set nativo (richiesto dai Change Streams) |
 | **Produzione** | MongoDB Atlas M10+ | SLA garantito, backup automatici, Change Streams stabili |
 
-> Per dev e staging **non serve Atlas** — Railway include un plugin MongoDB
-> che si collega automaticamente al backend con la variabile `MONGODB_URL`.
-> Atlas va configurato solo quando si va in produzione.
+> A differenza di Railway, Coolify non ha un plugin MongoDB gestito che inietta
+> automaticamente una connection string nel backend — va usato Atlas anche in
+> dev/staging (M0 free tier basta) e la variabile `MONGODB_URI` va valorizzata
+> a mano nel servizio Coolify. Un MongoDB self-hosted via Coolify non ha il
+> replica set abilitato di default, quindi non supporta i Change Streams.
 
 ---
 
@@ -170,99 +172,104 @@ Questo è il passaggio più delicato per un junior.
 | Ambiente | Branch | Piattaforma | DB |
 |---|---|---|---|
 | **Local** | qualsiasi | localhost | Docker |
-| **Dev/Staging** | `develop` | Railway | Railway MongoDB plugin |
-| **Production** | `main` | Railway (pro) o Cloud Run | MongoDB Atlas M10 |
+| **Dev/Staging** | `develop` | Coolify | MongoDB Atlas M0 |
+| **Production** | `main` | Coolify o Cloud Run | MongoDB Atlas M10 |
 
 ---
 
-## 7. Deploy: Railway (dev e staging)
+## 7. Deploy: Coolify (dev e staging)
 
-> **Perché Railway?** Zero configurazione server, WebSocket supportati nativamente,
-> MongoDB come plugin integrato, deploy automatico da GitHub push.
-> Free tier include 5$/mese di crediti — sufficiente per mesi di sviluppo.
+> **Perché Coolify?** Self-hosted (nessun vendor lock-in/costo per-uso), deploy
+> automatico da GitHub push via webhook, build da Dockerfile già presenti nel
+> repo, WebSocket supportati nativamente dietro il proxy Traefik integrato.
 
-### 7.1 Creare il progetto Railway
+### 7.1 Creare il progetto Coolify
 
-1. Andare su [railway.app](https://railway.app) → **Login with GitHub**
-2. **New Project** → **Deploy from GitHub repo**
-3. Selezionare il repository `presence-app`
-4. Railway crea automaticamente il primo service
+1. Accedere alla propria istanza Coolify (self-hosted o cloud)
+2. **New Resource** → **Public Repository** (o **Private Repository** con GitHub App collegata)
+3. Selezionare il repository `presence-app` e il branch `develop`
+4. Coolify propone di creare un'applicazione per il repo — ripetere il processo
+   una seconda volta per avere due applicazioni distinte (backend, frontend)
 
-### 7.2 Configurare i service
+### 7.2 Configurare le applicazioni
 
-Il progetto avrà **tre service**: backend, frontend, MongoDB.
+Il progetto avrà **due applicazioni** Coolify (backend, frontend) — niente
+MongoDB su Coolify, si usa sempre Atlas (vedi §5).
 
-**Service 1 — Backend:**
-1. Nel service creato automaticamente → **Settings**
-2. **Root Directory**: `/backend`
-3. **Start Command**: `npm start` (esegue il build compilato)
-4. Railway rileva Node.js e usa Nixpacks per buildare automaticamente
+**Applicazione 1 — Backend:**
+1. **Build Pack**: `Dockerfile`
+2. **Base Directory**: `backend`
+3. **Dockerfile Location**: `Dockerfile` (relativo alla base directory)
+4. **Ports Exposes**: `4000`
+5. **Health Check Path**: `/health`
 
-**Service 2 — Frontend:**
-1. **New** → **GitHub Repo** → stesso repo
-2. **Root Directory**: `/frontend`
-3. **Start Command**: lasciare vuoto (Railway serve il build Vite con static server)
-4. Oppure usare Dockerfile esistente se presente
+**Applicazione 2 — Frontend:**
+1. **Build Pack**: `Dockerfile`
+2. **Base Directory**: `frontend`
+3. **Dockerfile Location**: `Dockerfile`
+4. **Ports Exposes**: `80`
+5. **Health Check Path**: `/`
+6. **Build Argument**: `VITE_API_URL` = URL pubblico dell'applicazione backend (richiesto a build-time da Vite, va impostato come build arg, non solo come env var runtime)
 
-**Service 3 — MongoDB:**
-1. **New** → **Database** → **Add MongoDB**
-2. Railway spawna MongoDB e genera automaticamente `MONGODB_URL`
-3. La variabile viene iniettata nel backend linkando i due service:
-   - Nel service backend → **Variables** → **Add Reference** → selezionare `MONGODB_URL` dal service MongoDB
+### 7.3 Variabili d'ambiente su Coolify
 
-### 7.3 Variabili d'ambiente su Railway
-
-Nel service **backend** aggiungere da UI (Settings → Variables):
+Nell'applicazione **backend** aggiungere da UI (Environment Variables):
 
 ```
 NODE_ENV=staging
 JWT_SECRET=<genera con: openssl rand -base64 32>
 GOOGLE_CLIENT_ID=<da Google Cloud Console>
 GOOGLE_CLIENT_SECRET=<da Google Cloud Console>
-APP_URL=${{frontend.RAILWAY_PUBLIC_DOMAIN}}
+MONGODB_URI=<connection string Atlas>
+APP_URL=<URL pubblico assegnato all'applicazione frontend>
 PORT=4000
 ```
 
-Nel service **frontend**:
+Nell'applicazione **frontend**:
 ```
-VITE_API_URL=${{backend.RAILWAY_PUBLIC_DOMAIN}}
+VITE_API_URL=<URL pubblico assegnato all'applicazione backend>
 ```
 
-> Railway supporta la sintassi `${{service.VARIABILE}}` per referenziare
-> variabili da altri service dello stesso progetto.
+> A differenza di Railway, Coolify non ha una sintassi `${{service.VARIABILE}}`
+> per referenziare automaticamente l'URL di un'altra applicazione — l'URL
+> pubblico va copiato a mano una volta noto (Coolify lo assegna al primo deploy,
+> oppure è il dominio custom se già configurato, vedi §7.5).
 
 ### 7.4 Aggiungere redirect URI per OAuth
 
-Dopo il primo deploy Railway assegna un URL pubblico tipo
-`https://presence-backend-production.up.railway.app`.
+Dopo il primo deploy Coolify assegna un URL pubblico (dominio Coolify di default
+o il dominio custom configurato, vedi §7.5).
 
-Aggiornare su Google Cloud Console → Credentials → OAuth Client:
+Aggiornare su Google Cloud Console → Credentials → OAuth Client con l'URL
+pubblico effettivo dell'applicazione backend:
 ```
-https://presence-backend-<hash>.up.railway.app/auth/google/callback
+https://<dominio-backend>/auth/google/callback
 ```
 
 ### 7.5 Dominio custom (opzionale)
 
-Railway → service → **Settings** → **Custom Domain**:
+Applicazione Coolify → **Domains**: aggiungere il dominio desiderato, es.:
 ```
-staging.presence.facile.it → frontend service
-staging-api.presence.facile.it → backend service
+staging.presence.facile.it → applicazione frontend
+staging-api.presence.facile.it → applicazione backend
 ```
 
-Aggiungere i CNAME indicati da Railway nel DNS di Facile.
+Coolify genera automaticamente il certificato TLS (Let's Encrypt via il proxy
+Traefik integrato) una volta che il CNAME indicato punta al server Coolify.
 
 ---
 
-## 8. CI/CD con GitHub Actions + Railway
+## 8. CI/CD con GitHub Actions + Coolify
 
-Railway deploya automaticamente ad ogni push sul branch collegato — non serve
-configurare GitHub Actions per il deploy su Railway.
+Coolify deploya automaticamente ad ogni push sul branch collegato (via webhook
+GitHub, configurato quando si crea l'applicazione) — non serve configurare
+GitHub Actions per il deploy su Coolify.
 
 Il workflow di branching:
 
 ```
-feature/* → develop → [Railway deploy automatico su staging]
-develop   → main    → [Railway deploy automatico su produzione]
+feature/* → develop → [Coolify deploy automatico su staging]
+develop   → main    → [Coolify deploy automatico su produzione]
 ```
 
 ### Aggiungere linting pre-deploy (opzionale ma consigliato)
@@ -300,8 +307,10 @@ jobs:
 Questo workflow blocca il merge se TypeScript ha errori — utile per non deployare
 codice rotto su staging.
 
-> **Segreti GitHub da configurare** (solo se si vuole deploy manuale via CLI):
-> - `RAILWAY_TOKEN` — da Railway → Account Settings → Tokens
+> **Segreti GitHub da configurare** (solo se si vuole triggerare un deploy manuale
+> via API invece di aspettare il webhook automatico):
+> - `COOLIFY_TOKEN` — da Coolify → Keys & Tokens → API tokens
+> - `COOLIFY_API_URL` — l'URL della propria istanza Coolify
 
 ---
 
@@ -363,19 +372,19 @@ claude -p "refactora backend/src/routes/auth.ts per gestire il refresh token"
 
 ---
 
-## 11. Migrazione Railway → produzione (exit strategy)
+## 11. Migrazione Coolify → produzione alternativa (exit strategy)
 
-Railway va benissimo per dev e staging, ma se in produzione si vuole evitare
-i costi del piano pro (~20$/mese) o avere più controllo, la migrazione è semplice
-perché **i Dockerfile sono già presenti nel repo**.
+Coolify va benissimo per dev, staging e anche produzione (self-hosted, nessun
+costo per-uso oltre al server), ma se si vuole scalabilità gestita o si è già
+sullo stack GCP, la migrazione è semplice perché **i Dockerfile sono già
+presenti nel repo** — nessuna delle due piattaforme li richiede diversi.
 
 ### Opzioni produzione
 
 | Opzione | Costo stimato | Complessità | Quando sceglierla |
 |---|---|---|---|
-| **Railway Pro** | ~20$/mese | minima | Se il team vuole zero ops |
-| **GCP Cloud Run** | pay-per-use (< 10$/mese traffico basso) | media | Stack GCP, scalabilità |
-| **Dokploy su VPS** | ~5-10$/mese (VPS) | media | Controllo totale, costi fissi |
+| **Coolify** (stesso server di dev/staging o uno dedicato) | costo del VPS (~5-10$/mese) | minima | Se il team vuole restare self-hosted, zero costi per-uso |
+| **GCP Cloud Run** | pay-per-use (< 10$/mese traffico basso) | media | Stack GCP, scalabilità gestita |
 
 ### Procedura migrazione verso GCP Cloud Run
 
@@ -420,21 +429,21 @@ gcloud run deploy presence-frontend \
 
 **5. Aggiornare i redirect URI OAuth** con i nuovi URL Cloud Run.
 
-> La migrazione da Railway a Cloud Run richiede circa **2-3 ore** di lavoro
+> La migrazione da Coolify a Cloud Run richiede circa **2-3 ore** di lavoro
 > e zero modifiche al codice — cambia solo dove girano i container.
 
 ---
 
-## 12. Checklist deploy — prima messa online su Railway
+## 12. Checklist deploy — prima messa online su Coolify
 
 - [ ] Repository GitHub creato e codice pushato
-- [ ] Progetto Railway creato e collegato al repo
-- [ ] Tre service configurati: backend, frontend, MongoDB
-- [ ] Variabili d'ambiente inserite su Railway (backend e frontend)
-- [ ] `MONGODB_URL` referenziata dal service MongoDB al backend
-- [ ] Credenziali Google OAuth create con redirect URI Railway
-- [ ] `APP_URL` e `VITE_API_URL` puntano ai domini Railway corretti
-- [ ] CORS del backend configurato con il dominio frontend Railway
+- [ ] Due applicazioni Coolify create e collegate al repo: backend, frontend
+- [ ] MongoDB Atlas (M0 dev/staging, M10 prod) creato, connection string a portata di mano
+- [ ] Variabili d'ambiente inserite su Coolify (backend e frontend)
+- [ ] `MONGODB_URI` valorizzata a mano nell'applicazione backend (Atlas — Coolify non la genera)
+- [ ] Credenziali Google OAuth create con redirect URI dell'applicazione backend Coolify
+- [ ] `APP_URL` e `VITE_API_URL` puntano ai domini Coolify corretti
+- [ ] CORS del backend configurato con il dominio dell'applicazione frontend Coolify
 - [ ] Health check `GET /health` risponde 200
 - [ ] Login Google funzionante end-to-end
 - [ ] WebSocket testato (connessione persistente attiva)

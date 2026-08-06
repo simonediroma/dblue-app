@@ -59,7 +59,7 @@ test.describe('My Stats', () => {
 
 // ---------------------------------------------------------------------------------
 // CSV coverage — Stats Sanity Check (H-43)
-// Hits the real backend/DB (Railway dev environment) — no API mocking. See e2e/README.md.
+// Hits the real backend/DB (Coolify dev environment) — no API mocking. See e2e/README.md.
 // ---------------------------------------------------------------------------------
 import type { Page } from '@playwright/test';
 import { loginAsOwner as csvLoginAsOwner, getAuthHeaders as csvGetAuthHeaders } from '../fixtures/auth';

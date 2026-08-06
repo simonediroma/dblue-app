@@ -57,7 +57,7 @@ Move the current `App.tsx` (1,419 lines: routing, all state, data fetching, even
 **Verification:** app builds and behaves identically; existing e2e suite (still pointed at old auth/routes at this stage, run against `<SOURCE>` if needed for a baseline) shows no new failures attributable to this phase.
 
 ### Phase 2 — Monorepo scaffold
-Root `package.json` (`dev`/`build`/`start`/`cron` scripts), `concurrently`, port reassignment (backend 3001, frontend 5174), Vite proxy for `/api`. Existing `backend/Dockerfile` / `backend/railway.toml` / root `docker-compose.yml` are left in place (ignored by Coolify/Nixpacks, still usable for local Docker workflows) unless the client selects the "separate services" alternative in §6.1.
+Root `package.json` (`dev`/`build`/`start`/`cron` scripts), `concurrently`, port reassignment (backend 3001, frontend 5174), Vite proxy for `/api`. Existing `backend/Dockerfile` / root `docker-compose.yml` are left in place (ignored by Coolify/Nixpacks, still usable for local Docker workflows) unless the client selects the "separate services" alternative in §6.1.
 **Verification:** `npm run dev` from root starts both services on the new ports.
 
 ### Phase 3 — User model migration

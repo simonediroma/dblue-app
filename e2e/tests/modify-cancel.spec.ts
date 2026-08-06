@@ -13,7 +13,7 @@ import { flushOfficeCapacityQueue } from '../fixtures/officeCapacityQueue';
 
 /**
  * CSV coverage — Modify/Cancel (H-26 -> H-29, H-26b)
- * Hits the real backend/DB (Railway dev environment) — no API mocking. See e2e/README.md.
+ * Hits the real backend/DB (Coolify dev environment) — no API mocking. See e2e/README.md.
  *
  * H-27/H-28/H-26b need "today" (the DailyDetail last-minute warning only gates on the
  * exact current day, not "last minute" generally) — each resets its own account's

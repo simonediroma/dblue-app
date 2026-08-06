@@ -18,8 +18,8 @@
 | Database | MongoDB Atlas (M0 dev, M10 prod) | Mongoose ODM |
 | Real-time | WebSockets (`ws`) + MongoDB Change Streams | Aggiornamenti live disponibilità |
 | Auth | Google OAuth 2.0 (Passport.js) | Solo Google Sign-In, JWT per sessioni |
-| Deploy dev | Railway | Auto-deploy da branch `develop` |
-| Deploy prod | Railway Pro o GCP Cloud Run | MongoDB Atlas M10 |
+| Deploy dev | Coolify | Auto-deploy da branch `develop` |
+| Deploy prod | Coolify o GCP Cloud Run | MongoDB Atlas M10 |
 
 ---
 
@@ -57,8 +57,7 @@ presence-app/
 │   │   ├── types/          ← TypeScript interfaces
 │   │   ├── utils/          ← helpers puri
 │   │   └── context/        ← React context (AuthContext, ecc.)
-│   ├── Dockerfile
-│   └── railway.toml
+│   └── Dockerfile          ← build Coolify (Build Pack: Dockerfile, base directory frontend/)
 ├── backend/
 │   ├── src/
 │   │   ├── routes/         ← route Express (auth.ts, presence.ts, ecc.)
@@ -67,8 +66,7 @@ presence-app/
 │   │   ├── services/       ← business logic
 │   │   ├── config/         ← passport.ts, jwt.ts
 │   │   └── types/          ← express.d.ts e altri type augment
-│   ├── Dockerfile
-│   └── railway.toml
+│   └── Dockerfile          ← build Coolify (Build Pack: Dockerfile, base directory backend/)
 ├── presence---office-planner/  ← prototipo AI Studio — SOLA LETTURA
 ├── prompts/                    ← prompt Claude Code (M0→M6, UI-1→UI-4)
 ├── docs/                       ← architecture.md, lessons.md
@@ -83,11 +81,13 @@ presence-app/
 
 | Risorsa | Dev | Prod |
 |---------|-----|------|
-| Backend | Railway service | Railway Pro / Cloud Run |
-| Frontend | Railway service | Railway Pro / Cloud Run |
-| Database | Railway MongoDB plugin | MongoDB Atlas M10 |
+| Backend | Coolify application (Dockerfile, base dir `backend/`) | Coolify / Cloud Run |
+| Frontend | Coolify application (Dockerfile, base dir `frontend/`) | Coolify / Cloud Run |
+| Database | MongoDB Atlas M0 | MongoDB Atlas M10 |
 | Auth | Google OAuth (credenziali dev) | Google OAuth (credenziali prod) |
-| Region | EU (Railway default) | europe-west1 (GCP) |
+| Region | a seconda del server Coolify | europe-west1 (GCP) |
+
+Coolify non ha un plugin MongoDB gestito con auto-injection della connection string come Railway — a differenza del vecchio setup, `MONGODB_URI` va sempre valorizzata a mano (Atlas, sia in dev sia in prod) anche in ambiente dev. Vedi `docs/lessons.md` per il motivo per cui un'istanza MongoDB standalone non va bene (Change Streams richiedono un replica set).
 
 ---
 
@@ -95,13 +95,13 @@ presence-app/
 
 | Variabile | Backend/Frontend | Descrizione |
 |-----------|-----------------|-------------|
-| `MONGODB_URL` | Backend | Connection string MongoDB — Railway la genera automaticamente dal plugin con questo nome esatto |
+| `MONGODB_URI` | Backend | Connection string MongoDB (Atlas) — va sempre valorizzata a mano, Coolify non la genera automaticamente |
 | `JWT_SECRET` | Backend | Firma token sessione (min 32 chars) |
 | `GOOGLE_CLIENT_ID` | Backend | OAuth 2.0 client ID |
 | `GOOGLE_CLIENT_SECRET` | Backend only | OAuth 2.0 secret (mai sul frontend) |
 | `APP_URL` | Backend | URL pubblico del frontend (CORS) |
 | `BACKEND_URL` | Backend | URL pubblico del backend (callback OAuth) |
-| `PORT` | Backend | Default 4000 — Railway lo sovrascrive automaticamente |
+| `PORT` | Backend | Default 4000 — impostare come porta esposta nel servizio Coolify |
 | `NODE_ENV` | Backend | `development` / `production` |
 | `DEV_LOGIN_USER` | Backend | Email utente dev (solo NODE_ENV=development) |
 | `DEV_LOGIN_PASS` | Backend | Password utente dev (solo NODE_ENV=development) |
@@ -221,5 +221,7 @@ cd backend && npm run lint         # tsc --noEmit
 cd frontend && npm run lint        # tsc --noEmit
 ```
 
-**Deploy:** Railway fa il deploy automaticamente ad ogni `git push`.
-Non serve Railway CLI né Docker in locale — tutto gira su Railway.
+**Deploy:** Coolify fa il deploy automaticamente ad ogni `git push` sul branch collegato
+(webhook GitHub → build Dockerfile → rolling restart). Due applicazioni Coolify separate,
+una per `backend/` e una per `frontend/`, entrambe Build Pack "Dockerfile".
+Non serve Docker in locale — il build gira su Coolify.

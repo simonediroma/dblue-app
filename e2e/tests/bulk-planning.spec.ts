@@ -209,7 +209,7 @@ test.describe('Bulk planning — Extend to other days', () => {
 
 // ---------------------------------------------------------------------------------
 // CSV coverage — Bulk Planning (H-15 -> H-20)
-// Hits the real backend/DB (Railway dev environment) — no API mocking, no page.route()
+// Hits the real backend/DB (Coolify dev environment) — no API mocking, no page.route()
 // mocking like the block above. See e2e/README.md. Kept separate from the regression
 // tests above; do not merge.
 // ---------------------------------------------------------------------------------

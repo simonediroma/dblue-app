@@ -293,7 +293,7 @@ test.describe('Retrofit — current month cards are NOT retrofitted', () => {
 
 // ---------------------------------------------------------------------------------
 // CSV coverage — Retrofitting (H-34 -> H-39)
-// Hits the real backend/DB (Railway dev environment) — no page.route() mocking like the
+// Hits the real backend/DB (Coolify dev environment) — no page.route() mocking like the
 // blocks above. See e2e/README.md.
 // ---------------------------------------------------------------------------------
 import type { Page } from '@playwright/test';

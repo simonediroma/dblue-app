@@ -56,11 +56,11 @@ by side in `tests/`:
 ## Environment
 
 **There is no local dev environment for this suite.** It runs against the shared
-Railway dev environment — the same one manual QA testers use.
+Coolify dev environment — the same one manual QA testers use.
 
 1. `cd e2e && cp .env.example .env`, then fill in:
-   - `BASE_URL` / `API_BASE_URL` — the Railway dev frontend/backend URLs (ask, or reuse
-     the values already configured as `RAILWAY_FRONTEND_URL` / `RAILWAY_BACKEND_URL`
+   - `BASE_URL` / `API_BASE_URL` — the Coolify dev frontend/backend URLs (ask, or reuse
+     the values already configured as `COOLIFY_FRONTEND_URL` / `COOLIFY_BACKEND_URL`
      GitHub Actions secrets).
    - `DEV_LOGIN_PASS` — the shared password for all 6 dev-login accounts on that
      environment.
@@ -86,7 +86,7 @@ wired through `e2e/fixtures/testAdmin.ts`:
 | `POST /admin/test/reset-status` | Lets multiple spec files reuse the same 6 dev-login accounts for "today" without colliding with each other |
 | `POST /admin/test/simulate-confirm` | H-39, H-43 — simulates what the nightly cron would have done, without waiting for it |
 
-**This router must be deployed to Railway** before any test that uses it (H-01, H-40,
+**This router must be deployed to Coolify** before any test that uses it (H-01, H-40,
 H-39, H-43) can pass. Every other test only needs the app itself.
 
 ## Running the suite
@@ -156,7 +156,7 @@ working tree like any other change; commit it yourself if you want to keep it.
 
 The two kinds of coverage described above run as two separate, manually-triggered
 GitHub Actions workflows (`workflow_dispatch` only — neither runs automatically on
-push/merge, since both hit the shared Railway dev environment other people also use):
+push/merge, since both hit the shared Coolify dev environment other people also use):
 
 | Workflow | File | Runs |
 |---|---|---|

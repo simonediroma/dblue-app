@@ -7,7 +7,7 @@ import { flushOfficeCapacityQueue, queuePendingRestore } from '../fixtures/offic
 
 /**
  * CSV coverage — Teammates (H-01 -> H-08)
- * Hits the real backend/DB (Railway dev environment) — no API mocking. See e2e/README.md.
+ * Hits the real backend/DB (Coolify dev environment) — no API mocking. See e2e/README.md.
  *
  * The acting user for onboarding tests (H-01, H-02) is the employee dev account
  * (mario.rossi@dblue.it), whose onboardingCompleted flag is reset via the test-only
@@ -313,7 +313,7 @@ test.describe('CSV coverage — Teammates', () => {
     // See H-02: two setGiuliaStatus() round trips plus the Profile editor flow below
     // routinely exceed Playwright's 30s default test timeout on the real environment.
     // 60s still wasn't enough on a slower run — real network latency against the shared
-    // Railway environment varies, so give more headroom.
+    // Coolify environment varies, so give more headroom.
     test.setTimeout(90000);
     const officeDate = futureTestDate('H-04-office');
     const remoteDate = futureTestDate('H-04-remote');
@@ -373,7 +373,7 @@ test.describe('CSV coverage — Teammates', () => {
     // See H-02: two setGiuliaStatus() round trips plus the Profile editor flow below
     // routinely exceed Playwright's 30s default test timeout on the real environment.
     // 60s still wasn't enough on a slower run — real network latency against the shared
-    // Railway environment varies, so give more headroom.
+    // Coolify environment varies, so give more headroom.
     test.setTimeout(90000);
     const officeDate = futureTestDate('H-06-office');
     const remoteDate = futureTestDate('H-06-remote');

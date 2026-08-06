@@ -299,7 +299,7 @@ test.describe('Check-in (Say Good Morning) — integration', () => {
 
 // ---------------------------------------------------------------------------------
 // CSV coverage — Confirm/Check-In (H-21 -> H-25, H-25b)
-// Hits the real backend/DB (Railway dev environment) — no page.route() mocking like
+// Hits the real backend/DB (Coolify dev environment) — no page.route() mocking like
 // the blocks above. See e2e/README.md. Each test uses a different dev account so that
 // "today" (unique per userId+date) never collides across these sequential tests.
 // ---------------------------------------------------------------------------------

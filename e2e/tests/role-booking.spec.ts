@@ -7,7 +7,7 @@ import { flushOfficeCapacityQueue } from '../fixtures/officeCapacityQueue';
 
 /**
  * CSV coverage — Role-Specific Booking (H-44 -> H-46)
- * Hits the real backend/DB (Railway dev environment) — no API mocking. See e2e/README.md.
+ * Hits the real backend/DB (Coolify dev environment) — no API mocking. See e2e/README.md.
  */
 
 const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:4000';

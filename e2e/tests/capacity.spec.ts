@@ -7,7 +7,7 @@ import { flushOfficeCapacityQueue, queuePendingRestore } from '../fixtures/offic
 
 /**
  * CSV coverage — Capacity & Waiting List (H-40, H-40a, H-40b)
- * Hits the real backend/DB (Railway dev environment) — no API mocking. See e2e/README.md.
+ * Hits the real backend/DB (Coolify dev environment) — no API mocking. See e2e/README.md.
  *
  * The CSV assumes 23 real office seats; the actual seeded total is different and must
  * never be hardcoded — read it from GET /rooms.

@@ -7,7 +7,7 @@ import { flushOfficeCapacityQueue } from '../fixtures/officeCapacityQueue';
 
 /**
  * CSV coverage — Plan a Future Day (H-09 -> H-14)
- * Hits the real backend/DB (Railway dev environment) — no API mocking. See e2e/README.md.
+ * Hits the real backend/DB (Coolify dev environment) — no API mocking. See e2e/README.md.
  */
 
 test.describe('CSV coverage — Plan a Future Day', () => {

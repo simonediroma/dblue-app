@@ -13,7 +13,7 @@ export default defineConfig({
   globalTeardown: './global-teardown.ts',
   reporter: [['html', { open: 'never' }], ['list'], ['./reporters/csv-summary-reporter.ts']],
   use: {
-    // Primary target is the shared Railway dev environment (set BASE_URL/API_BASE_URL
+    // Primary target is the shared Coolify dev environment (set BASE_URL/API_BASE_URL
     // in e2e/.env). This fallback assumes a local frontend (vite --port=3000), not 5173.
     baseURL: process.env.BASE_URL ?? 'http://localhost:3000',
     headless: true,

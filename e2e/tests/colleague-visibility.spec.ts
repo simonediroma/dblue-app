@@ -7,7 +7,7 @@ import { flushOfficeCapacityQueue } from '../fixtures/officeCapacityQueue';
 
 /**
  * CSV coverage — Colleague Visibility (H-41 -> H-42)
- * Hits the real backend/DB (Railway dev environment) — no API mocking. See e2e/README.md.
+ * Hits the real backend/DB (Coolify dev environment) — no API mocking. See e2e/README.md.
  */
 
 async function setColleagueStatus(browser: Browser, role: DevRole, date: string, status: StatusKey) {
@@ -116,7 +116,7 @@ test.describe('CSV coverage — Colleague Visibility', () => {
     // Two setColleagueStatus() round trips (each a full login + day-planning flow in a
     // separate browser context) plus the teammate editor flow below routinely exceed
     // Playwright's 30s default test timeout on the real environment. 60s still wasn't
-    // enough on a slower run — real network latency against the shared Railway
+    // enough on a slower run — real network latency against the shared Coolify
     // environment varies, so give more headroom.
     test.setTimeout(90000);
     const date = futureTestDate('H-41');

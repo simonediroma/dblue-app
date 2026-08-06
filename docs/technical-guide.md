@@ -1,6 +1,6 @@
 # Presence App — Technical Guide
 
-> Version: 2026-06-18 | Stack: Node 20 · React 19 · MongoDB 7 · Railway → GCP
+> Version: 2026-06-18 | Stack: Node 20 · React 19 · MongoDB 7 · Coolify → GCP
 
 ---
 
@@ -22,7 +22,7 @@
    - [Types & Enums](#45-types--enums)
 5. [Infrastructure](#5-infrastructure)
    - [Local Development](#51-local-development)
-   - [Current Production — Railway](#52-current-production--railway)
+   - [Current Production — Coolify](#52-current-production--coolify)
    - [CI/CD Pipeline](#53-cicd-pipeline)
    - [Environment Variables Reference](#54-environment-variables-reference)
 6. [Migration to GCP](#6-migration-to-gcp)
@@ -76,8 +76,7 @@ dblue-app/
 │   │   ├── middleware/          # auth.middleware.ts, rbac.middleware.ts
 │   │   ├── config/              # jwt.ts, passport.ts
 │   │   └── __tests__/           # Jest unit tests (6 suites)
-│   ├── Dockerfile               # Multi-stage Node 20 Alpine build
-│   ├── railway.toml             # Railway deploy config (healthcheck /health)
+│   ├── Dockerfile               # Multi-stage Node 20 Alpine build (HEALTHCHECK on /health)
 │   ├── package.json
 │   └── tsconfig.json
 │
@@ -92,8 +91,7 @@ dblue-app/
 │   │   ├── pages/               # Login page
 │   │   └── types/               # API interfaces, WorkStatus enum, DayPresence, etc.
 │   ├── nginx/default.conf       # SPA routing (try_files → index.html), gzip
-│   ├── Dockerfile               # Multi-stage: Vite build → nginx Alpine
-│   ├── railway.toml             # Railway deploy config (healthcheck /)
+│   ├── Dockerfile               # Multi-stage: Vite build → nginx Alpine (HEALTHCHECK on /)
 │   ├── vite.config.ts           # Vite 6 + Tailwind v4 plugin
 │   ├── package.json
 │   └── tsconfig.json
@@ -741,34 +739,34 @@ npm run dev               # Vite on http://localhost:3000
 
 ---
 
-### 5.2 Current Production — Railway
+### 5.2 Current Production — Coolify
 
-Both services are deployed as Docker containers on [Railway](https://railway.app).
+Both services are deployed as Docker containers on a self-hosted [Coolify](https://coolify.io) instance, as two separate applications built directly from the Dockerfiles already in the repo (no `docker-compose.yml` involved in this path — that file is local-dev-only, see §5.1).
 
 ```
-Railway Project
-├── backend service
-│   ├── Source: Dockerfile (backend/)
-│   ├── Health check: GET /health (30 s timeout, 3 retries)
-│   ├── Restart policy: on-failure, max 3×
+Coolify Project
+├── backend application
+│   ├── Build Pack: Dockerfile, base directory backend/
+│   ├── Health check: GET /health (Docker HEALTHCHECK in the Dockerfile: 30 s interval, 3 retries)
+│   ├── Restart policy: Coolify restarts the container on health-check failure
 │   └── Env vars: MONGODB_URI, JWT_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
 │                 APP_URL, BACKEND_URL, NODE_ENV=production, (SMTP_* optional)
 │
-└── frontend service
-    ├── Source: Dockerfile (frontend/)
+└── frontend application
+    ├── Build Pack: Dockerfile, base directory frontend/
     ├── Build arg: VITE_API_URL = public backend URL
-    ├── Health check: GET / (30 s timeout)
-    └── Served by nginx on $PORT (Railway injects)
+    ├── Health check: GET / (Docker HEALTHCHECK in the Dockerfile)
+    └── Served by nginx on port 80, proxied by Coolify's built-in Traefik
 ```
 
-MongoDB is **not** hosted on Railway. The project uses **MongoDB Atlas** (M10+ cluster required for Change Streams support). The `MONGODB_URI` env var in the Railway backend service points to the Atlas connection string.
+MongoDB is **not** hosted on Coolify — there is no managed MongoDB plugin equivalent to Railway's. The project uses **MongoDB Atlas** (M10+ cluster required for Change Streams support). The `MONGODB_URI` env var in the Coolify backend application points to the Atlas connection string and must be set by hand (Coolify does not auto-generate or inject it).
 
 **Deploy flow:**
 ```
-git push origin main  →  Railway detects push  →  Docker build  →  Container swap
+git push origin main  →  Coolify webhook fires  →  Docker build  →  Container swap
 ```
 
-No downtime strategy: Railway performs rolling restarts (one new container starts, health-checks pass, old container stops).
+No downtime strategy: Coolify performs rolling restarts (one new container starts, health-checks pass, old container stops, same as before).
 
 ---
 
@@ -789,8 +787,8 @@ jobs:
       - npx playwright install --with-deps chromium
       - npx playwright test
     env:
-      BASE_URL:        ${{ secrets.BASE_URL }}         # Railway frontend URL
-      API_BASE_URL:    ${{ secrets.API_BASE_URL }}     # Railway backend URL
+      BASE_URL:        ${{ secrets.BASE_URL }}         # Coolify frontend URL
+      API_BASE_URL:    ${{ secrets.API_BASE_URL }}     # Coolify backend URL
       DEV_LOGIN_USER:  ${{ secrets.DEV_LOGIN_USER }}
       DEV_LOGIN_PASS:  ${{ secrets.DEV_LOGIN_PASS }}
 ```
@@ -825,7 +823,7 @@ Artifacts: Playwright HTML report (7-day retention).
 | `GOOGLE_CLIENT_SECRET` | Yes* | `GOCSPX-…` | Google OAuth client secret |
 | `APP_URL` | Yes | `https://presence.dblue.it` | Frontend public URL (CORS origin) |
 | `BACKEND_URL` | Yes | `https://api.presence.dblue.it` | Backend public URL (OAuth callback) |
-| `PORT` | No | `4000` | Express listen port (injected by Railway/Cloud Run) |
+| `PORT` | No | `4000` | Express listen port (injected by Cloud Run; fixed via Coolify's "Ports Exposes" setting) |
 | `NODE_ENV` | No | `production` | Disables dev-login when set to `production` |
 | `ENABLE_DEV_LOGIN` | No | `true` | Allow dev-login route (staging only) |
 | `DEV_LOGIN_USER` | No | `dev@dblue.it` | Dev-login email |
@@ -852,7 +850,7 @@ Artifacts: Playwright HTML report (7-day retention).
 
 ## 6. Migration to GCP
 
-This section describes a complete migration from Railway to Google Cloud Platform (GCP), targeting a production-ready setup with Cloud Run, Artifact Registry, Cloud Build, Secret Manager, and a Cloud Load Balancer with a custom domain.
+This section describes a complete migration from Coolify to Google Cloud Platform (GCP), targeting a production-ready setup with Cloud Run, Artifact Registry, Cloud Build, Secret Manager, and a Cloud Load Balancer with a custom domain.
 
 ### 6.1 Architecture Overview
 
@@ -1167,7 +1165,7 @@ gcloud compute forwarding-rules create presence-http-rule \
 
 ### 6.9 Step 8 — Cloud Build CI/CD
 
-Replace GitHub Actions + Railway auto-deploy with Cloud Build triggers.
+Replace GitHub Actions + Coolify auto-deploy with Cloud Build triggers.
 
 **Create `cloudbuild.yaml` at the repo root:**
 
@@ -1334,7 +1332,7 @@ Estimates for a team of ~50 users, low-to-medium traffic, `europe-west1` region.
 | MongoDB Atlas | M10 cluster (external) | ~$57 |
 | **Total** | | **~$95–110/month** |
 
-Compare to Railway: ~$20–40/month for both services + Pro plan. GCP costs more but provides enterprise-grade SLAs, granular IAM, and better observability.
+Compare to Coolify: cost of the underlying VPS only (~$5–10/month), self-hosted, no per-service plan fee. GCP costs more but provides enterprise-grade SLAs, granular IAM, and better observability.
 
 **Cost optimization levers:**
 - Set `--min-instances=0` on frontend (already done); only backend needs always-on.

@@ -2,7 +2,7 @@ import type { FullConfig } from '@playwright/test';
 import { request as playwrightRequest } from '@playwright/test';
 
 // Verifies the target environment (BASE_URL/API_BASE_URL — normally the shared
-// Railway dev environment) is reachable and already seeded, before the suite
+// Coolify dev environment) is reachable and already seeded, before the suite
 // runs. Deliberately does NOT reseed itself: reseeding is destructive and would
 // fight with tests running against a DB other people are also using manually.
 export default async function globalSetup(_config: FullConfig): Promise<void> {

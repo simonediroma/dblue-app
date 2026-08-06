@@ -9,7 +9,7 @@ const OWNER_EMAIL = 'dev@dblue.it';
 
 /**
  * CSV coverage — Permesso / leave hours (H-31 -> H-33)
- * Hits the real backend/DB (Railway dev environment) — no API mocking. See e2e/README.md.
+ * Hits the real backend/DB (Coolify dev environment) — no API mocking. See e2e/README.md.
  *
  * Root cause already traced in frontend/src/services/api.ts: updateOffTime() is the only
  * mutating presence call that does NOT pipe its response through normalizeDay(), and
