@@ -7,6 +7,7 @@ import { retrofitStatus } from '../services/working-status.service';
 import { getMonthlyStats } from '../services/stats.service';
 import { runSeed } from '../services/seed.service';
 import { isDblueOfficeIntegrationEnabled, setDblueOfficeIntegrationEnabled } from '../services/settings.service';
+import { checkDevAccountsCompliance } from '../services/dblueOfficeCompliance.service';
 
 const router = Router();
 router.use(requireAuth);
@@ -208,6 +209,31 @@ router.patch(
     try {
       const enabled = await setDblueOfficeIntegrationEnabled(dblueOfficeIntegrationEnabled);
       res.json({ dblueOfficeIntegrationEnabled: enabled });
+    } catch (err) {
+      handleError(res, err);
+    }
+  }
+);
+
+// GET /admin/dblue-office-compliance — Owner only, gated dietro ENABLE_DEV_LOGIN
+// (i DEV_ACCOUNTS controllati hanno senso solo con il dev-login attivo). Chiama
+// /booking-app/session per i 6 account di test e confronta il ruolo ricevuto con
+// quello atteso — diagnostica pura, indipendente dal flag dblueOfficeIntegrationEnabled
+// (va usata anche PRIMA di accenderlo, per validare la mappatura ruoli su staging).
+router.get(
+  '/dblue-office-compliance',
+  (_req: Request, res: Response, next): void => {
+    if (!process.env.ENABLE_DEV_LOGIN) {
+      res.status(404).end();
+      return;
+    }
+    next();
+  },
+  requireRole('owner'),
+  async (_req: Request, res: Response): Promise<void> => {
+    try {
+      const results = await checkDevAccountsCompliance();
+      res.json({ results });
     } catch (err) {
       handleError(res, err);
     }

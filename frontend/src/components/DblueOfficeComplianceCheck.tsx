@@ -1,0 +1,92 @@
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { motion } from 'motion/react';
+import { ChevronLeft, CheckCircle2, XCircle, RefreshCw } from 'lucide-react';
+import { checkDblueOfficeCompliance } from '../services/api';
+import type { DblueOfficeComplianceResult } from '../services/api';
+
+interface DblueOfficeComplianceCheckProps {
+  onBack: () => void;
+}
+
+type State =
+  | { status: 'loading' }
+  | { status: 'done'; results: DblueOfficeComplianceResult[] }
+  | { status: 'error'; message: string };
+
+export default function DblueOfficeComplianceCheck({ onBack }: DblueOfficeComplianceCheckProps) {
+  const [state, setState] = useState<State>({ status: 'loading' });
+
+  const runCheck = () => {
+    setState({ status: 'loading' });
+    checkDblueOfficeCompliance()
+      .then((results) => setState({ status: 'done', results }))
+      .catch((err) => setState({ status: 'error', message: (err as Error).message }));
+  };
+
+  useEffect(() => {
+    runCheck();
+  }, []);
+
+  return createPortal(
+    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="fixed inset-0 bg-surface z-[200] flex flex-col font-sans">
+      <header className="px-6 py-4 bg-surface-container-lowest border-b border-outline-variant/10 flex items-center gap-4 shadow-sm">
+        <button onClick={onBack} aria-label="Back" className="p-2 hover:bg-surface-container rounded-full transition-colors shrink-0">
+          <ChevronLeft className="w-5 h-5 text-on-surface" />
+        </button>
+        <div className="flex-grow">
+          <h1 className="font-headline text-lg font-bold text-on-surface">Compliance account dblue-office</h1>
+          <p className="text-xs text-on-surface-variant">
+            Chiama /booking-app/session per i 6 account di test e confronta il ruolo ricevuto con quello atteso
+          </p>
+        </div>
+        <button
+          onClick={runCheck}
+          disabled={state.status === 'loading'}
+          aria-label="Verifica di nuovo"
+          className="p-2 bg-primary/10 hover:bg-primary/20 disabled:opacity-50 rounded-full transition-colors text-primary"
+        >
+          <RefreshCw className={`w-5 h-5 ${state.status === 'loading' ? 'animate-spin' : ''}`} />
+        </button>
+      </header>
+
+      <main className="flex-grow overflow-y-auto p-6 space-y-3 max-w-2xl mx-auto w-full pb-24">
+        {state.status === 'loading' && (
+          <p className="text-sm text-on-surface-variant">Verifica in corso...</p>
+        )}
+
+        {state.status === 'error' && (
+          <div className="bg-red-50 border border-red-200 p-4 rounded-2xl">
+            <p className="text-xs font-medium text-red-700">{state.message}</p>
+          </div>
+        )}
+
+        {state.status === 'done' &&
+          state.results.map((r) => (
+            <div
+              key={r.email}
+              className={`bg-surface-container-lowest rounded-2xl p-4 border flex items-start gap-3 ${
+                r.compliant ? 'border-green-500/30' : 'border-red-500/30'
+              }`}
+            >
+              {r.compliant ? (
+                <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
+              ) : (
+                <XCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+              )}
+              <div className="flex flex-col gap-0.5 min-w-0">
+                <span className="font-bold text-sm text-on-surface truncate">{r.email}</span>
+                <span className="text-xs text-on-surface-variant">
+                  Atteso: <span className="font-mono">{r.expectedRole}</span>
+                  {' · '}
+                  Ricevuto: <span className="font-mono">{r.actualRole ?? '—'}</span>
+                </span>
+                {r.error && <span className="text-xs text-red-600">{r.error}</span>}
+              </div>
+            </div>
+          ))}
+      </main>
+    </motion.div>,
+    document.body
+  );
+}

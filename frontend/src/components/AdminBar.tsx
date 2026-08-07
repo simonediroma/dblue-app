@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { triggerSeed, getAdminSettings, setDblueOfficeIntegrationEnabled } from '../services/api';
 import type { SeedSummary, Room } from '../services/api';
 import RoomManagement from './RoomManagement';
+import DblueOfficeComplianceCheck from './DblueOfficeComplianceCheck';
 
 type SeedState =
   | { status: 'idle' }
@@ -18,6 +19,7 @@ export default function AdminBar({ onRoomsChanged }: AdminBarProps) {
   const { user } = useAuth();
   const [state, setState] = useState<SeedState>({ status: 'idle' });
   const [showRoomManagement, setShowRoomManagement] = useState(false);
+  const [showComplianceCheck, setShowComplianceCheck] = useState(false);
   const [dblueIntegrationEnabled, setDblueIntegrationEnabled] = useState<boolean | null>(null);
   const [dblueToggleLoading, setDblueToggleLoading] = useState(false);
 
@@ -87,6 +89,15 @@ export default function AdminBar({ onRoomsChanged }: AdminBarProps) {
           <span className="text-slate-400 italic">Le stanze sono gestite da dblue-office</span>
         )}
 
+        {user.role === 'owner' && (
+          <button
+            onClick={() => setShowComplianceCheck(true)}
+            className="px-3 py-1 rounded bg-indigo-700 hover:bg-indigo-600 text-white font-medium transition-colors"
+          >
+            Verifica account dblue-office
+          </button>
+        )}
+
         {user.role === 'owner' && dblueIntegrationEnabled !== null && (
           <button
             onClick={handleToggleDblueIntegration}
@@ -128,6 +139,10 @@ export default function AdminBar({ onRoomsChanged }: AdminBarProps) {
           onBack={() => setShowRoomManagement(false)}
           onRoomsChanged={onRoomsChanged}
         />
+      )}
+
+      {showComplianceCheck && (
+        <DblueOfficeComplianceCheck onBack={() => setShowComplianceCheck(false)} />
       )}
     </div>
   );
