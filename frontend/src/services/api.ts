@@ -31,9 +31,12 @@ export interface Room {
   id: string;
   name: string;
   capacity: number;
-  type: 'open_space' | 'lab' | 'admin' | 'management';
-  // Ignored for type 'open_space' (visible to everyone). For other types, which
-  // roles (besides owner, who always sees every room) can see/book this room.
+  // 'open_space' | 'lab' | 'admin' | 'management' in modalità locale (i 4 tipi
+  // fissi); in modalità dblue-office è la categoria restituita dall'API, arbitraria
+  // — non un union fisso.
+  type: string;
+  // Popolato solo in modalità locale — la visibilità in modalità API è già "baked
+  // in" (la stanza è nella lista solo se l'utente può vederla).
   visibleRoles?: Role[];
   color?: string;
 }

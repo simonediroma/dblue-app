@@ -1,30 +1,51 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { requireAuth } from '../middleware/auth.middleware';
 import { requireRole } from '../middleware/rbac.middleware';
 import { Room, IRoom } from '../models/room.model';
 import { WorkingStatus } from '../models/working-status.model';
 import { IUser } from '../models/user.model';
 import { reallocateSeededBookings } from '../services/reallocation.service';
-import { getVisibleRooms } from '../services/capacity.service';
+import { getVisibleRoomsForUser } from '../services/capacity.service';
+import { isDblueOfficeIntegrationEnabled } from '../services/settings.service';
 
 const router = Router();
 
+// Le stanze si gestiscono in locale (CRUD sotto) solo quando l'integrazione è
+// disattivata — quando è attiva, dblue-office è l'unica fonte e una scrittura
+// locale non avrebbe alcun effetto reale (verrebbe ignorata dalla prossima sync).
+async function blockRoomWritesWhenIntegrationEnabled(
+  _req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  if (await isDblueOfficeIntegrationEnabled()) {
+    res.status(409).json({ error: 'Le stanze sono gestite da dblue-office quando l\'integrazione è attiva' });
+    return;
+  }
+  next();
+}
+
 router.get('/', requireAuth, async (req: Request, res: Response): Promise<void> => {
   const user = req.user as IUser;
-  const rooms = await getVisibleRooms(user.role);
+  const rooms = await getVisibleRoomsForUser({ role: user.role, dblueOfficeRooms: user.dblueOfficeRooms });
   res.json(
     rooms.map((r) => ({
-      id: r._id,
+      id: r.id,
       name: r.name,
       capacity: r.capacity,
-      type: r.type,
+      type: r.category,
       color: r.color,
       visibleRoles: r.visibleRoles,
     }))
   );
 });
 
-router.post('/', requireAuth, requireRole('owner'), async (req: Request, res: Response): Promise<void> => {
+router.post(
+  '/',
+  requireAuth,
+  requireRole('owner'),
+  blockRoomWritesWhenIntegrationEnabled,
+  async (req: Request, res: Response): Promise<void> => {
   const user = req.user as IUser;
   const { name, capacity, type, color, visibleRoles } = req.body as Pick<
     IRoom,
@@ -32,9 +53,15 @@ router.post('/', requireAuth, requireRole('owner'), async (req: Request, res: Re
   >;
   const room = await Room.create({ name, capacity, type, color, visibleRoles, createdBy: user._id });
   res.status(201).json(room);
-});
+  }
+);
 
-router.patch('/:id', requireAuth, requireRole('owner'), async (req: Request, res: Response): Promise<void> => {
+router.patch(
+  '/:id',
+  requireAuth,
+  requireRole('owner'),
+  blockRoomWritesWhenIntegrationEnabled,
+  async (req: Request, res: Response): Promise<void> => {
   const { name, capacity, color, isActive, visibleRoles } = req.body as Partial<
     Pick<IRoom, 'name' | 'capacity' | 'color' | 'isActive' | 'visibleRoles'>
   >;
@@ -75,9 +102,15 @@ router.patch('/:id', requireAuth, requireRole('owner'), async (req: Request, res
   }
 
   res.json(updated);
-});
+  }
+);
 
-router.delete('/:id', requireAuth, requireRole('owner'), async (req: Request, res: Response): Promise<void> => {
+router.delete(
+  '/:id',
+  requireAuth,
+  requireRole('owner'),
+  blockRoomWritesWhenIntegrationEnabled,
+  async (req: Request, res: Response): Promise<void> => {
   const room = await Room.findById(req.params.id).lean();
   if (room) {
     const todayStr = new Date().toISOString().slice(0, 10);
@@ -97,6 +130,7 @@ router.delete('/:id', requireAuth, requireRole('owner'), async (req: Request, re
     return;
   }
   res.json(updated);
-});
+  }
+);
 
 export default router;

@@ -2,6 +2,7 @@ import request from 'supertest';
 import { createApp } from '../app';
 import { connect, disconnect, clearDatabase } from './setup';
 import { createUser, authCookie, createRoom } from './helpers';
+import { setDblueOfficeIntegrationEnabled } from '../services/settings.service';
 
 const app = createApp();
 
@@ -69,5 +70,49 @@ describe('PATCH /rooms/:id', () => {
     expect(res.status).toBe(200);
     expect(res.body.capacity).toBe(4);
     expect(res.body.color).toBe('#ef4444');
+  });
+});
+
+describe('dblue-office integration guard on room writes', () => {
+  // clearDatabase() nell'afterEach globale ripulisce anche il documento Setting,
+  // quindi il flag torna OFF da solo tra un test e l'altro — nessun reset esplicito.
+  it('POST /rooms returns 409 when the flag is ON, even for owner', async () => {
+    await setDblueOfficeIntegrationEnabled(true);
+    const owner = await createUser({ role: 'owner' });
+    const res = await request(app)
+      .post('/rooms')
+      .set('Cookie', authCookie(String(owner._id)))
+      .send({ name: 'New Room', capacity: 10, type: 'open_space' });
+    expect(res.status).toBe(409);
+  });
+
+  it('PATCH /rooms/:id returns 409 when the flag is ON', async () => {
+    const owner = await createUser({ role: 'owner' });
+    const room = await createRoom(owner._id);
+    await setDblueOfficeIntegrationEnabled(true);
+    const res = await request(app)
+      .patch(`/rooms/${room._id}`)
+      .set('Cookie', authCookie(String(owner._id)))
+      .send({ capacity: 4 });
+    expect(res.status).toBe(409);
+  });
+
+  it('DELETE /rooms/:id returns 409 when the flag is ON', async () => {
+    const owner = await createUser({ role: 'owner' });
+    const room = await createRoom(owner._id);
+    await setDblueOfficeIntegrationEnabled(true);
+    const res = await request(app)
+      .delete(`/rooms/${room._id}`)
+      .set('Cookie', authCookie(String(owner._id)));
+    expect(res.status).toBe(409);
+  });
+
+  it('GET /rooms is unaffected by the flag', async () => {
+    await setDblueOfficeIntegrationEnabled(true);
+    const owner = await createUser({ role: 'owner' });
+    const res = await request(app)
+      .get('/rooms')
+      .set('Cookie', authCookie(String(owner._id)));
+    expect(res.status).toBe(200);
   });
 });

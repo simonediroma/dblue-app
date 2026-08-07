@@ -2,6 +2,7 @@ import { WorkingStatus, IWorkingStatus, WorkingStatusValue } from '../models/wor
 import { Room } from '../models/room.model';
 import { User, IUser } from '../models/user.model';
 import { sendWaitingListPromotion } from './email.service';
+import { isDblueOfficeIntegrationEnabled } from './settings.service';
 
 export type Role = IUser['role'];
 
@@ -19,11 +20,28 @@ export interface PresenceBreakdown {
   totalCapacity: number;
 }
 
+// Forma unificata di "una stanza che questo utente può vedere/prenotare",
+// indipendente dal fatto che provenga dal Room model locale (flag OFF) o dallo
+// snapshot cachato al login da dblue-office (flag ON) — vedi getVisibleRoomsForUser.
+export interface VisibleRoom {
+  id?: string;
+  name: string;
+  capacity: number;
+  color?: string;
+  category?: string;
+  // Popolato solo in modalità locale (OFF) — RoomManagement.tsx lo usa per il
+  // picker di visibilità per ruolo. In modalità API la visibilità è già "baked in"
+  // (la stanza è nella lista solo se l'utente può vederla), non serve esporlo.
+  visibleRoles?: Role[];
+}
+
 const BOOKED_STATUSES: WorkingStatusValue[] = ['in_office', 'office_no_desk'];
 
 // Rooms a given role can see and book: every open_space room (visible to
 // everyone, open_space is the "for everyone" flag) plus any other room whose
 // visibleRoles includes this role. Owner always sees every room regardless.
+// Solo per la modalità locale (flag dblue-office OFF) — vedi getVisibleRoomsForUser,
+// il punto d'ingresso corretto per il codice applicativo.
 export async function getVisibleRooms(role: Role) {
   const rooms = await Room.find({ isActive: true }).lean();
   return rooms.filter(
@@ -31,13 +49,41 @@ export async function getVisibleRooms(role: Role) {
   );
 }
 
-export async function getTotalCapacity(role: Role): Promise<number> {
-  const rooms = await getVisibleRooms(role);
+interface UserRoomContext {
+  role: Role;
+  dblueOfficeRooms?: VisibleRoom[];
+}
+
+/**
+ * Stanze visibili/prenotabili da questo utente — punto d'ingresso unico per tutto
+ * il codice applicativo (upsertStatus, GET /rooms, websocket, ecc.).
+ *
+ * OFF (default): comportamento invariato, deriva da getVisibleRooms(role) sul Room
+ * model locale. ON: legge lo snapshot già cachato al login (user.dblueOfficeRooms,
+ * popolato da userSync.service.ts) — nessuna chiamata esterna in questo path.
+ */
+export async function getVisibleRoomsForUser(user: UserRoomContext): Promise<VisibleRoom[]> {
+  const enabled = await isDblueOfficeIntegrationEnabled();
+  if (!enabled) {
+    const rooms = await getVisibleRooms(user.role);
+    return rooms.map((r) => ({
+      id: String(r._id),
+      name: r.name,
+      capacity: r.capacity,
+      color: r.color,
+      category: r.type,
+      visibleRoles: r.visibleRoles,
+    }));
+  }
+  return user.dblueOfficeRooms ?? [];
+}
+
+export function getTotalCapacity(rooms: VisibleRoom[]): number {
   return rooms.reduce((sum, r) => sum + (r.capacity ?? 0), 0);
 }
 
-export async function getBookedCount(date: string, role: Role): Promise<number> {
-  const visibleRoomNames = (await getVisibleRooms(role)).map((r) => r.name);
+export async function getBookedCount(date: string, rooms: VisibleRoom[]): Promise<number> {
+  const visibleRoomNames = rooms.map((r) => r.name);
   return WorkingStatus.countDocuments({
     date,
     status: { $in: BOOKED_STATUSES },
@@ -45,9 +91,9 @@ export async function getBookedCount(date: string, role: Role): Promise<number> 
   });
 }
 
-export async function isCapacityAvailable(date: string, role: Role): Promise<boolean> {
-  const [booked, total] = await Promise.all([getBookedCount(date, role), getTotalCapacity(role)]);
-  return booked < total;
+export async function isCapacityAvailable(date: string, rooms: VisibleRoom[]): Promise<boolean> {
+  const booked = await getBookedCount(date, rooms);
+  return booked < getTotalCapacity(rooms);
 }
 
 export async function getWaitingList(date: string): Promise<IWorkingStatus[]> {
@@ -60,9 +106,12 @@ export async function promoteFromWaitingList(date: string): Promise<void> {
 
   const first = waitingList[0];
   const waitingUser = await User.findById(first.userId).lean();
-  const role: Role = waitingUser?.role ?? 'employee';
+  const rooms = await getVisibleRoomsForUser({
+    role: waitingUser?.role ?? 'employee',
+    dblueOfficeRooms: waitingUser?.dblueOfficeRooms,
+  });
 
-  const available = await isCapacityAvailable(date, role);
+  const available = await isCapacityAvailable(date, rooms);
   if (!available) return;
 
   await WorkingStatus.findByIdAndUpdate(first._id, { $set: { status: 'in_office' } });
@@ -75,15 +124,11 @@ export async function promoteFromWaitingList(date: string): Promise<void> {
   }
 }
 
-// Broadcast target for the live WebSocket update — must stay role-scoped, same as
-// the authenticated GET /presence (getStatusForUser): office capacity is "the rooms
-// this role can see" (getVisibleRooms), not a single whole-office number for
-// everyone. The websocket layer resolves each connection's role from its auth token
-// on subscribe (see websocket.service.ts) and calls this once per distinct role
-// among a date's subscribers.
-export async function getPresenceBreakdown(date: string, role: Role): Promise<PresenceBreakdown> {
-  const rooms = await getVisibleRooms(role);
-
+// Broadcast target for the live WebSocket update — capacità è per-utente
+// (getVisibleRoomsForUser), non più solo per-ruolo: il chiamante (websocket.service.ts)
+// risolve l'elenco stanze visibili per ciascuna connessione e lo passa qui, questa
+// funzione resta agnostica rispetto al flag/alla provenienza dell'elenco.
+export async function getPresenceBreakdown(date: string, rooms: VisibleRoom[]): Promise<PresenceBreakdown> {
   const roomOccupancies: RoomOccupancy[] = await Promise.all(
     rooms.map(async (room) => {
       const booked = await WorkingStatus.countDocuments({
@@ -102,7 +147,7 @@ export async function getPresenceBreakdown(date: string, role: Role): Promise<Pr
   });
 
   const totalBooked = roomOccupancies.reduce((sum, r) => sum + r.booked, 0) + extras;
-  const totalCapacity = rooms.reduce((sum, r) => sum + (r.capacity ?? 0), 0);
+  const totalCapacity = getTotalCapacity(rooms);
 
   return { date, rooms: roomOccupancies, extras, totalBooked, totalCapacity };
 }

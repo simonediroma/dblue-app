@@ -6,8 +6,7 @@ import {
   promoteFromWaitingList,
   getTotalCapacity,
   getBookedCount,
-  getVisibleRooms,
-  Role,
+  getVisibleRoomsForUser,
 } from './capacity.service';
 import { sendSickLeaveConfirmation } from './email.service';
 
@@ -81,9 +80,8 @@ export async function getStatusForUser(
   const endDate = workingDays[workingDays.length - 1];
 
   const user = await User.findById(userId).lean();
-  const role: Role = user?.role ?? 'employee';
 
-  const [userStatuses, allOfficeStatuses, allWaitingListStatuses, totalCapacity, visibleRooms] = await Promise.all([
+  const [userStatuses, allOfficeStatuses, allWaitingListStatuses, visibleRooms] = await Promise.all([
     WorkingStatus.find({ userId, date: { $gte: startDate, $lte: endDate } }).lean(),
     WorkingStatus.find({
       date: { $gte: startDate, $lte: endDate },
@@ -95,9 +93,9 @@ export async function getStatusForUser(
       date: { $gte: startDate, $lte: endDate },
       status: 'waiting_list',
     }).lean(),
-    getTotalCapacity(role),
-    getVisibleRooms(role),
+    getVisibleRoomsForUser({ role: user?.role ?? 'employee', dblueOfficeRooms: user?.dblueOfficeRooms }),
   ]);
+  const totalCapacity = getTotalCapacity(visibleRooms);
 
   const visibleRoomNames = new Set(visibleRooms.map((r) => r.name));
   const teammateIds = new Set((user?.teammates ?? []).map((t: Types.ObjectId) => t.toString()));
@@ -186,16 +184,18 @@ export async function upsertStatus(
 
   const [existing, actingUser] = await Promise.all([
     WorkingStatus.findOne({ userId, date }),
-    User.findById(userId).select('role email').lean(),
+    User.findById(userId).select('role email dblueOfficeRooms').lean(),
   ]);
-  const role: Role = actingUser?.role ?? 'employee';
+  const visibleRooms = await getVisibleRoomsForUser({
+    role: actingUser?.role ?? 'employee',
+    dblueOfficeRooms: actingUser?.dblueOfficeRooms,
+  });
 
-  // Role check: the frontend only ever offers rooms getVisibleRooms(role) returns for
-  // this user, but nothing enforced that server-side — a direct API call could set
-  // `room` to any name, including a role-restricted one (e.g. an employee booking the
-  // Admin Room). Reject before touching the DB.
+  // Room check: the frontend only ever offers rooms getVisibleRoomsForUser() returns
+  // for this user, but nothing enforced that server-side — a direct API call could
+  // set `room` to any name, including one this user can't actually access. Reject
+  // before touching the DB.
   if (payload.room) {
-    const visibleRooms = await getVisibleRooms(role);
     const visibleRoomNames = new Set(visibleRooms.map((r) => r.name));
     if (!visibleRoomNames.has(payload.room)) {
       const err = Object.assign(new Error('Stanza non visibile per il tuo ruolo'), { statusCode: 403 });
@@ -223,7 +223,7 @@ export async function upsertStatus(
   // Capacity gate: if requesting in_office but office is full, downgrade to waiting_list
   let finalStatus = payload.status;
   if (payload.status === 'in_office') {
-    const available = await isCapacityAvailable(date, role);
+    const available = await isCapacityAvailable(date, visibleRooms);
     if (!available) {
       finalStatus = 'waiting_list';
     }
@@ -267,10 +267,8 @@ export async function upsertStatus(
     );
   }
 
-  const [bookedCount, totalCapacity] = await Promise.all([
-    getBookedCount(date, role),
-    getTotalCapacity(role),
-  ]);
+  const bookedCount = await getBookedCount(date, visibleRooms);
+  const totalCapacity = getTotalCapacity(visibleRooms);
 
   return { ...result!.toObject(), bookedCount, totalCapacity };
 }
