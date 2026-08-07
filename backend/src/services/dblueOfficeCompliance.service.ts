@@ -3,6 +3,7 @@ import {
   getBookingAppSession,
   getBookingAppSessionUrl,
   getRequestHeaderNames,
+  parseDblueOfficeDate,
   DblueOfficeForbiddenError,
   DblueOfficeSessionResponse,
   DblueOfficeUserRoom,
@@ -53,15 +54,15 @@ function checkRoomShape(room: DblueOfficeUserRoom | DblueOfficeRoom, source: str
 function checkClosure(closure: DblueOfficeSessionResponse['closures'][number]): DblueOfficeSanityIssue[] {
   const issues: DblueOfficeSanityIssue[] = [];
   const label = closure.title?.trim() || closure._id || '(senza titolo)';
-  const start = new Date(closure.start);
-  const end = new Date(closure.end);
-  if (isNaN(start.getTime())) {
-    issues.push({ field: 'closures.start', message: `Chiusura "${label}" ha start non valido: "${closure.start}"` });
+  const start = parseDblueOfficeDate(closure.start);
+  const end = parseDblueOfficeDate(closure.end);
+  if (!start) {
+    issues.push({ field: 'closures.start', message: `Chiusura "${label}" ha start non valido (atteso DD-MM-YYYY): "${closure.start}"` });
   }
-  if (isNaN(end.getTime())) {
-    issues.push({ field: 'closures.end', message: `Chiusura "${label}" ha end non valido: "${closure.end}"` });
+  if (!end) {
+    issues.push({ field: 'closures.end', message: `Chiusura "${label}" ha end non valido (atteso DD-MM-YYYY): "${closure.end}"` });
   }
-  if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && start > end) {
+  if (start && end && start > end) {
     issues.push({ field: 'closures', message: `Chiusura "${label}" ha start (${closure.start}) dopo end (${closure.end})` });
   }
   return issues;

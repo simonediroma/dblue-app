@@ -1,5 +1,5 @@
 import { isDblueOfficeIntegrationEnabled } from './settings.service';
-import { getBookingAppSession } from './dblueOfficeApi.service';
+import { getBookingAppSession, parseDblueOfficeDate } from './dblueOfficeApi.service';
 
 export interface OfficeClosure {
   start: string; // YYYY-MM-DD
@@ -14,10 +14,6 @@ const CACHE_TTL_MS = 5 * 60 * 1000;
 const FALLBACK_CLOSURES: OfficeClosure[] = [{ start: '2026-11-01', end: '2026-11-01', title: 'Office closed' }];
 
 let cache: { closures: OfficeClosure[]; fetchedAt: number } | null = null;
-
-function toDateOnly(iso: string): string {
-  return iso.slice(0, 10);
-}
 
 /**
  * Ritorna le chiusure ufficio. Se l'integrazione dblue-office è disattivata, ritorna
@@ -35,11 +31,16 @@ export async function getClosures(requesterEmail: string): Promise<OfficeClosure
 
   try {
     const session = await getBookingAppSession(requesterEmail);
-    const closures = session.closures.map((c) => ({
-      start: toDateOnly(c.start),
-      end: toDateOnly(c.end),
-      title: c.title,
-    }));
+    const closures: OfficeClosure[] = [];
+    for (const c of session.closures) {
+      const start = parseDblueOfficeDate(c.start);
+      const end = parseDblueOfficeDate(c.end);
+      if (!start || !end) {
+        console.warn(`[dblue-office] chiusura "${c.title || c._id}" scartata, data non valida (atteso DD-MM-YYYY): start="${c.start}" end="${c.end}"`);
+        continue;
+      }
+      closures.push({ start, end, title: c.title });
+    }
     cache = { closures, fetchedAt: Date.now() };
     return closures;
   } catch (err) {

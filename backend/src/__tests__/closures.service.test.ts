@@ -1,5 +1,11 @@
 jest.mock('../services/settings.service');
-jest.mock('../services/dblueOfficeApi.service');
+// Mock solo getBookingAppSession — parseDblueOfficeDate deve restare l'implementazione
+// reale, altrimenti un automock pieno la sostituisce con un mock che ritorna sempre
+// undefined, scartando silenziosamente ogni chiusura.
+jest.mock('../services/dblueOfficeApi.service', () => ({
+  ...jest.requireActual('../services/dblueOfficeApi.service'),
+  getBookingAppSession: jest.fn(),
+}));
 
 import { getClosures } from '../services/closures.service';
 import { isDblueOfficeIntegrationEnabled } from '../services/settings.service';
@@ -32,7 +38,7 @@ describe('closures.service', () => {
     expect(result).toEqual(STATIC_FALLBACK);
   });
 
-  it('normalizes ISO datetimes to YYYY-MM-DD when the integration is enabled', async () => {
+  it('normalizes DD-MM-YYYY dates to YYYY-MM-DD when the integration is enabled', async () => {
     mockIsEnabled.mockResolvedValue(true);
     mockGetSession.mockResolvedValue({
       success: true,
@@ -42,7 +48,7 @@ describe('closures.service', () => {
       allRooms: [],
       roomCategories: [],
       closures: [
-        { _id: '1', title: 'Summer closure', start: '2026-08-15T00:00:00.000Z', end: '2026-08-22T00:00:00.000Z' },
+        { _id: '1', title: 'Summer closure', start: '15-08-2026', end: '22-08-2026' },
       ],
     });
 
@@ -74,5 +80,32 @@ describe('closures.service', () => {
     expect(mockGetSession).toHaveBeenCalled();
 
     jest.spyOn(Date, 'now').mockRestore();
+  });
+
+  it('drops closures with an invalid date format (e.g. ISO 8601, not the real DD-MM-YYYY) and keeps the valid ones', async () => {
+    const realNow = Date.now.bind(Date);
+    jest.spyOn(Date, 'now').mockImplementation(() => realNow() + 20 * 60 * 1000); // oltre il TTL, forza un refetch
+    mockIsEnabled.mockResolvedValue(true);
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    mockGetSession.mockResolvedValue({
+      success: true,
+      user: {},
+      userSpaceAccess: [],
+      userRoomList: [],
+      allRooms: [],
+      roomCategories: [],
+      closures: [
+        { _id: '1', title: 'Valid closure', start: '15-08-2026', end: '22-08-2026' },
+        { _id: '2', title: 'Bad closure', start: '2026-08-15T00:00:00.000Z', end: '2026-08-22T00:00:00.000Z' },
+      ],
+    });
+
+    const result = await getClosures('dev@dblue.it');
+
+    expect(result).toEqual([{ start: '2026-08-15', end: '2026-08-22', title: 'Valid closure' }]);
+    expect(warnSpy).toHaveBeenCalled();
+
+    jest.spyOn(Date, 'now').mockRestore();
+    warnSpy.mockRestore();
   });
 });

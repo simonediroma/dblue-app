@@ -102,7 +102,7 @@ describe('dblueOfficeCompliance.service', () => {
           { id: 'r2', name: '', category: 'cat1', color: '#fff', capacity: 4, reserved: false, isActive: true },
         ],
         roomCategories: [{ id: 'cat1', category: 'Open Space', bgcolor: '#fff', color: '#000' }],
-        closures: [{ _id: 'c1', title: 'Bad closure', start: '2026-08-20T00:00:00.000Z', end: '2026-08-15T00:00:00.000Z' }],
+        closures: [{ _id: 'c1', title: 'Bad closure', start: '20-08-2026', end: '15-08-2026' }],
       });
     });
 
@@ -122,5 +122,35 @@ describe('dblueOfficeCompliance.service', () => {
     expect(fields).toContain('closures');
     // Il confronto ruolo resta indipendente da questi problemi.
     expect(result.compliant).toBe(true);
+  });
+
+  it('flags a closure date in ISO 8601 format as invalid — the real API format is DD-MM-YYYY, not ISO', async () => {
+    mockGetSession.mockImplementation((email: string) => {
+      const account = DEV_ACCOUNTS.find((a) => a.email === email)!;
+      return Promise.resolve({
+        ...sessionFor(account.role),
+        closures: [{ _id: 'c1', title: 'Wrong format', start: '2026-08-15T00:00:00.000Z', end: '2026-08-22T00:00:00.000Z' }],
+      });
+    });
+
+    const results = await checkDevAccountsCompliance();
+    const fields = results[0].sanityIssues.map((i) => i.field);
+
+    expect(fields).toContain('closures.start');
+    expect(fields).toContain('closures.end');
+  });
+
+  it('accepts a well-formed DD-MM-YYYY closure without flagging it', async () => {
+    mockGetSession.mockImplementation((email: string) => {
+      const account = DEV_ACCOUNTS.find((a) => a.email === email)!;
+      return Promise.resolve({
+        ...sessionFor(account.role),
+        closures: [{ _id: 'c1', title: 'Ferragosto', start: '15-08-2026', end: '22-08-2026' }],
+      });
+    });
+
+    const results = await checkDevAccountsCompliance();
+
+    expect(results[0].sanityIssues).toEqual([]);
   });
 });
