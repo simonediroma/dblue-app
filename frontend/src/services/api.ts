@@ -296,4 +296,14 @@ export function getStatsByUser(userId: string, month: string): Promise<MonthlySt
   return request<MonthlyStats>(`/admin/stats/${userId}/monthly?month=${encodeURIComponent(month)}`);
 }
 
+export interface OfficeClosure {
+  start: string; // YYYY-MM-DD
+  end: string; // YYYY-MM-DD
+  title: string;
+}
+
+export function getClosures(): Promise<OfficeClosure[]> {
+  return request<OfficeClosure[]>('/closures');
+}
+
 export { BASE_URL };

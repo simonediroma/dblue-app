@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { DayPresence, WorkStatus, OffTimeType } from '../types';
 import type { Colleague } from '../constants/colleagues';
 import type { User } from '../types/api';
-import { getColleaguePresence, type ColleaguePresenceItem } from '../services/api';
+import { getColleaguePresence, getClosures, type ColleaguePresenceItem, type OfficeClosure } from '../services/api';
 import { mapUserToColleague } from '../hooks/useColleagues';
 import {
  getFictionalDayName,
@@ -126,6 +126,7 @@ export default function DailyDetail({
  const [unbookingWarningDays, setUnbookingWarningDays] = React.useState<string[]>([]);
  const [pendingStatusUpdate, setPendingStatusUpdate] = React.useState<WorkStatus | null>(null);
  const [colleagueData, setColleagueData] = React.useState<ColleaguePresenceItem[]>([]);
+ const [closures, setClosures] = React.useState<OfficeClosure[]>([]);
 
  useBodyScrollLock();
 
@@ -133,6 +134,10 @@ export default function DailyDetail({
    setColleagueData([]);
    getColleaguePresence(day.date).then(setColleagueData).catch((err) => console.error('DailyDetail: failed to load colleague presence', err));
  }, [day.date]);
+
+ React.useEffect(() => {
+   getClosures().then(setClosures).catch((err) => console.error('DailyDetail: failed to load closures', err));
+ }, []);
 
  const displayMonth = months[parseAppDate(day.date).getMonth()];
  const dayNumDisplay = day.date.split('-')[2];
@@ -317,8 +322,6 @@ export default function DailyDetail({
  [WorkStatus.OFFICE_NO_DESK]: { label: 'Office (No Desk)', icon: Headset, color: 'bg-primary/10 text-primary', emoji: '🏢' },
  };
  const config = !isPending ? statusConfig[day.status] : null;
-
- const IS_CLOSED_DAYS = ['2026-11-01']; // Add closed days here
 
  const handleStatusSelect = (status: WorkStatus) => {
  // Check for last-minute change on the current day
@@ -847,7 +850,7 @@ export default function DailyDetail({
  dateStr,
  dayNum: d.getDate(),
  isWeekend,
- isClosed: IS_CLOSED_DAYS.includes(dateStr),
+ isClosed: closures.some(c => dateStr >= c.start && dateStr <= c.end),
  dayLabel: getFictionalDayName(d, 'short'),
  dateLabel: `${months[d.getMonth()].slice(0, 3)} ${d.getDate()}`,
  monthLabel: `${months[d.getMonth()]} ${d.getFullYear()}`,
