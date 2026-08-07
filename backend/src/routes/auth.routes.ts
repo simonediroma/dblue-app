@@ -3,6 +3,11 @@ import passport from '../config/passport';
 import { signToken } from '../config/jwt';
 import { requireAuth } from '../middleware/auth.middleware';
 import { User, IUser } from '../models/user.model';
+import {
+  syncUserFromDblueOfficeIfEnabled,
+  DblueOfficeAccessDeniedError,
+  DblueOfficeSyncUnavailableError,
+} from '../services/userSync.service';
 
 const router = Router();
 
@@ -29,25 +34,32 @@ router.get('/google', (req: Request, res: Response, next) => {
   passport.authenticate('google', { session: false, scope: ['profile', 'email'] })(req, res, next);
 });
 
-router.get(
-  '/google/callback',
-  (req: Request, res: Response, next) => {
-    if (!googleStrategyAvailable) {
-      res.redirect(`${process.env.APP_URL ?? '/'}/login?error=oauth_not_configured`);
-      return;
-    }
-    passport.authenticate('google', {
-      session: false,
-      failureRedirect: `${process.env.APP_URL}/login?error=unauthorized`,
-    })(req, res, next);
-  },
-  (req: Request, res: Response) => {
-    const user = req.user as IUser;
-    const token = signToken(String(user._id));
-    setAuthCookie(res, String(user._id));
-    res.redirect(`${process.env.APP_URL ?? '/'}?token=${token}`);
+router.get('/google/callback', (req: Request, res: Response, next) => {
+  if (!googleStrategyAvailable) {
+    res.redirect(`${process.env.APP_URL ?? '/'}/login?error=oauth_not_configured`);
+    return;
   }
-);
+  passport.authenticate(
+    'google',
+    { session: false },
+    (err: Error | null, user: IUser | false, info?: { message?: string }) => {
+      if (err) return next(err);
+      if (!user) {
+        // Distingue un accesso negato (dominio/dblue-office 403) da un servizio
+        // dblue-office momentaneamente non raggiungibile (nessun sync pregresso da cui
+        // procedere) — vedi syncUserFromDblueOfficeIfEnabled in userSync.service.ts.
+        const errorCode = info?.message?.startsWith('Servizio dblue-office')
+          ? 'service-unavailable'
+          : 'unauthorized';
+        res.redirect(`${process.env.APP_URL ?? '/'}/login?error=${errorCode}`);
+        return;
+      }
+      const token = signToken(String(user._id));
+      setAuthCookie(res, String(user._id));
+      res.redirect(`${process.env.APP_URL ?? '/'}?token=${token}`);
+    }
+  )(req, res, next);
+});
 
 router.post('/logout', (_req: Request, res: Response) => {
   res.clearCookie('token');
@@ -96,6 +108,23 @@ router.post('/dev-login', async (req: Request, res: Response): Promise<void> => 
     { $setOnInsert: { googleId: `dev-login:${account.email}`, email: account.email, name: account.name, onboardingCompleted: true }, $set: { role: account.role } },
     { upsert: true, new: true }
   );
+
+  // No-op se il flag dblue-office è OFF (default) — stesso comportamento di sempre.
+  // Se ON, richiede che questa email esista come identità di test su dblue-office
+  // staging (vedi CLAUDE_MEMORY.md / piano) — altrimenti la sync fallisce con 403.
+  try {
+    await syncUserFromDblueOfficeIfEnabled(user);
+  } catch (err) {
+    if (err instanceof DblueOfficeAccessDeniedError) {
+      res.status(403).json({ error: err.message });
+      return;
+    }
+    if (err instanceof DblueOfficeSyncUnavailableError) {
+      res.status(503).json({ error: 'Servizio dblue-office non disponibile, riprova più tardi' });
+      return;
+    }
+    throw err;
+  }
 
   const token = signToken(String(user._id));
   setAuthCookie(res, String(user._id));

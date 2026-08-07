@@ -6,6 +6,7 @@ import { User, IUser } from '../models/user.model';
 import { retrofitStatus } from '../services/working-status.service';
 import { getMonthlyStats } from '../services/stats.service';
 import { runSeed } from '../services/seed.service';
+import { isDblueOfficeIntegrationEnabled, setDblueOfficeIntegrationEnabled } from '../services/settings.service';
 
 const router = Router();
 router.use(requireAuth);
@@ -171,6 +172,42 @@ router.post(
     try {
       const summary = await runSeed(fresh === true);
       res.json({ ok: true, summary });
+    } catch (err) {
+      handleError(res, err);
+    }
+  }
+);
+
+// GET /admin/settings — Owner only, stato attuale dei toggle di sistema
+router.get(
+  '/settings',
+  requireRole('owner'),
+  async (_req: Request, res: Response): Promise<void> => {
+    try {
+      const dblueOfficeIntegrationEnabled = await isDblueOfficeIntegrationEnabled();
+      res.json({ dblueOfficeIntegrationEnabled });
+    } catch (err) {
+      handleError(res, err);
+    }
+  }
+);
+
+// PATCH /admin/settings — Owner only, attiva/disattiva l'integrazione dblue-office.
+// Di default è disattivata: finché nessun owner la accende dalla AdminBar, l'app si
+// comporta esattamente come prima dell'integrazione (whitelist @dblue.it, stanze/utenti
+// locali) — vedi passport.ts e userSync.service.ts.
+router.patch(
+  '/settings',
+  requireRole('owner'),
+  async (req: Request, res: Response): Promise<void> => {
+    const { dblueOfficeIntegrationEnabled } = req.body as { dblueOfficeIntegrationEnabled?: boolean };
+    if (typeof dblueOfficeIntegrationEnabled !== 'boolean') {
+      res.status(400).json({ error: 'dblueOfficeIntegrationEnabled (boolean) richiesto' });
+      return;
+    }
+    try {
+      const enabled = await setDblueOfficeIntegrationEnabled(dblueOfficeIntegrationEnabled);
+      res.json({ dblueOfficeIntegrationEnabled: enabled });
     } catch (err) {
       handleError(res, err);
     }

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { triggerSeed } from '../services/api';
+import { triggerSeed, getAdminSettings, setDblueOfficeIntegrationEnabled } from '../services/api';
 import type { SeedSummary, Room } from '../services/api';
 import RoomManagement from './RoomManagement';
 
@@ -18,6 +18,30 @@ export default function AdminBar({ onRoomsChanged }: AdminBarProps) {
   const { user } = useAuth();
   const [state, setState] = useState<SeedState>({ status: 'idle' });
   const [showRoomManagement, setShowRoomManagement] = useState(false);
+  const [dblueIntegrationEnabled, setDblueIntegrationEnabled] = useState<boolean | null>(null);
+  const [dblueToggleLoading, setDblueToggleLoading] = useState(false);
+
+  const isOwner = user?.role === 'owner';
+
+  useEffect(() => {
+    if (!isOwner) return;
+    getAdminSettings()
+      .then(settings => setDblueIntegrationEnabled(settings.dblueOfficeIntegrationEnabled))
+      .catch(() => setDblueIntegrationEnabled(null));
+  }, [isOwner]);
+
+  async function handleToggleDblueIntegration() {
+    if (dblueIntegrationEnabled === null) return;
+    setDblueToggleLoading(true);
+    try {
+      const settings = await setDblueOfficeIntegrationEnabled(!dblueIntegrationEnabled);
+      setDblueIntegrationEnabled(settings.dblueOfficeIntegrationEnabled);
+    } catch (err) {
+      setState({ status: 'error', message: (err as Error).message });
+    } finally {
+      setDblueToggleLoading(false);
+    }
+  }
 
   if (!user || (user.role !== 'owner' && user.role !== 'director')) return null;
 
@@ -57,6 +81,19 @@ export default function AdminBar({ onRoomsChanged }: AdminBarProps) {
             className="px-3 py-1 rounded bg-teal-700 hover:bg-teal-600 text-white font-medium transition-colors"
           >
             Gestisci Stanze
+          </button>
+        )}
+
+        {user.role === 'owner' && dblueIntegrationEnabled !== null && (
+          <button
+            onClick={handleToggleDblueIntegration}
+            disabled={dblueToggleLoading}
+            className={`px-3 py-1 rounded disabled:opacity-50 text-white font-medium transition-colors ${
+              dblueIntegrationEnabled ? 'bg-emerald-700 hover:bg-emerald-600' : 'bg-slate-700 hover:bg-slate-600'
+            }`}
+            aria-pressed={dblueIntegrationEnabled}
+          >
+            {dblueToggleLoading ? '...' : `Integrazione dblue-office: ${dblueIntegrationEnabled ? 'ON' : 'OFF'}`}
           </button>
         )}
 
