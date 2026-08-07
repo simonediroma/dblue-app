@@ -11,6 +11,17 @@ import { DEV_ACCOUNTS } from '../routes/auth.routes';
 
 const mockGetSession = getBookingAppSession as jest.Mock;
 
+beforeEach(() => {
+  // getBookingAppSessionUrl (usata per la diagnostica) NON è mockata — usa la vera
+  // getBaseUrl(), che legge questa env var. getBookingAppSession invece è mockata
+  // sopra, quindi non fa mai una vera richiesta HTTP in questi test.
+  process.env.DBLUE_OFFICE_API_URL = 'https://staging-tools.dblue.it/api/v1/users';
+});
+
+afterEach(() => {
+  delete process.env.DBLUE_OFFICE_API_URL;
+});
+
 function sessionFor(role: string) {
   return {
     success: true,
@@ -37,6 +48,13 @@ describe('dblueOfficeCompliance.service', () => {
       expect(result.compliant).toBe(true);
       expect(result.actualRole).toBe(result.expectedRole);
       expect(result.error).toBeUndefined();
+      // Diagnostica: URL reale (con l'email nella query), solo il NOME dell'header
+      // (mai il valore della API key), e la risposta grezza esplorabile per intero.
+      expect(result.url).toBe(
+        `https://staging-tools.dblue.it/api/v1/users/booking-app/session?email=${encodeURIComponent(result.email)}`
+      );
+      expect(result.requestHeaders).toEqual(['X-API-Key']);
+      expect(result.rawResponse).toEqual(sessionFor(result.expectedRole));
     }
   });
 
@@ -60,6 +78,11 @@ describe('dblueOfficeCompliance.service', () => {
       expect(result.compliant).toBe(false);
       expect(result.actualRole).toBeUndefined();
       expect(result.error).toContain('User not found');
+      expect(result.rawResponse).toBeUndefined();
+      // La diagnostica (URL, nomi header) resta disponibile anche quando la
+      // chiamata fallisce — è calcolata a parte dalla risposta vera e propria.
+      expect(result.url).toContain('/booking-app/session?email=');
+      expect(result.requestHeaders).toEqual(['X-API-Key']);
     }
   });
 });
