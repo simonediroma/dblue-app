@@ -1,12 +1,16 @@
 import { Router, Request, Response } from 'express';
 import { requireAuth } from '../middleware/auth.middleware';
 import { User, IUser } from '../models/user.model';
+import { syncUserDirectoryIfEnabled } from '../services/userDirectorySync.service';
 
 const router = Router();
 
 router.use(requireAuth);
 
 router.get('/', async (req: Request, res: Response): Promise<void> => {
+  const requester = req.user as IUser;
+  await syncUserDirectoryIfEnabled(requester.email);
+
   const search = req.query.search as string | undefined;
   const filter: Record<string, unknown> = {};
   if (search) {
