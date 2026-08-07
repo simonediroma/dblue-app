@@ -59,6 +59,9 @@ export interface DblueOfficeRoomCategory {
 export interface DblueOfficeClosure {
   _id: string;
   title: string;
+  // Formato DD-MM-YYYY (confermato da Natalia: la doc originale indicava ISO 8601
+  // per errore, il formato dati realmente inviato dall'API è questo) — usare
+  // parseDblueOfficeDate() per convertirlo, mai `new Date(...)` diretto.
   start: string;
   end: string;
 }
@@ -141,6 +144,27 @@ export function getBookingAppUserListUrl(requesterEmail: string): string {
 /** Nomi degli header HTTP inviati a ogni richiesta — mai i valori (es. la API key). */
 export function getRequestHeaderNames(): string[] {
   return [...REQUEST_HEADER_NAMES];
+}
+
+/**
+ * Converte una data di chiusura dblue-office (formato reale DD-MM-YYYY, confermato
+ * da Natalia dopo una segnalazione: la doc indicava ISO 8601 per errore) nel formato
+ * interno dell'app (YYYY-MM-DD). Ritorna null se il valore non rispetta il formato
+ * atteso o non è una data calendariale reale (es. "31-02-2026", rollover silenzioso
+ * che `new Date(...)` accetterebbe senza errori).
+ */
+export function parseDblueOfficeDate(value: string): string | null {
+  const match = /^(\d{2})-(\d{2})-(\d{4})$/.exec(value.trim());
+  if (!match) return null;
+  const [, dd, mm, yyyy] = match;
+  const day = Number(dd);
+  const month = Number(mm);
+  const year = Number(yyyy);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
+    return null;
+  }
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 async function request<T>(path: string, params: Record<string, string>): Promise<T> {
