@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'motion/react';
-import { ChevronLeft, CheckCircle2, XCircle, RefreshCw } from 'lucide-react';
+import { ChevronLeft, CheckCircle2, XCircle, RefreshCw, AlertTriangle } from 'lucide-react';
 import { checkDblueOfficeCompliance } from '../services/api';
 import type { DblueOfficeComplianceResult } from '../services/api';
 
@@ -37,7 +37,7 @@ export default function DblueOfficeComplianceCheck({ onBack }: DblueOfficeCompli
         <div className="flex-grow">
           <h1 className="font-headline text-lg font-bold text-on-surface">Compliance account dblue-office</h1>
           <p className="text-xs text-on-surface-variant">
-            Chiama /booking-app/session per i 6 account di test e confronta il ruolo ricevuto con quello atteso
+            Chiama /booking-app/session per i 6 account di test — confronta il ruolo ricevuto con quello atteso e controlla la coerenza di stanze/categorie/chiusure
           </p>
         </div>
         <button
@@ -60,6 +60,19 @@ export default function DblueOfficeComplianceCheck({ onBack }: DblueOfficeCompli
             <p className="text-xs font-medium text-red-700">{state.message}</p>
           </div>
         )}
+
+        {state.status === 'done' && (() => {
+          const totalIssues = state.results.reduce((sum, r) => sum + r.sanityIssues.length, 0);
+          if (totalIssues === 0) return null;
+          return (
+            <div className="bg-amber-50 border border-amber-300 p-4 rounded-2xl flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <p className="text-xs font-medium text-amber-800">
+                {totalIssues} problema/i di coerenza dati rilevati — vedi il dettaglio per account qui sotto.
+              </p>
+            </div>
+          );
+        })()}
 
         {state.status === 'done' &&
           state.results.map((r) => (
@@ -94,6 +107,22 @@ export default function DblueOfficeComplianceCheck({ onBack }: DblueOfficeCompli
                     <span className="font-mono">{r.requestHeaders.join(', ')}</span>{' '}
                     <span className="italic">(solo nome, mai il valore)</span>
                   </span>
+                )}
+
+                {r.sanityIssues.length > 0 && (
+                  <div className="mt-1 bg-amber-50 border border-amber-200 rounded-lg p-2 flex flex-col gap-1">
+                    <span className="text-[11px] font-bold text-amber-800 flex items-center gap-1">
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                      {r.sanityIssues.length} problema/i nei dati stanze/categorie/chiusure
+                    </span>
+                    <ul className="list-disc list-inside">
+                      {r.sanityIssues.map((issue, idx) => (
+                        <li key={idx} className="text-[11px] text-amber-800">
+                          <span className="font-mono">{issue.field}</span>: {issue.message}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
 
                 {r.rawResponse != null && (

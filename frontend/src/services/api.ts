@@ -270,6 +270,11 @@ export function setDblueOfficeIntegrationEnabled(enabled: boolean): Promise<Admi
   });
 }
 
+export interface DblueOfficeSanityIssue {
+  field: string;
+  message: string;
+}
+
 export interface DblueOfficeComplianceResult {
   email: string;
   expectedRole: string;
@@ -279,6 +284,7 @@ export interface DblueOfficeComplianceResult {
   url?: string;
   requestHeaders: string[];
   rawResponse?: unknown;
+  sanityIssues: DblueOfficeSanityIssue[];
 }
 
 export function checkDblueOfficeCompliance(): Promise<DblueOfficeComplianceResult[]> {

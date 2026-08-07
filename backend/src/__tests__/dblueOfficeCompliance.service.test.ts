@@ -55,6 +55,8 @@ describe('dblueOfficeCompliance.service', () => {
       );
       expect(result.requestHeaders).toEqual(['X-API-Key']);
       expect(result.rawResponse).toEqual(sessionFor(result.expectedRole));
+      // Nessuna stanza/chiusura nella risposta di test → nulla da segnalare.
+      expect(result.sanityIssues).toEqual([]);
     }
   });
 
@@ -83,6 +85,42 @@ describe('dblueOfficeCompliance.service', () => {
       // chiamata fallisce — è calcolata a parte dalla risposta vera e propria.
       expect(result.url).toContain('/booking-app/session?email=');
       expect(result.requestHeaders).toEqual(['X-API-Key']);
+      expect(result.sanityIssues).toEqual([]);
     }
+  });
+
+  it('flags structural problems in rooms/categories/closures without touching role compliance', async () => {
+    mockGetSession.mockImplementation((email: string) => {
+      const account = DEV_ACCOUNTS.find((a) => a.email === email)!;
+      return Promise.resolve({
+        ...sessionFor(account.role),
+        userRoomList: [
+          { id: 'r1', name: 'Room A', space: 'missing-category', color: '#4A90D9', capacity: 6, reserved: false, isActive: true, includeReserved: true },
+        ],
+        allRooms: [
+          { id: 'r1', name: 'Room A', category: 'missing-category', color: '', capacity: 0, reserved: false, isActive: true },
+          { id: 'r2', name: '', category: 'cat1', color: '#fff', capacity: 4, reserved: false, isActive: true },
+        ],
+        roomCategories: [{ id: 'cat1', category: 'Open Space', bgcolor: '#fff', color: '#000' }],
+        closures: [{ _id: 'c1', title: 'Bad closure', start: '2026-08-20T00:00:00.000Z', end: '2026-08-15T00:00:00.000Z' }],
+      });
+    });
+
+    const results = await checkDevAccountsCompliance();
+    const result = results[0];
+
+    const fields = result.sanityIssues.map((i) => i.field);
+    // allRooms[0]: category non trovata, color vuoto, capacity 0.
+    expect(fields).toContain('allRooms.category');
+    expect(fields).toContain('allRooms.color');
+    expect(fields).toContain('allRooms.capacity');
+    // allRooms[1]: nome vuoto.
+    expect(fields).toContain('allRooms.name');
+    // userRoomList[0]: space non trovato in roomCategories.
+    expect(fields).toContain('userRoomList.space');
+    // closures[0]: start dopo end.
+    expect(fields).toContain('closures');
+    // Il confronto ruolo resta indipendente da questi problemi.
+    expect(result.compliant).toBe(true);
   });
 });
