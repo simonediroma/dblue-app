@@ -276,6 +276,9 @@ export interface DblueOfficeComplianceResult {
   actualRole?: string;
   compliant: boolean;
   error?: string;
+  url?: string;
+  requestHeaders: string[];
+  rawResponse?: unknown;
 }
 
 export function checkDblueOfficeCompliance(): Promise<DblueOfficeComplianceResult[]> {

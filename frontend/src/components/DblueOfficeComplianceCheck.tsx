@@ -74,7 +74,7 @@ export default function DblueOfficeComplianceCheck({ onBack }: DblueOfficeCompli
               ) : (
                 <XCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
               )}
-              <div className="flex flex-col gap-0.5 min-w-0">
+              <div className="flex flex-col gap-1 min-w-0 flex-1">
                 <span className="font-bold text-sm text-on-surface truncate">{r.email}</span>
                 <span className="text-xs text-on-surface-variant">
                   Atteso: <span className="font-mono">{r.expectedRole}</span>
@@ -82,6 +82,30 @@ export default function DblueOfficeComplianceCheck({ onBack }: DblueOfficeCompli
                   Ricevuto: <span className="font-mono">{r.actualRole ?? '—'}</span>
                 </span>
                 {r.error && <span className="text-xs text-red-600">{r.error}</span>}
+
+                {r.url && (
+                  <span className="text-[11px] text-on-surface-variant/70 break-all">
+                    <span className="font-bold">URL:</span> <span className="font-mono">{r.url}</span>
+                  </span>
+                )}
+                {r.requestHeaders.length > 0 && (
+                  <span className="text-[11px] text-on-surface-variant/70">
+                    <span className="font-bold">Header inviati:</span>{' '}
+                    <span className="font-mono">{r.requestHeaders.join(', ')}</span>{' '}
+                    <span className="italic">(solo nome, mai il valore)</span>
+                  </span>
+                )}
+
+                {r.rawResponse != null && (
+                  <details className="mt-1">
+                    <summary className="text-[11px] font-bold text-primary cursor-pointer select-none">
+                      Mostra risposta completa
+                    </summary>
+                    <pre className="mt-1 text-[10px] leading-snug bg-surface-container rounded-lg p-3 overflow-x-auto whitespace-pre-wrap break-all">
+                      {JSON.stringify(r.rawResponse, null, 2)}
+                    </pre>
+                  </details>
+                )}
               </div>
             </div>
           ))}

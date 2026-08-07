@@ -115,11 +115,36 @@ function getApiKey(): string {
   return apiKey;
 }
 
-async function request<T>(path: string, params: Record<string, string>): Promise<T> {
+function buildUrl(path: string, params: Record<string, string>): URL {
   const url = new URL(`${getBaseUrl()}${path}`);
   for (const [key, value] of Object.entries(params)) {
     url.searchParams.set(key, value);
   }
+  return url;
+}
+
+// Nomi (non valori) degli header HTTP effettivamente inviati a ogni richiesta —
+// usato per la diagnostica (dblueOfficeCompliance.service.ts), mai per costruire
+// gli header reali della fetch qui sotto.
+const REQUEST_HEADER_NAMES = ['X-API-Key'];
+
+/** URL esatto che verrebbe chiamato per GET /booking-app/session — solo diagnostica. */
+export function getBookingAppSessionUrl(email: string): string {
+  return buildUrl('/booking-app/session', { email }).toString();
+}
+
+/** URL esatto che verrebbe chiamato per GET /list/booking-app — solo diagnostica. */
+export function getBookingAppUserListUrl(requesterEmail: string): string {
+  return buildUrl('/list/booking-app', { email: requesterEmail }).toString();
+}
+
+/** Nomi degli header HTTP inviati a ogni richiesta — mai i valori (es. la API key). */
+export function getRequestHeaderNames(): string[] {
+  return [...REQUEST_HEADER_NAMES];
+}
+
+async function request<T>(path: string, params: Record<string, string>): Promise<T> {
+  const url = buildUrl(path, params);
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
