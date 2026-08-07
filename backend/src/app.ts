@@ -8,6 +8,7 @@ import presenceRoutes from './routes/presence.routes';
 import statsRoutes from './routes/stats.routes';
 import adminRoutes from './routes/admin.routes';
 import adminTestRoutes from './routes/admin-test.routes';
+import closuresRoutes from './routes/closures.routes';
 
 export function createApp() {
   const app = express();
@@ -27,6 +28,7 @@ export function createApp() {
   app.use('/stats', statsRoutes);
   app.use('/admin', adminRoutes);
   app.use('/admin/test', adminTestRoutes);
+  app.use('/closures', closuresRoutes);
 
   return app;
 }

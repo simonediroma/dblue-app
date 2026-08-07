@@ -36,7 +36,20 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 
           let user = await User.findOne({ googleId: profile.id });
           if (!user) {
-            user = await User.create({ googleId: profile.id, email, name, avatar });
+            // Potrebbe già esistere un record "ombra" per questa email, creato dalla
+            // sync della directory dblue-office (userDirectorySync.service.ts) prima
+            // che questa persona avesse mai fatto login — lo reclamiamo assegnandogli
+            // il vero googleId invece di provare a crearne uno nuovo, che violerebbe
+            // il vincolo unique su email.
+            user = await User.findOne({ email });
+            if (user) {
+              user.googleId = profile.id;
+              user.name = name;
+              if (avatar) user.avatar = avatar;
+              await user.save();
+            } else {
+              user = await User.create({ googleId: profile.id, email, name, avatar });
+            }
           } else {
             user.name = name;
             if (avatar) user.avatar = avatar;
