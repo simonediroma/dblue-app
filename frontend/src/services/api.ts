@@ -270,6 +270,20 @@ export function setDblueOfficeIntegrationEnabled(enabled: boolean): Promise<Admi
   });
 }
 
+export interface DblueOfficeComplianceResult {
+  email: string;
+  expectedRole: string;
+  actualRole?: string;
+  compliant: boolean;
+  error?: string;
+}
+
+export function checkDblueOfficeCompliance(): Promise<DblueOfficeComplianceResult[]> {
+  return request<{ results: DblueOfficeComplianceResult[] }>('/admin/dblue-office-compliance').then(
+    (r) => r.results
+  );
+}
+
 export interface ColleaguePresenceItem {
   userId: string;
   name: string;
