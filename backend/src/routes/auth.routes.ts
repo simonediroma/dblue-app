@@ -3,6 +3,11 @@ import passport from '../config/passport';
 import { signToken } from '../config/jwt';
 import { requireAuth } from '../middleware/auth.middleware';
 import { User, IUser } from '../models/user.model';
+import {
+  syncUserFromDblueOfficeIfEnabled,
+  DblueOfficeAccessDeniedError,
+  DblueOfficeSyncUnavailableError,
+} from '../services/userSync.service';
 
 const router = Router();
 
@@ -103,6 +108,23 @@ router.post('/dev-login', async (req: Request, res: Response): Promise<void> => 
     { $setOnInsert: { googleId: `dev-login:${account.email}`, email: account.email, name: account.name, onboardingCompleted: true }, $set: { role: account.role } },
     { upsert: true, new: true }
   );
+
+  // No-op se il flag dblue-office è OFF (default) — stesso comportamento di sempre.
+  // Se ON, richiede che questa email esista come identità di test su dblue-office
+  // staging (vedi CLAUDE_MEMORY.md / piano) — altrimenti la sync fallisce con 403.
+  try {
+    await syncUserFromDblueOfficeIfEnabled(user);
+  } catch (err) {
+    if (err instanceof DblueOfficeAccessDeniedError) {
+      res.status(403).json({ error: err.message });
+      return;
+    }
+    if (err instanceof DblueOfficeSyncUnavailableError) {
+      res.status(503).json({ error: 'Servizio dblue-office non disponibile, riprova più tardi' });
+      return;
+    }
+    throw err;
+  }
 
   const token = signToken(String(user._id));
   setAuthCookie(res, String(user._id));
