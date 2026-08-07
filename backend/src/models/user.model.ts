@@ -34,6 +34,17 @@ export interface IUser extends Document {
   // traccia l'ultimo sync riuscito (usato per il fallback su dato stale se l'API è giù).
   dblueOfficeId?: string;
   lastSyncedAt?: Date;
+  // Snapshot delle stanze visibili/prenotabili da questo utente su dblue-office,
+  // cachato al login (stesso motivo di dblueOfficeId sopra) — permette a
+  // capacity.service.ts di risolvere la capacità per-utente senza chiamate esterne
+  // nel path caldo di prenotazione. Solo modalità API; vuoto/assente in locale.
+  dblueOfficeRooms?: Array<{
+    id?: string;
+    name: string;
+    capacity: number;
+    color?: string;
+    category?: string;
+  }>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -81,6 +92,18 @@ const userSchema = new Schema<IUser>(
     onboardingCompleted: { type: Boolean, default: false },
     dblueOfficeId: { type: String, unique: true, sparse: true },
     lastSyncedAt: { type: Date },
+    dblueOfficeRooms: {
+      type: [
+        {
+          id: String,
+          name: String,
+          capacity: Number,
+          color: String,
+          category: String,
+          _id: false,
+        },
+      ],
+    },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );

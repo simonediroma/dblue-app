@@ -4,14 +4,7 @@ import { motion } from 'motion/react';
 import { getFictionalDayName, months } from '../utils/dateUtils';
 import type { Room } from '../services/api';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
-
-const roomTypeColor: Record<string, string> = {
-  open_space: 'bg-blue-500',
-  lab: 'bg-gradient-to-r from-[#ff0000] via-[#0000ff] to-[#00ff00]',
-  admin: 'bg-indigo-500',
-  management: 'bg-amber-500',
-};
-const fallbackColors = ['bg-red-500', 'bg-green-500', 'bg-purple-500', 'bg-teal-500'];
+import { roomColorInfo } from '../utils/roomColor';
 
 interface RoomSelectionProps {
   date: string;
@@ -51,7 +44,7 @@ export default function RoomSelection({ date, rooms, onSelect, onBack, mode = 'c
           <h3 className="font-headline font-bold text-lg text-on-surface/70 mb-4 tracking-tight">{sectionTitle}</h3>
           <div className="flex flex-col gap-3">
             {rooms.map((room, i) => {
-              const color = roomTypeColor[room.type] ?? fallbackColors[i % fallbackColors.length];
+              const color = roomColorInfo(room, i);
               const isPlanned = room.name === plannedRoom;
               return (
                 <button key={room.id} data-testid="checkin-room-option" onClick={() => onSelect(room.name)}
@@ -63,7 +56,7 @@ export default function RoomSelection({ date, rooms, onSelect, onBack, mode = 'c
                     </div>
                   )}
                   <div className="flex items-center gap-4">
-                    <div className={`w-6 h-6 rounded-full flex-shrink-0 shadow-sm ${color}`}/>
+                    <div className={`w-6 h-6 rounded-full flex-shrink-0 shadow-sm ${color.className ?? ''}`} style={color.style}/>
                     <span className={`font-headline font-bold text-lg transition-colors ${isPlanned ? 'text-primary' : 'text-on-surface group-hover:text-primary'}`}>
                       {room.name}
                     </span>

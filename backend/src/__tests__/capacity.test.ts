@@ -2,7 +2,7 @@ import { Types } from 'mongoose';
 import { connect, disconnect, clearDatabase } from './setup';
 import { createUser, createRoom } from './helpers';
 import { WorkingStatus } from '../models/working-status.model';
-import { getTotalCapacity, getBookedCount, isCapacityAvailable } from '../services/capacity.service';
+import { getTotalCapacity, getBookedCount, isCapacityAvailable, getVisibleRoomsForUser, Role } from '../services/capacity.service';
 
 beforeAll(connect);
 afterAll(disconnect);
@@ -14,13 +14,20 @@ function tomorrowStr(): string {
   return d.toISOString().slice(0, 10);
 }
 
+// Il flag dblue-office resta OFF di default (nessun Setting doc creato in questi
+// test) — getVisibleRoomsForUser risolve quindi sempre dal Room model locale,
+// stesso comportamento di getVisibleRooms(role) prima della migrazione a PR-D.
+function visibleRoomsFor(role: Role) {
+  return getVisibleRoomsForUser({ role });
+}
+
 describe('role-based room visibility & capacity', () => {
   it('total capacity is open_space only for a role with no extra visible rooms', async () => {
     const owner = await createUser({ role: 'owner' });
     await createRoom(owner._id, { name: 'Blue', type: 'open_space', capacity: 20 });
     await createRoom(owner._id, { name: 'Admin Room', type: 'admin', capacity: 8, visibleRoles: ['director'] });
 
-    expect(await getTotalCapacity('employee')).toBe(20);
+    expect(getTotalCapacity(await visibleRoomsFor('employee'))).toBe(20);
   });
 
   it('adds a restricted room capacity for the role it is visible to', async () => {
@@ -28,7 +35,7 @@ describe('role-based room visibility & capacity', () => {
     await createRoom(owner._id, { name: 'Blue', type: 'open_space', capacity: 20 });
     await createRoom(owner._id, { name: 'Admin Room', type: 'admin', capacity: 8, visibleRoles: ['director'] });
 
-    expect(await getTotalCapacity('director')).toBe(28);
+    expect(getTotalCapacity(await visibleRoomsFor('director'))).toBe(28);
   });
 
   it('owner always sees every room regardless of visibleRoles', async () => {
@@ -37,7 +44,7 @@ describe('role-based room visibility & capacity', () => {
     await createRoom(owner._id, { name: 'Admin Room', type: 'admin', capacity: 8, visibleRoles: ['director'] });
     await createRoom(owner._id, { name: 'Lab', type: 'lab', capacity: 15, visibleRoles: ['lab_responsible'] });
 
-    expect(await getTotalCapacity('owner')).toBe(43);
+    expect(getTotalCapacity(await visibleRoomsFor('owner'))).toBe(43);
   });
 
   it('booked count only counts bookings in rooms visible to the given role, plus unassigned ones', async () => {
@@ -53,9 +60,9 @@ describe('role-based room visibility & capacity', () => {
     ]);
 
     // Employee can't see Admin Room: only Blue + the unassigned entry count.
-    expect(await getBookedCount(date, 'employee')).toBe(2);
+    expect(await getBookedCount(date, await visibleRoomsFor('employee'))).toBe(2);
     // Director can see Admin Room too: all three count.
-    expect(await getBookedCount(date, 'director')).toBe(3);
+    expect(await getBookedCount(date, await visibleRoomsFor('director'))).toBe(3);
   });
 
   it('capacity gate is evaluated against the acting role, not a global constant', async () => {
@@ -73,8 +80,8 @@ describe('role-based room visibility & capacity', () => {
     });
 
     // The single open_space seat is taken: an employee has no room left.
-    expect(await isCapacityAvailable(date, 'employee')).toBe(false);
+    expect(await isCapacityAvailable(date, await visibleRoomsFor('employee'))).toBe(false);
     // A director still has the (still-empty) Admin Room seat available.
-    expect(await isCapacityAvailable(date, 'director')).toBe(true);
+    expect(await isCapacityAvailable(date, await visibleRoomsFor('director'))).toBe(true);
   });
 });

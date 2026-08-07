@@ -15,7 +15,7 @@ export async function startChangeStream(): Promise<void> {
     const date = doc.date as string;
 
     try {
-      await broadcastToDate(date, (role) => getPresenceBreakdown(date, role));
+      await broadcastToDate(date, (visibleRooms) => getPresenceBreakdown(date, visibleRooms));
     } catch (err) {
       console.error('[ChangeStream] Errore broadcast:', err);
     }

@@ -2,16 +2,17 @@ import { WebSocketServer, WebSocket } from 'ws';
 import http from 'http';
 import { verifyToken } from '../config/jwt';
 import { User } from '../models/user.model';
-import type { Role } from './capacity.service';
+import { getVisibleRoomsForUser, VisibleRoom } from './capacity.service';
 
 const rooms = new Map<string, Set<WebSocket>>();
 
 // Resolved once per connection from its subscribe token — office capacity is
-// role-scoped (getVisibleRooms), so every subscriber of the same date can still
-// need a different breakdown. Falls back to the most restrictive role if the
-// token is missing/invalid rather than over-exposing room-restricted capacity.
-const roleByConnection = new WeakMap<WebSocket, Role>();
-const FALLBACK_ROLE: Role = 'employee';
+// per-user (getVisibleRoomsForUser), not per-role: due utenti con lo stesso ruolo
+// possono avere accessi diversi in modalità dblue-office. Falls back to the most
+// restrictive access (employee role, nessuna stanza extra) if the token is
+// missing/invalid rather than over-exposing room-restricted capacity.
+const visibleRoomsByConnection = new WeakMap<WebSocket, VisibleRoom[]>();
+const FALLBACK_ROLE = 'employee' as const;
 
 export function initWebSocket(server: http.Server): void {
   const wss = new WebSocketServer({ server, path: '/ws' });
@@ -38,7 +39,7 @@ export function initWebSocket(server: http.Server): void {
           const msg = JSON.parse(data.toString());
           if (msg.type === 'subscribe' && isValidDate(msg.date)) {
             if (subscribedDate) leaveRoom(subscribedDate, ws);
-            roleByConnection.set(ws, await resolveRole(msg.token));
+            visibleRoomsByConnection.set(ws, await resolveVisibleRooms(msg.token));
             subscribedDate = msg.date;
             joinRoom(msg.date, ws);
           }
@@ -48,34 +49,48 @@ export function initWebSocket(server: http.Server): void {
 
     ws.on('close', () => {
       if (subscribedDate) leaveRoom(subscribedDate, ws);
-      roleByConnection.delete(ws);
+      visibleRoomsByConnection.delete(ws);
     });
 
     ws.on('ping', () => ws.pong());
   });
 }
 
-async function resolveRole(token: unknown): Promise<Role> {
-  if (typeof token !== 'string') return FALLBACK_ROLE;
+async function resolveVisibleRooms(token: unknown): Promise<VisibleRoom[]> {
+  if (typeof token !== 'string') return getVisibleRoomsForUser({ role: FALLBACK_ROLE });
   const payload = verifyToken(token);
-  if (!payload) return FALLBACK_ROLE;
-  const user = await User.findById(payload.sub).select('role').lean();
-  return user?.role ?? FALLBACK_ROLE;
+  if (!payload) return getVisibleRoomsForUser({ role: FALLBACK_ROLE });
+  const user = await User.findById(payload.sub).select('role dblueOfficeRooms').lean();
+  return getVisibleRoomsForUser({ role: user?.role ?? FALLBACK_ROLE, dblueOfficeRooms: user?.dblueOfficeRooms });
 }
 
-export async function broadcastToDate(date: string, getBreakdown: (role: Role) => Promise<object>): Promise<void> {
+// Chiave stabile per raggruppare connessioni con lo stesso identico accesso —
+// stessa ottimizzazione di prima (un solo calcolo per gruppo), ma la chiave ora è
+// l'insieme di stanze visibili invece del ruolo, corretto anche quando due utenti
+// con lo stesso ruolo hanno accessi diversi (modalità dblue-office).
+function roomAccessKey(visibleRooms: VisibleRoom[]): string {
+  return visibleRooms.map((r) => r.id ?? r.name).sort().join('|');
+}
+
+export async function broadcastToDate(
+  date: string,
+  getBreakdown: (visibleRooms: VisibleRoom[]) => Promise<object>
+): Promise<void> {
   const subscribers = rooms.get(date);
   if (!subscribers || subscribers.size === 0) return;
 
-  const byRole = new Map<Role, WebSocket[]>();
+  const byAccess = new Map<string, { visibleRooms: VisibleRoom[]; sockets: WebSocket[] }>();
   for (const ws of subscribers) {
-    const role = roleByConnection.get(ws) ?? FALLBACK_ROLE;
-    (byRole.get(role) ?? byRole.set(role, []).get(role)!).push(ws);
+    const visibleRooms = visibleRoomsByConnection.get(ws) ?? [];
+    const key = roomAccessKey(visibleRooms);
+    const group = byAccess.get(key) ?? { visibleRooms, sockets: [] };
+    group.sockets.push(ws);
+    byAccess.set(key, group);
   }
 
   await Promise.all(
-    Array.from(byRole.entries()).map(async ([role, sockets]) => {
-      const payload = await getBreakdown(role);
+    Array.from(byAccess.values()).map(async ({ visibleRooms, sockets }) => {
+      const payload = await getBreakdown(visibleRooms);
       const msg = JSON.stringify({ type: 'presence_update', data: payload });
       for (const ws of sockets) {
         if (ws.readyState === WebSocket.OPEN) ws.send(msg);

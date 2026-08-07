@@ -75,13 +75,16 @@ export default function AdminBar({ onRoomsChanged }: AdminBarProps) {
           {state.status === 'loading' ? '...' : 'Seed DB (upsert)'}
         </button>
 
-        {user.role === 'owner' && (
+        {user.role === 'owner' && dblueIntegrationEnabled === false && (
           <button
             onClick={() => setShowRoomManagement(true)}
             className="px-3 py-1 rounded bg-teal-700 hover:bg-teal-600 text-white font-medium transition-colors"
           >
             Gestisci Stanze
           </button>
+        )}
+        {user.role === 'owner' && dblueIntegrationEnabled === true && (
+          <span className="text-slate-400 italic">Le stanze sono gestite da dblue-office</span>
         )}
 
         {user.role === 'owner' && dblueIntegrationEnabled !== null && (

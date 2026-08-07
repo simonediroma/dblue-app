@@ -17,14 +17,7 @@ import {
  months
 } from '../utils/dateUtils';
 import type { Room } from '../services/api';
-
-const roomTypeColor: Record<string, string> = {
- open_space: 'bg-blue-500',
- lab: 'bg-gradient-to-r from-[#ff0000] via-[#0000ff] to-[#00ff00]',
- admin: 'bg-indigo-500',
- management: 'bg-amber-500',
-};
-const roomFallbackColors = ['bg-red-500', 'bg-green-500', 'bg-purple-500', 'bg-teal-500'];
+import { roomColorInfo } from '../utils/roomColor';
 
 function mapBackendStatus(s: string): WorkStatus {
   const map: Record<string, WorkStatus> = {
@@ -725,13 +718,13 @@ export default function DailyDetail({
  const isLab = room.type === 'lab';
  const hasActivityPlanned = isLab && day.isLabBooked;
  const isCurrentRoom = isLab && day.room === room.name;
- const roomColor = roomTypeColor[room.type] ?? roomFallbackColors[roomIdx % roomFallbackColors.length];
+ const roomColor = roomColorInfo(room, roomIdx);
 
  if (isLab && hasActivityPlanned && !isCurrentRoom) {
  return (
  <div key={room.id} className="w-full bg-surface-container-low/50 rounded-2xl p-5 border border-outline-variant/10 text-left opacity-60">
  <div className="flex items-center gap-4">
- <div className={`w-6 h-6 rounded-full flex-shrink-0 shadow-sm ${roomColor}`}/>
+ <div className={`w-6 h-6 rounded-full flex-shrink-0 shadow-sm ${roomColor.className ?? ''}`} style={roomColor.style}/>
  <div className="flex flex-col">
  <span className="font-headline font-bold text-base text-on-surface">
  {room.name}
@@ -758,7 +751,7 @@ export default function DailyDetail({
  } hover:border-primary/40 hover:shadow-lg active:scale-[0.98] group shadow-sm text-left`}
  >
  <div className="flex items-center gap-4">
- <div className={`w-6 h-6 rounded-full flex-shrink-0 shadow-sm ${roomColor}`}/>
+ <div className={`w-6 h-6 rounded-full flex-shrink-0 shadow-sm ${roomColor.className ?? ''}`} style={roomColor.style}/>
  <div className="flex flex-col">
  <div className="flex items-center gap-2">
  <span className="font-headline font-bold text-lg text-on-surface group-hover:text-primary transition-colors">
@@ -1315,7 +1308,7 @@ export default function DailyDetail({
  <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
  {rooms.map((room, roomIdx) => {
  const isActive = currentConfig.room === room.name && currentConfig.isUsingDesk;
- const extRoomColor = roomTypeColor[room.type] ?? roomFallbackColors[roomIdx % roomFallbackColors.length];
+ const extRoomColor = roomColorInfo(room, roomIdx);
 
  return (
  <button key={room.id} data-testid="extend-room-option" onClick={() => updateRoomConfig(dateStr, room.name, true)}
@@ -1325,7 +1318,7 @@ export default function DailyDetail({
  `}
  >
  <div className="flex items-center gap-1.5 overflow-hidden">
- <div className={`w-2 h-2 rounded-full ${extRoomColor} shrink-0`}/>
+ <div className={`w-2 h-2 rounded-full ${extRoomColor.className ?? ''} shrink-0`} style={extRoomColor.style}/>
  <span className={`text-[10px] font-bold truncate ${isActive ? 'text-on-surface' : 'text-on-surface/80'}`}>
  {room.type === 'lab' ? 'Lab' : room.type === 'management' ? 'Management' : room.name}
  </span>

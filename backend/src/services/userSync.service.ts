@@ -49,6 +49,9 @@ export async function syncUserFromDblueOfficeIfEnabled(user: IUser): Promise<voi
   if (session.user.mandatory_presence_days != null) {
     user.contract.presenceDaysTarget = session.user.mandatory_presence_days;
   }
+  user.dblueOfficeRooms = session.userRoomList
+    .filter((r) => r.isActive)
+    .map((r) => ({ id: r.id, name: r.name, capacity: r.capacity, color: r.color, category: r.space }));
   user.lastSyncedAt = new Date();
   await user.save();
 }
