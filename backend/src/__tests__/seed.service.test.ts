@@ -9,7 +9,7 @@ jest.mock('../services/dblueOfficeApi.service', () => ({
 }));
 
 import { connect, disconnect, clearDatabase } from './setup';
-import { runSeed } from '../services/seed.service';
+import { runSeed, startSeedJob, getSeedJobState } from '../services/seed.service';
 import { User } from '../models/user.model';
 import { Room } from '../models/room.model';
 import { WorkingStatus } from '../models/working-status.model';
@@ -109,5 +109,66 @@ describe('runSeed — sourced from dblue-office', () => {
     mockGetSession.mockRejectedValue(new Error('dblue-office non raggiungibile'));
     await expect(runSeed(true)).rejects.toThrow();
     expect(await Room.countDocuments()).toBe(0);
+  });
+});
+
+// POST /admin/seed used to await runSeed() directly and hold the HTTP request open
+// until it finished — with a real dblue-office directory (potentially much larger
+// than the old 85 synthetic colleagues), this could take long enough to exceed a
+// proxy/browser timeout ("Failed to fetch" client-side even though the backend was
+// still working). startSeedJob() runs it in the background instead.
+describe('startSeedJob / getSeedJobState', () => {
+  beforeAll(connect);
+  afterAll(disconnect);
+  afterEach(clearDatabase);
+
+  beforeEach(() => {
+    mockGetSession.mockImplementation((email: string) => Promise.resolve(sessionFor(email)));
+    mockGetUserList.mockResolvedValue({ success: true, users: DIRECTORY_USERS });
+  });
+
+  async function waitUntilFinished() {
+    for (let i = 0; i < 200; i++) {
+      if (getSeedJobState().status !== 'running') return;
+      await new Promise((r) => setTimeout(r, 10));
+    }
+    throw new Error('seed job did not finish in time');
+  }
+
+  it('runs the seed in the background and exposes the summary once done', async () => {
+    const { started } = startSeedJob(true);
+    expect(started).toBe(true);
+    expect(getSeedJobState().status).toBe('running');
+
+    await waitUntilFinished();
+
+    const state = getSeedJobState();
+    expect(state.status).toBe('done');
+    if (state.status === 'done') {
+      expect(state.summary.rooms).toBe(2);
+    }
+  });
+
+  it('rejects a second start while one is already running', async () => {
+    const first = startSeedJob(true);
+    expect(first.started).toBe(true);
+
+    const second = startSeedJob(true);
+    expect(second.started).toBe(false);
+
+    await waitUntilFinished();
+  });
+
+  it('exposes the error message instead of throwing when the catalog fetch fails', async () => {
+    mockGetSession.mockRejectedValue(new Error('dblue-office non raggiungibile'));
+
+    startSeedJob(true);
+    await waitUntilFinished();
+
+    const state = getSeedJobState();
+    expect(state.status).toBe('error');
+    if (state.status === 'error') {
+      expect(state.message).toContain('dblue-office non raggiungibile');
+    }
   });
 });

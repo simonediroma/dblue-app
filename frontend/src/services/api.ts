@@ -248,11 +248,25 @@ export interface SeedSummary {
   fullCapacityTestDate: string | null;
 }
 
-export function triggerSeed(fresh = false): Promise<{ ok: boolean; summary: SeedSummary }> {
-  return request<{ ok: boolean; summary: SeedSummary }>('/admin/seed', {
+// POST /admin/seed avvia il job in background e risponde subito (non attende il
+// completamento — il seed ora interroga sempre dblue-office e può richiedere più
+// tempo di quanto un browser sia disposto ad aspettare su una singola richiesta).
+// Il chiamante fa polling di getSeedStatus() per sapere quando è finito.
+export function triggerSeed(fresh = false): Promise<{ ok: boolean; status: string }> {
+  return request<{ ok: boolean; status: string }>('/admin/seed', {
     method: 'POST',
     body: JSON.stringify({ fresh }),
   });
+}
+
+export type SeedJobState =
+  | { status: 'idle' }
+  | { status: 'running'; startedAt: string }
+  | { status: 'done'; summary: SeedSummary; finishedAt: string }
+  | { status: 'error'; message: string; finishedAt: string };
+
+export function getSeedStatus(): Promise<SeedJobState> {
+  return request<SeedJobState>('/admin/seed/status');
 }
 
 export interface AdminSettings {

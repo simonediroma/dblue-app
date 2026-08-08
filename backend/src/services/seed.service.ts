@@ -219,15 +219,18 @@ export async function runSeed(fresh = false): Promise<SeedSummary> {
   // Real role/rooms/presence-target for the 6 dev accounts, straight from
   // dblue-office — always (force:true), independent of the live integration flag:
   // seed is a distinct, deliberate admin action, not the request-time behavior the
-  // flag governs. Best-effort per account: one not yet provisioned in dblue-office
-  // shouldn't block the whole reseed, it just keeps its local fallback role above.
-  for (const u of devUsers) {
-    try {
-      await syncUserFromDblueOfficeIfEnabled(u, { force: true });
-    } catch (err) {
-      console.warn(`[seed] dblue-office sync fallita per ${u.email}, mantengo il ruolo locale: ${(err as Error).message}`);
-    }
-  }
+  // flag governs. Best-effort per account, done in parallel (independent accounts,
+  // no shared state): one not yet provisioned in dblue-office shouldn't block the
+  // whole reseed, it just keeps its local fallback role above.
+  await Promise.all(
+    devUsers.map(async (u) => {
+      try {
+        await syncUserFromDblueOfficeIfEnabled(u, { force: true });
+      } catch (err) {
+        console.warn(`[seed] dblue-office sync fallita per ${u.email}, mantengo il ruolo locale: ${(err as Error).message}`);
+      }
+    })
+  );
 
   // Real room catalog — foundational input, no fallback: without it there is no
   // authoritative name/capacity data to generate coherent presence records against.
@@ -363,15 +366,16 @@ export async function runSeed(fresh = false): Promise<SeedSummary> {
     }
   }
 
-  await WorkingStatus.deleteMany({ userId: meUser._id });
-  await WorkingStatus.insertMany(meRecords);
-
-  let totalColleagueRecords = 0;
-  for (const { user: u, records } of colleagueRecordsByUser) {
-    await WorkingStatus.deleteMany({ userId: u._id });
-    await WorkingStatus.insertMany(records);
-    totalColleagueRecords += records.length;
-  }
+  // One bulk delete + one bulk insert for every user's records instead of a
+  // round-trip pair per user — with a real dblue-office directory (potentially far
+  // larger than the old 85 synthetic colleagues) the old per-user sequential loop
+  // could make POST /admin/seed take long enough to exceed a proxy/browser timeout
+  // ("Failed to fetch" client-side, even though the backend was still working).
+  const allColleagueRecords = colleagueRecordsByUser.flatMap((c) => c.records);
+  const allUserIds = [meUser._id, ...colleagueUsers.map((u) => u._id)];
+  await WorkingStatus.deleteMany({ userId: { $in: allUserIds } });
+  await WorkingStatus.insertMany([...meRecords, ...allColleagueRecords]);
+  const totalColleagueRecords = allColleagueRecords.length;
 
   const defaultTeammates = colleagueUsers.slice(0, 5).map((u) => u._id);
   await User.updateOne({ _id: meUser._id }, { teammates: defaultTeammates });
@@ -384,4 +388,45 @@ export async function runSeed(fresh = false): Promise<SeedSummary> {
     rangeColleagues: `${colleaguesStartDate} → ${meEndDate}`,
     fullCapacityTestDate,
   };
+}
+
+// ─── Job asincrono ───────────────────────────────────────────────────────────
+//
+// runSeed() ora chiama sempre dblue-office (directory reale potenzialmente grande)
+// e può richiedere più tempo di quanto un proxy/browser sia disposto ad aspettare su
+// una singola richiesta HTTP sincrona — POST /admin/seed avviava il lavoro e restava
+// in attesa della risposta, causando "Failed to fetch" lato client anche quando il
+// backend completava correttamente in background. Il job gira quindi in modo
+// asincrono con uno stato in-memory a livello di modulo (stesso pattern già usato
+// per il TTL di userDirectorySync.service.ts — proporzionato a un tool admin
+// owner-only, nessuna nuova collezione Mongo necessaria) — la route risponde subito,
+// il frontend fa polling di getSeedJobState() finché non è 'done'/'error'.
+
+export type SeedJobState =
+  | { status: 'idle' }
+  | { status: 'running'; startedAt: string }
+  | { status: 'done'; summary: SeedSummary; finishedAt: string }
+  | { status: 'error'; message: string; finishedAt: string };
+
+let jobState: SeedJobState = { status: 'idle' };
+
+export function getSeedJobState(): SeedJobState {
+  return jobState;
+}
+
+// Rifiuta un secondo avvio mentre uno è già in corso — previene esattamente
+// l'incidente già osservato in passato di due fresh:true sovrapposti che
+// corrompevano i dati (il delete-poi-insert di runSeed() non è atomico contro un
+// secondo run concorrente).
+export function startSeedJob(fresh: boolean): { started: boolean } {
+  if (jobState.status === 'running') return { started: false };
+  jobState = { status: 'running', startedAt: new Date().toISOString() };
+  runSeed(fresh)
+    .then((summary) => {
+      jobState = { status: 'done', summary, finishedAt: new Date().toISOString() };
+    })
+    .catch((err) => {
+      jobState = { status: 'error', message: (err as Error).message, finishedAt: new Date().toISOString() };
+    });
+  return { started: true };
 }
