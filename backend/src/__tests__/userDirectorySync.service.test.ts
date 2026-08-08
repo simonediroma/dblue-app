@@ -75,4 +75,36 @@ describe('userDirectorySync.service', () => {
 
     expect(mockGetUserList).not.toHaveBeenCalled();
   });
+
+  it('force:true bypasses both the flag check and the TTL', async () => {
+    mockIsEnabled.mockResolvedValue(false);
+    mockGetUserList.mockClear();
+    mockGetUserList.mockResolvedValue({ success: true, users: [DIRECTORY_USER] });
+    mockFindOneAndUpdate.mockResolvedValue({});
+
+    await syncUserDirectoryIfEnabled('dev@dblue.it', { force: true });
+
+    expect(mockIsEnabled).not.toHaveBeenCalled();
+    expect(mockGetUserList).toHaveBeenCalledWith('dev@dblue.it');
+  });
+
+  it('maps mandatory_presence_days into contract.presenceDaysTarget when present', async () => {
+    mockGetUserList.mockClear();
+    mockFindOneAndUpdate.mockClear();
+    mockGetUserList.mockResolvedValue({
+      success: true,
+      users: [{ ...DIRECTORY_USER, mandatory_presence_days: 9 }],
+    });
+    mockFindOneAndUpdate.mockResolvedValue({});
+
+    await syncUserDirectoryIfEnabled('dev@dblue.it', { force: true });
+
+    expect(mockFindOneAndUpdate).toHaveBeenCalledWith(
+      { email: 'natalia.kravchenko@dblue.it' },
+      expect.objectContaining({
+        $set: expect.objectContaining({ 'contract.presenceDaysTarget': 9 }),
+      }),
+      { upsert: true }
+    );
+  });
 });
