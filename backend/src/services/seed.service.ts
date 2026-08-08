@@ -3,6 +3,9 @@ import { User } from '../models/user.model';
 import { Room, seedDefaultRooms } from '../models/room.model';
 import { WorkingStatus, WorkingStatusValue } from '../models/working-status.model';
 import { DEV_ACCOUNTS } from '../routes/auth.routes';
+import { getBookingAppSession } from './dblueOfficeApi.service';
+import { syncUserFromDblueOfficeIfEnabled } from './userSync.service';
+import { syncUserDirectoryIfEnabled } from './userDirectorySync.service';
 
 // ─── Seeded pseudo-random (riproducibile) ────────────────────────────────────
 
@@ -52,60 +55,15 @@ function monthEnd(year: number, month: number): string {
   return toDateStr(new Date(Date.UTC(year, month, 0)));
 }
 
-// ─── Dati colleghi ───────────────────────────────────────────────────────────
-
-const COLLEAGUES = [
-  'Alberto Pasquini', 'Alessandra Tedeschi', 'Alessandro Tedeschi Gallo',
-  'Alessia Golfetti', 'Alexandra Ghita', 'Alice Salvatori', 'Ana Ferreira',
-  'Anna Vicario', 'Andrea Capaccioli', 'Aurora De Bortoli', 'Andrea Carrieri',
-  'Marianna Groia', 'Carla Fresia', 'Carlo Abate', 'Damiano Taurino',
-  'Daria Verna', 'Elisa Spiller', 'Elizabeth Humm', 'Erica Vannucci',
-  'Francesca Piazza', 'Francesca Margiotta', 'Francois Brambati',
-  'Emanuela Laguardia', 'Angela Donati', 'Giorgio Sestili', 'Giuseppe Frau',
-  'Linda Portoghese', 'Viviana S. Couto', 'Linda Napoletano', 'Luca Save',
-  'Marta Cecconi', 'Mara Marzella', 'Marilea Laviola', 'Susanna Cohen',
-  'Michela Cohen', 'Michela Terenzi', 'Micol Biscotto', 'Morena Ugulini',
-  'Nicola Cavagnetto', 'Nikolas Giampaolo', 'Paola Lanzi', 'Paola Tomasello',
-  'Patrizia Di Leonardo', 'Rebecca Hueting', 'Fabio Lovati',
-  'Katarzyna Cichomska', 'Annalisa De Angelis', 'Simona Turco',
-  'Simone Pozzi', 'Stefano Bonelli', 'Hossein Mapar', 'Tommaso Vendruscolo',
-  'Vanessa Arrigoni', 'Vera Ferraiuolo', 'Debora Zanatto', 'Bhavesh Sharma',
-  'Vladimira Canadyova', 'Serena Fabbrini', 'Serena Scuccimarra',
-  'Teodora Mosor', 'Sonia Matera', 'Natalia Kravchenko', 'Marta Renzini',
-  'Alfonso Levantesi', 'Emma Volpato', 'Veronika Takacs', 'Giusy Portolan',
-  'Lorenzo Mancini', 'Daniele Ruscio', 'Matteo Cirillo', 'Leonie Stieren',
-  'Virginia Procopio', 'Elisa Prati', 'Paris Vaiopoulos',
-  'Domenico De Pasquali', 'Claudia Iasillo', 'Izabela Ihnatiuc',
-  'Jean Baptiste Shamuana', 'Michele Di Virgilio', 'Ginevra Fedrizzi',
-  'Olivia Cox', 'Silvia Torsi', 'Edoardo Pedicini', 'Lorenzo Cane',
-  'Luca Cappello',
-];
-
-const ROLES_ASSIGNED: Record<string, 'director' | 'admin_member' | 'lab_responsible'> = {
-  'Giorgio Sestili': 'director',
-  'Patrizia Di Leonardo': 'director',
-  'Marilea Laviola': 'admin_member',
-  'Debora Zanatto': 'admin_member',
-  'Carlo Abate': 'admin_member',
-  'Hossein Mapar': 'lab_responsible',
-  'Bhavesh Sharma': 'lab_responsible',
-};
-
-function nameToEmail(name: string): string {
-  const normalized = name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z\s.]/g, '')
-    .trim()
-    .replace(/\s+/g, '.');
-  return `${normalized}@dbluecorp.com`;
-}
-
 // ─── Generazione status ──────────────────────────────────────────────────────
 
-const OPEN_SPACE_ROOMS = ['Blue', 'Red', 'Green'];
 const OFFICE_STATUSES: WorkingStatusValue[] = ['in_office', 'office_no_desk'];
+
+interface RoomPoolEntry {
+  name: string;
+  capacity: number;
+  color?: string;
+}
 
 type ColleagueProfile = {
   officeProb: number;
@@ -114,10 +72,11 @@ type ColleagueProfile = {
 };
 
 // officeProb tuned so the pool's average (~0.16) keeps a typical day's organic
-// attendance well under the real office capacity (24) — with the old values
-// (tuned for the previous 89-seat default) nearly every day organically exceeded
-// the new, much smaller capacity, making the daily cap above flatten every single
-// day to "full" instead of just the one day meant to demonstrate it.
+// attendance comfortably under a modest office capacity — the real room pool now
+// comes from dblue-office at seed time (unknown when this comment was written),
+// so the *guaranteed* full day is what actually demonstrates "full" (see
+// fullCapacityTestDate below); these probabilities just keep every OTHER day from
+// also organically reading as full.
 function generateColleagueProfile(seed: number): ColleagueProfile {
   const rng = seededRandom(seed);
   const r = rng();
@@ -146,6 +105,7 @@ function buildStatusForUser(
   lastMinutePerMonth: number,
   baseSeed: number,
   todayStr: string,
+  roomPool: RoomPoolEntry[],
 ): StatusRecord[] {
   const rng = seededRandom(baseSeed);
   const records: StatusRecord[] = [];
@@ -171,7 +131,7 @@ function buildStatusForUser(
 
     if (r < profile.officeProb) {
       status = 'in_office';
-      room = OPEN_SPACE_ROOMS[Math.floor(rng() * OPEN_SPACE_ROOMS.length)];
+      room = roomPool[Math.floor(rng() * roomPool.length)].name;
       isUsingDesk = true;
     } else if (r < profile.officeProb + profile.remoteProb) {
       status = 'remote';
@@ -245,30 +205,53 @@ export async function runSeed(fresh = false): Promise<SeedSummary> {
   // without this they'd stay stuck at the schema default (false) forever. Using $set
   // instead would stomp on a deliberate mid-suite reset (resetOnboarding(), used by
   // H-01/H-02 to exercise the onboarding flow itself) on every subsequent call.
+  const devUsers = [meUser];
   for (const account of DEV_ACCOUNTS) {
     if (account.email === meData.email) continue;
-    await User.findOneAndUpdate(
+    const u = await User.findOneAndUpdate(
       { email: account.email },
       { $setOnInsert: { googleId: `dev-login:${account.email}`, email: account.email, name: account.name, onboardingCompleted: true }, $set: { role: account.role } },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
+    devUsers.push(u);
   }
 
-  const colleagueUsers = [];
-  for (let i = 0; i < COLLEAGUES.length; i++) {
-    const name = COLLEAGUES[i];
-    const email = nameToEmail(name);
-    const role = ROLES_ASSIGNED[name] ?? 'employee';
-    const target = [8, 10, 10, 12][i % 4];
-    const u = await User.findOneAndUpdate(
-      { email },
-      { googleId: `seed-${i}`, email, name, role, contract: { presenceDaysTarget: target }, onboardingCompleted: true },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    );
-    colleagueUsers.push(u);
+  // Real role/rooms/presence-target for the 6 dev accounts, straight from
+  // dblue-office — always (force:true), independent of the live integration flag:
+  // seed is a distinct, deliberate admin action, not the request-time behavior the
+  // flag governs. Best-effort per account: one not yet provisioned in dblue-office
+  // shouldn't block the whole reseed, it just keeps its local fallback role above.
+  for (const u of devUsers) {
+    try {
+      await syncUserFromDblueOfficeIfEnabled(u, { force: true });
+    } catch (err) {
+      console.warn(`[seed] dblue-office sync fallita per ${u.email}, mantengo il ruolo locale: ${(err as Error).message}`);
+    }
   }
 
-  await seedDefaultRooms(meUser._id as Types.ObjectId);
+  // Real room catalog — foundational input, no fallback: without it there is no
+  // authoritative name/capacity data to generate coherent presence records against.
+  // Let a failure here abort runSeed() entirely (surfaced as an error on
+  // POST /admin/seed) rather than silently falling back to something synthetic.
+  const session = await getBookingAppSession(meData.email);
+  const roomPool: RoomPoolEntry[] = session.allRooms
+    .filter((r) => r.isActive)
+    .map((r) => ({ name: r.name, capacity: r.capacity, color: r.color }));
+  if (roomPool.length === 0) {
+    throw new Error('dblue-office non ha restituito nessuna stanza attiva: impossibile generare i dati seed.');
+  }
+
+  await seedDefaultRooms(
+    meUser._id as Types.ObjectId,
+    roomPool.map((r) => ({ name: r.name, type: 'open_space' as const, capacity: r.capacity, color: r.color ?? '#94a3b8' }))
+  );
+
+  // Full real directory → shadow local Users (same upsert the app already does when
+  // it syncs the directory live) — force:true bypasses both the flag check and the
+  // 30-minute TTL, so a reseed always takes a fresh snapshot.
+  await syncUserDirectoryIfEnabled(meData.email, { force: true });
+  const devEmails = DEV_ACCOUNTS.map((a) => a.email);
+  const colleagueUsers = await User.find({ email: { $nin: devEmails } });
 
   const now = new Date();
   const todayStr = toDateStr(now);
@@ -291,18 +274,13 @@ export async function runSeed(fresh = false): Promise<SeedSummary> {
   const colleaguesDays = workingDaysInRange(colleaguesStartDate, meEndDate);
 
   // Guarantee ONE fully-booked future day so the waiting-list flow can always be
-  // tested, without every other day also reading as full: officeProb below is tuned
-  // so organic attendance normally stays comfortably under capacity. Synthetic seeding
-  // only ever assigns the 3 open_space rooms (Blue/Red/Green, see OPEN_SPACE_ROOMS) —
-  // it never touches role-restricted rooms (Lab/Admin/Management), so "full" here must
-  // be measured against that open_space pool's real capacity, not the owner's full
-  // cross-role total (which includes seats no synthetic record can ever occupy).
+  // tested, without every other day also reading as full: officeProb above is tuned
+  // so organic attendance normally stays comfortably under capacity. Seeding only
+  // ever assigns rooms from roomPool (the real dblue-office catalog fetched above),
+  // so "full" here is measured against that pool's real total capacity.
   const fullCapacityTestDate = colleaguesDays.find((d) => d > todayStr) ?? null;
-  const openSpaceRoomDocs = await Room.find({ name: { $in: OPEN_SPACE_ROOMS }, isActive: true })
-    .select('name capacity')
-    .lean();
-  const openSpaceCapacityByRoom = new Map(openSpaceRoomDocs.map((r) => [r.name, r.capacity]));
-  const fullCapacityTestSeats = openSpaceRoomDocs.reduce((sum, r) => sum + r.capacity, 0);
+  const openSpaceCapacityByRoom = new Map(roomPool.map((r) => [r.name, r.capacity]));
+  const fullCapacityTestSeats = roomPool.reduce((sum, r) => sum + r.capacity, 0);
 
   const meRecords = buildStatusForUser(
     meUser._id as Types.ObjectId,
@@ -311,6 +289,7 @@ export async function runSeed(fresh = false): Promise<SeedSummary> {
     3,
     42,
     todayStr,
+    roomPool,
   );
   if (fullCapacityTestDate) {
     const meTestRecord = meRecords.find((r) => r.date === fullCapacityTestDate);
@@ -334,13 +313,14 @@ export async function runSeed(fresh = false): Promise<SeedSummary> {
       i % 5 === 0 ? 2 : 0,
       i * 999 + 13,
       todayStr,
+      roomPool,
     );
     if (fullCapacityTestDate) {
       const testRecord = records.find((r) => r.date === fullCapacityTestDate);
       if (testRecord) {
         if (i < fullCapacityTestSeats) {
           testRecord.status = 'in_office';
-          testRecord.room = OPEN_SPACE_ROOMS[i % OPEN_SPACE_ROOMS.length];
+          testRecord.room = roomPool[i % roomPool.length].name;
           testRecord.isUsingDesk = true;
           testRecord.isConfirmed = false;
           testRecord.confirmedAt = undefined;
@@ -360,10 +340,9 @@ export async function runSeed(fresh = false): Promise<SeedSummary> {
   // office-wide total. Each user's day (and room preference) is generated independently
   // with no cross-user awareness — capping only the aggregate total isn't enough to
   // prevent a single room from being "overbooked" (e.g. 9 people randomly landing in
-  // Blue on the same date) while the office-wide total still reads as under capacity.
-  // Demote per-room overflow to waiting_list, same as upsertStatus() would for a real
-  // booking once that room is full. Synthetic seeding only ever assigns open_space
-  // rooms (see OPEN_SPACE_ROOMS), so this never has to consider role-restricted rooms.
+  // the same room on the same date) while the office-wide total still reads as under
+  // capacity. Demote per-room overflow to waiting_list, same as upsertStatus() would
+  // for a real booking once that room is full.
   const byDateRoom = new Map<string, Map<string, StatusRecord[]>>();
   for (const r of [...meRecords, ...colleagueRecordsByUser.flatMap((c) => c.records)]) {
     if (!OFFICE_STATUSES.includes(r.status) || !r.room) continue;
@@ -399,7 +378,7 @@ export async function runSeed(fresh = false): Promise<SeedSummary> {
 
   return {
     users: 1 + colleagueUsers.length,
-    rooms: 6,
+    rooms: roomPool.length,
     workingStatuses: meRecords.length + totalColleagueRecords,
     rangeMe: `${meStartDate} → ${meEndDate}`,
     rangeColleagues: `${colleaguesStartDate} → ${meEndDate}`,

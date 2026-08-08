@@ -54,8 +54,17 @@ const DEFAULT_ROOMS: Array<{
   { name: 'Management Room', type: 'management', capacity: 4, color: '#f59e0b', visibleRoles: ['director'] },
 ];
 
-export async function seedDefaultRooms(createdByUserId: Types.ObjectId): Promise<void> {
-  for (const room of DEFAULT_ROOMS) {
+export async function seedDefaultRooms(
+  createdByUserId: Types.ObjectId,
+  rooms: Array<{
+    name: string;
+    type: IRoom['type'];
+    capacity: number;
+    color: string;
+    visibleRoles?: IUser['role'][];
+  }> = DEFAULT_ROOMS
+): Promise<void> {
+  for (const room of rooms) {
     await Room.findOneAndUpdate(
       { name: room.name },
       { ...room, createdBy: createdByUserId },

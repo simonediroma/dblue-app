@@ -21,10 +21,19 @@ const ROLE_MAP: Record<DblueOfficeBookingAppRole, IUser['role']> = {
  * In caso di errore rete/5xx di dblue-office: se l'utente è già stato sincronizzato
  * in passato (ha un dblueOfficeId), si procede con l'ultimo dato locale noto invece
  * di bloccare il login. Si blocca solo chi non è mai stato sincronizzato.
+ *
+ * `options.force` bypassa il controllo del flag — usato dal seed (`seed.service.ts`),
+ * che deve poter allineare ruolo/stanze reali indipendentemente dal fatto che
+ * l'integrazione sia accesa per il traffico normale in questo momento.
  */
-export async function syncUserFromDblueOfficeIfEnabled(user: IUser): Promise<void> {
-  const enabled = await isDblueOfficeIntegrationEnabled();
-  if (!enabled) return;
+export async function syncUserFromDblueOfficeIfEnabled(
+  user: IUser,
+  options: { force?: boolean } = {}
+): Promise<void> {
+  if (!options.force) {
+    const enabled = await isDblueOfficeIntegrationEnabled();
+    if (!enabled) return;
+  }
 
   let session;
   try {

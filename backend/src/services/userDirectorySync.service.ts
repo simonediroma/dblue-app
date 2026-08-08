@@ -26,11 +26,20 @@ const ROLE_MAP: Record<DblueOfficeBookingAppRole, IUser['role']> = {
  * No-op se il flag è OFF, se l'ultima sync è più recente del TTL, o se dblue-office
  * non risponde (la directory locale resta quella dell'ultima sync riuscita — mai un
  * hard-fail, `GET /users` serve comunque i dati locali).
+ *
+ * `options.force` bypassa sia il controllo del flag sia il TTL — usato dal seed
+ * (`seed.service.ts`), che deve poter prendere uno snapshot fresco della directory
+ * reale indipendentemente dallo stato del flag e da quando è girata l'ultima sync.
  */
-export async function syncUserDirectoryIfEnabled(requesterEmail: string): Promise<void> {
-  const enabled = await isDblueOfficeIntegrationEnabled();
-  if (!enabled) return;
-  if (Date.now() - lastSyncedAt < CACHE_TTL_MS) return;
+export async function syncUserDirectoryIfEnabled(
+  requesterEmail: string,
+  options: { force?: boolean } = {}
+): Promise<void> {
+  if (!options.force) {
+    const enabled = await isDblueOfficeIntegrationEnabled();
+    if (!enabled) return;
+    if (Date.now() - lastSyncedAt < CACHE_TTL_MS) return;
+  }
 
   let directory;
   try {
@@ -51,6 +60,9 @@ export async function syncUserDirectoryIfEnabled(requesterEmail: string): Promis
             role: ROLE_MAP[u.booking_app_role] ?? 'employee',
             dblueOfficeId: u._id,
             ...(u.image_url ? { avatar: u.image_url } : {}),
+            ...(u.mandatory_presence_days != null
+              ? { 'contract.presenceDaysTarget': u.mandatory_presence_days }
+              : {}),
           },
         },
         { upsert: true }
