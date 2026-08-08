@@ -5,7 +5,7 @@ import { requireRole } from '../middleware/rbac.middleware';
 import { User, IUser } from '../models/user.model';
 import { retrofitStatus } from '../services/working-status.service';
 import { getMonthlyStats } from '../services/stats.service';
-import { runSeed } from '../services/seed.service';
+import { startSeedJob, getSeedJobState } from '../services/seed.service';
 import { isDblueOfficeIntegrationEnabled, setDblueOfficeIntegrationEnabled } from '../services/settings.service';
 import { checkDevAccountsCompliance } from '../services/dblueOfficeCompliance.service';
 
@@ -153,11 +153,18 @@ router.get(
   }
 );
 
-// POST /admin/seed — Owner only, popola il DB con dati di test. fresh:true cancella
-// User/Room/WorkingStatus prima di ripopolare — gated dietro ENABLE_DEV_LOGIN come
-// gli endpoint di admin-test.routes.ts, così un token owner compromesso (o un env
-// mal configurato) non può cancellare dati reali in un ambiente di produzione dove
-// quel flag non è impostato.
+// POST /admin/seed — Owner only, avvia in background il popolamento del DB con dati
+// di test (fresh:true cancella User/Room/WorkingStatus prima di ripopolare) — gated
+// dietro ENABLE_DEV_LOGIN come gli endpoint di admin-test.routes.ts, così un token
+// owner compromesso (o un env mal configurato) non può cancellare dati reali in un
+// ambiente di produzione dove quel flag non è impostato.
+//
+// Risponde subito (202) invece di attendere il completamento: da quando il seed
+// interroga sempre dblue-office (directory reale, potenzialmente grande), la
+// generazione può richiedere più tempo di quanto un proxy/browser sia disposto ad
+// aspettare su una singola richiesta HTTP sincrona — il client fa polling di
+// GET /seed/status per sapere quando è finito. 409 se un seed è già in corso
+// (previene la stessa corsa già osservata in passato di due fresh:true sovrapposti).
 router.post(
   '/seed',
   (_req: Request, res: Response, next): void => {
@@ -168,14 +175,30 @@ router.post(
     next();
   },
   requireRole('owner'),
-  async (req: Request, res: Response): Promise<void> => {
+  (req: Request, res: Response): void => {
     const { fresh } = req.body as { fresh?: boolean };
-    try {
-      const summary = await runSeed(fresh === true);
-      res.json({ ok: true, summary });
-    } catch (err) {
-      handleError(res, err);
+    const { started } = startSeedJob(fresh === true);
+    if (!started) {
+      res.status(409).json({ error: 'Un seed è già in corso' });
+      return;
     }
+    res.status(202).json({ ok: true, status: 'started' });
+  }
+);
+
+// GET /admin/seed/status — Owner only, stato del job di seed avviato da POST /seed.
+router.get(
+  '/seed/status',
+  (_req: Request, res: Response, next): void => {
+    if (!process.env.ENABLE_DEV_LOGIN) {
+      res.status(404).end();
+      return;
+    }
+    next();
+  },
+  requireRole('owner'),
+  (_req: Request, res: Response): void => {
+    res.json(getSeedJobState());
   }
 );
 

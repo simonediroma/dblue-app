@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { triggerSeed, getAdminSettings, setDblueOfficeIntegrationEnabled } from '../services/api';
+import { triggerSeed, getSeedStatus, getAdminSettings, setDblueOfficeIntegrationEnabled } from '../services/api';
 import type { SeedSummary, Room } from '../services/api';
 import RoomManagement from './RoomManagement';
 import DblueOfficeComplianceCheck from './DblueOfficeComplianceCheck';
@@ -50,10 +50,35 @@ export default function AdminBar({ onRoomsChanged }: AdminBarProps) {
   async function handleSeed(fresh: boolean) {
     setState({ status: 'loading' });
     try {
-      const { summary } = await triggerSeed(fresh);
-      setState({ status: 'success', summary });
+      await triggerSeed(fresh);
     } catch (err) {
       setState({ status: 'error', message: (err as Error).message });
+      return;
+    }
+    pollSeedStatus();
+  }
+
+  // POST /admin/seed avvia il job in background e risponde subito — il seed ora
+  // interroga sempre dblue-office (directory reale, potenzialmente grande) e può
+  // richiedere più tempo di quanto il browser sia disposto ad aspettare su una
+  // singola richiesta. Il pulsante resta in stato "loading" finché il polling non
+  // trova 'done'/'error'.
+  async function pollSeedStatus() {
+    let job;
+    try {
+      job = await getSeedStatus();
+    } catch (err) {
+      setState({ status: 'error', message: (err as Error).message });
+      return;
+    }
+    if (job.status === 'idle' || job.status === 'running') {
+      setTimeout(pollSeedStatus, 3000);
+      return;
+    }
+    if (job.status === 'done') {
+      setState({ status: 'success', summary: job.summary });
+    } else {
+      setState({ status: 'error', message: job.message });
     }
   }
 
