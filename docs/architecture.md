@@ -102,7 +102,9 @@ presence-app/
 | `APP_URL` | Backend | URL pubblico del frontend (CORS) |
 | `BACKEND_URL` | Backend | URL pubblico del backend (callback OAuth) |
 | `PORT` | Backend | Default 4000 — Railway lo sovrascrive automaticamente |
-| `NODE_ENV` | Backend | `development` / `production` |
+| `NODE_ENV` | Backend | `development` / `production` — ottimizzazioni Node/Express, resta `production` anche in staging |
+| `APP_ENV` | Backend | `development` / `staging` / `production` — distingue staging da produzione dove `NODE_ENV` da solo non basta |
+| `COOKIE_DOMAIN` | Backend | Opzionale. Vuota su Railway (domini scorrelati). Va valorizzata solo quando backend/frontend condividono una root di dominio (es. Coolify) — vedi `auth.routes.ts` |
 | `DEV_LOGIN_USER` | Backend | Email utente dev (solo NODE_ENV=development) |
 | `DEV_LOGIN_PASS` | Backend | Password utente dev (solo NODE_ENV=development) |
 | `DEV_LOGIN_ROLE` | Backend | Ruolo utente dev, default `director` |

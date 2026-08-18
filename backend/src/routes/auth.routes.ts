@@ -12,12 +12,20 @@ import {
 const router = Router();
 
 const isProduction = process.env.NODE_ENV === 'production';
+// Set only once backend/frontend share a root domain (e.g. Coolify staging on
+// app.dblue.it/api.dblue.it) — until then this stays unset and behavior is
+// unchanged from today (Railway, unrelated domains, sameSite: 'none' in prod).
+const cookieDomain = process.env.COOKIE_DOMAIN || undefined;
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: isProduction,
-  sameSite: (isProduction ? 'none' : 'lax') as 'none' | 'lax',
+  // Once backend/frontend share a root domain, the cookie no longer needs
+  // sameSite: 'none' to cross origins — 'lax' is stricter (better CSRF
+  // posture) and sufficient for same-site subdomains.
+  sameSite: (cookieDomain ? 'lax' : isProduction ? 'none' : 'lax') as 'none' | 'lax',
   maxAge: 7 * 24 * 60 * 60 * 1000,
+  ...(cookieDomain && { domain: cookieDomain }),
 };
 
 function setAuthCookie(res: Response, userId: string): void {
