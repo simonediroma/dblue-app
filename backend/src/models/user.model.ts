@@ -5,6 +5,10 @@ export interface IUser extends Document {
   email: string;
   name: string;
   avatar?: string;
+  // Solo per gli account creati via sign-up con password (POST /auth/signup) — assente
+  // per chi entra solo via Google OAuth o dev-login. `select: false` sullo schema: mai
+  // incluso in una query se non richiesto esplicitamente con .select('+passwordHash').
+  passwordHash?: string;
   role: 'employee' | 'lab_responsible' | 'admin_member' | 'director' | 'owner';
   teammates: Types.ObjectId[];
   contract: {
@@ -60,6 +64,7 @@ const userSchema = new Schema<IUser>(
     email: { type: String, required: true, unique: true, lowercase: true },
     name: { type: String, required: true },
     avatar: { type: String },
+    passwordHash: { type: String, select: false },
     role: {
       type: String,
       enum: ['employee', 'lab_responsible', 'admin_member', 'director', 'owner'],
