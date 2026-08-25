@@ -54,9 +54,8 @@ router.get('/google/callback', (req: Request, res: Response, next) => {
         res.redirect(`${process.env.APP_URL ?? '/'}/login?error=${errorCode}`);
         return;
       }
-      const token = signToken(String(user._id));
       setAuthCookie(res, String(user._id));
-      res.redirect(`${process.env.APP_URL ?? '/'}?token=${token}`);
+      res.redirect(`${process.env.APP_URL ?? '/'}`);
     }
   )(req, res, next);
 });
@@ -126,9 +125,8 @@ router.post('/dev-login', async (req: Request, res: Response): Promise<void> => 
     throw err;
   }
 
-  const token = signToken(String(user._id));
   setAuthCookie(res, String(user._id));
-  res.json({ ok: true, token });
+  res.json({ ok: true });
 });
 
 export default router;

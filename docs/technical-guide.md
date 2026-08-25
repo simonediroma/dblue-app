@@ -374,11 +374,7 @@ Bridges MongoDB to WebSocket.
 
 #### auth.middleware.ts — `requireAuth`
 
-Extracts JWT from:
-1. `Authorization: Bearer <token>` header
-2. `token` httpOnly cookie
-
-Verifies signature with `JWT_SECRET`, loads `User` from DB, attaches to `req.user`. Returns 401 if missing or invalid.
+Extracts the JWT from the `token` httpOnly cookie (the only channel — no `Authorization` header is accepted, so the token is never readable by page JavaScript). Verifies signature with `JWT_SECRET`, loads `User` from DB, attaches to `req.user`. Returns 401 if missing or invalid.
 
 #### rbac.middleware.ts — `requireRole(...roles)`
 
@@ -570,7 +566,7 @@ Triggered from the FAB "Say Good Morning" or from the DailyDetail WORKSPACE tab.
 
 Provides authentication state globally.
 
-- On mount: checks URL for `?token=` param (post-OAuth redirect), stores in `localStorage`, then fetches `GET /auth/me`.
+- On mount: fetches `GET /auth/me` — the httpOnly `token` cookie set by the backend (OAuth callback or dev-login) is sent automatically, no token ever passes through the URL or client-side storage.
 - Returns `{ user, loading, logout(), refreshUser() }`.
 - Returns `null` user on 401 → `ProtectedRoute` redirects to `/login`.
 
@@ -610,8 +606,7 @@ Loads the full user list for avatar display.
 
 Every call sends:
 ```
-Authorization: Bearer <token>   (from localStorage)
-credentials: 'include'          (sends httpOnly cookie as fallback)
+credentials: 'include'          (sends the httpOnly "token" cookie)
 Content-Type: application/json
 ```
 

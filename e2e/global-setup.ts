@@ -21,11 +21,10 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
           'Check BASE_URL/API_BASE_URL/DEV_LOGIN_PASS in e2e/.env and that ENABLE_DEV_LOGIN=true on the backend.'
       );
     }
-    const { token } = (await loginRes.json()) as { token: string };
-
-    const usersRes = await context.get('/admin/users', {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    // /auth/dev-login sets the auth cookie on this response; playwrightRequest's
+    // APIRequestContext keeps its own cookie jar and replays it on every subsequent
+    // call made through the same `context` — no explicit header needed.
+    const usersRes = await context.get('/admin/users');
     if (!usersRes.ok()) {
       throw new Error(`global-setup: GET /admin/users failed (${usersRes.status()}).`);
     }

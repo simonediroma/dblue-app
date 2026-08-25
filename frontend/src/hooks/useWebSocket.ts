@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import type { PresenceUpdate } from '../types';
-import { BASE_URL, getStoredToken } from '../services/api';
+import { BASE_URL } from '../services/api';
 
 export function useWebSocket(onPresenceUpdate: (update: PresenceUpdate) => void) {
   useEffect(() => {
@@ -16,10 +16,11 @@ export function useWebSocket(onPresenceUpdate: (update: PresenceUpdate) => void)
       ws.onopen = () => {
         delay = 1000;
         const today = new Date().toISOString().slice(0, 10);
-        // Office capacity is role-scoped (getVisibleRooms) — the token lets the
-        // backend resolve this connection's role and broadcast the matching
-        // breakdown instead of a single value shared by every subscriber.
-        ws.send(JSON.stringify({ type: 'subscribe', date: today, token: getStoredToken() }));
+        // Office capacity is per-user (getVisibleRoomsForUser) — the backend resolves
+        // this connection's access from the httpOnly cookie sent on the WS handshake,
+        // and broadcasts the matching breakdown instead of a single value shared by
+        // every subscriber.
+        ws.send(JSON.stringify({ type: 'subscribe', date: today }));
       };
 
       ws.onmessage = (event) => {
