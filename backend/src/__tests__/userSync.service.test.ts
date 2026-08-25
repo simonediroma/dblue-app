@@ -86,4 +86,42 @@ describe('userSync.service — force option', () => {
 
     expect(user.contract.presenceDaysTarget).toBeNull();
   });
+
+  it('nets reserved seats out of capacity, except when includeReserved says they are this user\'s', async () => {
+    mockIsEnabled.mockResolvedValue(false);
+    mockGetSession.mockResolvedValue({
+      success: true,
+      user: {
+        dblueOfficeId: 'dbl-1',
+        name: 'Mario Rossi',
+        email: 'mario.rossi@dblue.it',
+        image_url: null,
+        mandatory_presence_days: null,
+        booking_app_role: 'lab_responsible',
+      },
+      userSpaceAccess: [],
+      userRoomList: [
+        // Lab: 2 dei 6 posti sono riservati, ma per questo utente (lab_responsible)
+        // includeReserved:true dice che sono suoi — vede la capacity intera.
+        { id: 'lab', name: 'Innovation Lab', space: 'lab', color: '#fff', capacity: 6, reserved: 2, isActive: true, includeReserved: true, isLab: true },
+        // Stanza open space: nessun includeReserved, i riservati vanno sottratti.
+        { id: 'open', name: 'Open Space', space: 'open', color: '#eee', capacity: 10, reserved: 3, isActive: true, includeReserved: false },
+        // Dato inconsistente da dblue-office (reserved > capacity) — non deve mai
+        // risultare in una capacity negativa.
+        { id: 'bad', name: 'Bad Room', space: 'open', color: '#ddd', capacity: 2, reserved: 5, isActive: true, includeReserved: false },
+      ],
+      allRooms: [],
+      roomCategories: [],
+      closures: [],
+    });
+    const user = fakeUser();
+
+    await syncUserFromDblueOfficeIfEnabled(user, { force: true });
+
+    expect(user.dblueOfficeRooms).toEqual([
+      expect.objectContaining({ id: 'lab', capacity: 6 }),
+      expect.objectContaining({ id: 'open', capacity: 7 }),
+      expect.objectContaining({ id: 'bad', capacity: 0 }),
+    ]);
+  });
 });
