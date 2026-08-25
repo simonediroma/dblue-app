@@ -33,6 +33,11 @@ export interface VisibleRoom {
   // picker di visibilità per ruolo. In modalità API la visibilità è già "baked in"
   // (la stanza è nella lista solo se l'utente può vederla), non serve esporlo.
   visibleRoles?: Role[];
+  // "È questa il Lab?" — OFF: deriva da room.type==='lab' (il nostro schema, unica
+  // identificazione in quella modalità). ON: passato 1:1 dal campo che dblue-office
+  // esporrà sulle stanze (proposta in corso, non ancora implementata lato loro) —
+  // nessuna inferenza nostra, mai una seconda logica di riconoscimento in app.
+  isLab?: boolean;
 }
 
 const BOOKED_STATUSES: WorkingStatusValue[] = ['in_office', 'office_no_desk'];
@@ -73,6 +78,7 @@ export async function getVisibleRoomsForUser(user: UserRoomContext): Promise<Vis
       color: r.color,
       category: r.type,
       visibleRoles: r.visibleRoles,
+      isLab: r.type === 'lab',
     }));
   }
   return user.dblueOfficeRooms ?? [];

@@ -37,6 +37,11 @@ export interface DblueOfficeUserRoom {
   reserved: boolean;
   isActive: boolean;
   includeReserved: boolean;
+  // Proposto a dblue-office, non ancora implementato lato loro (vedi email di
+  // richiesta) — identifica la stanza come "il Lab" ai fini della prenotazione
+  // esclusiva per la giornata. Opzionale finché non lo shippano: undefined si
+  // mappa a false in userSync.service.ts, degrado esplicito già esistente.
+  isLab?: boolean;
 }
 
 export interface DblueOfficeRoom {
@@ -47,6 +52,8 @@ export interface DblueOfficeRoom {
   capacity: number;
   reserved: boolean;
   isActive: boolean;
+  // Vedi DblueOfficeUserRoom.isLab — stessa proposta, stesso campo su allRooms.
+  isLab?: boolean;
 }
 
 export interface DblueOfficeRoomCategory {

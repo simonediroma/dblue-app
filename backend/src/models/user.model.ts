@@ -44,6 +44,7 @@ export interface IUser extends Document {
     capacity: number;
     color?: string;
     category?: string;
+    isLab?: boolean;
   }>;
   createdAt: Date;
   updatedAt: Date;
@@ -100,6 +101,7 @@ const userSchema = new Schema<IUser>(
           capacity: Number,
           color: String,
           category: String,
+          isLab: Boolean,
           _id: false,
         },
       ],

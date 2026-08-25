@@ -2,13 +2,13 @@ import { Types } from 'mongoose';
 import { LabBooking } from '../models/lab-booking.model';
 import { VisibleRoom, Role, getVisibleRoomsForUser } from './capacity.service';
 
-// Unica stanza di tipo/categoria 'lab' visibile all'utente — vale solo in modalità
-// locale (flag dblue-office OFF, category === room.type letterale). In modalità API
-// la categoria è un ID opaco lato dblue-office, quindi qui non troveremo mai un match
-// finché non si decide come dblue-office segnala una stanza lab — degrado esplicito,
-// non un crash: il chiamante tratta "nessuna stanza" come 409.
+// Quale stanza, tra quelle visibili all'utente, è "il Lab" — un solo campo,
+// VisibleRoom.isLab, popolato a monte da getVisibleRoomsForUser() (locale: da
+// room.type==='lab'; API: passato 1:1 dal campo dblue-office). Nessuna logica di
+// riconoscimento qui: se nessuna stanza visibile ha isLab, degrado esplicito (409),
+// non un crash — es. in modalità API finché dblue-office non implementa il campo.
 export function findLabRoom(rooms: VisibleRoom[]): VisibleRoom | undefined {
-  return rooms.find((r) => r.category === 'lab');
+  return rooms.find((r) => r.isLab);
 }
 
 export async function bookLab(

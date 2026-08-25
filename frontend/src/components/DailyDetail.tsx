@@ -110,7 +110,7 @@ export default function DailyDetail({
  // else sees a plain "booked"/nothing state (see the Activities section below).
  // Gated on a lab room actually being visible too, so the action never renders
  // for someone who would just hit a 409 (e.g. no lab-type room configured).
- const canManageLab = rooms.some(r => r.type === 'lab') && (currentUserRole === 'lab_responsible' || currentUserRole === 'owner');
+ const canManageLab = rooms.some(r => r.isLab) && (currentUserRole === 'lab_responsible' || currentUserRole === 'owner');
  const [step, setStep] = React.useState<FlowStep>(initialStep);
  const [extendedDates, setExtendedDates] = React.useState<string[]>([]);
  const [extendedOfficeConfigs, setExtendedOfficeConfigs] = React.useState<Record<string, { room: string, isUsingDesk: boolean }>>({});
@@ -722,7 +722,7 @@ export default function DailyDetail({
  <h3 className="font-headline font-bold text-lg text-on-surface/70 mb-4 tracking-tight">I plan to use a desk in...</h3>
  <div className="flex flex-col gap-3">
  {rooms.map((room, roomIdx) => {
- const isLab = room.type === 'lab';
+ const isLab = room.isLab === true;
  const hasActivityPlanned = isLab && day.isLabBooked;
  const isCurrentRoom = isLab && day.room === room.name;
  const roomColor = roomColorInfo(room, roomIdx);
@@ -1327,7 +1327,7 @@ export default function DailyDetail({
  <div className="flex items-center gap-1.5 overflow-hidden">
  <div className={`w-2 h-2 rounded-full ${extRoomColor.className ?? ''} shrink-0`} style={extRoomColor.style}/>
  <span className={`text-[10px] font-bold truncate ${isActive ? 'text-on-surface' : 'text-on-surface/80'}`}>
- {room.type === 'lab' ? 'Lab' : room.type === 'management' ? 'Management' : room.name}
+ {room.isLab ? 'Lab' : room.type === 'management' ? 'Management' : room.name}
  </span>
  </div>
  <span className={`text-[9px] font-bold ml-3.5 ${isActive ? 'text-primary' : 'text-on-surface-variant/40'}`}>{room.capacity} seats</span>
