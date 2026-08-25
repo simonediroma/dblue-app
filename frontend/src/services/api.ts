@@ -336,6 +336,20 @@ export function getStatsByUser(userId: string, month: string): Promise<MonthlySt
   return request<MonthlyStats>(`/admin/stats/${userId}/monthly?month=${encodeURIComponent(month)}`);
 }
 
+export interface LabBookingResult {
+  date: string;
+  isLabBooked: boolean;
+  labBookerName?: string;
+}
+
+export function bookLab(date: string): Promise<LabBookingResult> {
+  return request<LabBookingResult>(`/lab-bookings/${date}`, { method: 'POST' });
+}
+
+export function unbookLab(date: string): Promise<LabBookingResult> {
+  return request<LabBookingResult>(`/lab-bookings/${date}`, { method: 'DELETE' });
+}
+
 export interface OfficeClosure {
   start: string; // YYYY-MM-DD
   end: string; // YYYY-MM-DD

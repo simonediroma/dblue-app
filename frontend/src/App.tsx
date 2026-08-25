@@ -91,7 +91,7 @@ export default function App() {
  const currentMonthLabel = monthKeyToLabel(currentMonthKey);
  const nextMonthLabel = monthKeyToLabel(nextMonthKey);
 
- const { days, setDays, loading, updateStatus: hookUpdateStatus, bulkUpdateStatus: hookBulkUpdateStatus, updateOffTime: hookUpdateOffTime } = usePresence([currentMonthKey, nextMonthKey]);
+ const { days, setDays, loading, updateStatus: hookUpdateStatus, bulkUpdateStatus: hookBulkUpdateStatus, updateOffTime: hookUpdateOffTime, updateLabBooking: hookUpdateLabBooking } = usePresence([currentMonthKey, nextMonthKey]);
  const colleagues = useColleagues();
 
  const [historicalDays, setHistoricalDays] = useState<DayPresence[]>([]);
@@ -182,11 +182,17 @@ export default function App() {
  setSelectedDay(null);
  };
 
- const handleUpdateLabBooking = (date: string, isBooked: boolean) => {
- setDays(prev => prev.map(d => d.date === date ? { ...d, isLabBooked: isBooked, labBookerName: isBooked ? 'Roberto' : undefined } : d));
- 
+ const handleUpdateLabBooking = async (date: string, isBooked: boolean) => {
+ const dayNum = date.split('-')[2];
+
+ try {
+ await hookUpdateLabBooking(date, isBooked);
+ } catch {
+ return;
+ }
+
  setNotification({
- message: isBooked ? `Lab booked for Oct ${date.split('-')[2]}` : `Lab booking cancelled`,
+ message: isBooked ? `Lab booked for Day ${dayNum}` : `Lab booking cancelled for Day ${dayNum}`,
  date: date
  });
  };
@@ -1294,6 +1300,7 @@ export default function App() {
  projectTeammates={projectTeammates}
  rooms={rooms}
  currentUserName={user?.name}
+ currentUserRole={user?.role}
  onClose={handleCloseDetail}
  onCancel={handleCancelDetail}
  onCheckIn={() => handleCheckIn(selectedDay.date)}

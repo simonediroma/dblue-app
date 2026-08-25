@@ -16,18 +16,49 @@ test.describe('CSV coverage — Role-Specific Booking', () => {
   test.afterEach(flushOfficeCapacityQueue);
 
   // [H-44] Lab Responsible booking protection: the "Book Lab" Activities feature
-  // (App.tsx handleUpdateLabBooking / DailyDetail.tsx ~1588-1627) has NO backend
-  // persistence — it's a client-only mock with a hardcoded booker name ('Roberto')
-  // and a hardcoded "other people in the lab" list, regardless of who is logged in.
-  // The CSV's actual concern (an employee silently overriding and deleting the Lab
-  // Responsible's real booking, with no notification) cannot be validated against
-  // real multi-user backend behavior because there is no such behavior to validate —
-  // there is no `/lab-bookings` (or similar) endpoint. Marked fixme rather than
-  // written as a misleading "passing" test; revisit once real persistence exists.
-  test.fixme(
-    '[H-44] employee cannot override the Lab Responsible\'s lab booking',
-    async () => {}
-  );
+  // now has real backend persistence (LabBooking model, /lab-bookings/:date,
+  // gated to lab_responsible + owner via requireRole) — an employee can neither
+  // book, override, nor delete the Lab Responsible's booking, and sees it as a
+  // read-only "Lab booked for the day" card with no action available.
+  test('[H-44] employee cannot override the Lab Responsible\'s lab booking', async ({ page, browser }) => {
+    const date = futureTestDate('H-44');
+    await loginAsLabResponsible(page);
+    const labHeaders = await getAuthHeaders(page);
+
+    // Best-effort cleanup in case a previous run today left a booking behind —
+    // futureTestDate() is deterministic per calendar day.
+    await page.request.delete(`${API_BASE}/lab-bookings/${date}`, { headers: labHeaders });
+
+    const bookRes = await page.request.post(`${API_BASE}/lab-bookings/${date}`, { headers: labHeaders });
+    expect(bookRes.status()).toBe(200);
+    expect((await bookRes.json()).labBookerName).toBe('Sara Ferrari');
+
+    const employeeContext = await browser.newContext();
+    const employeePage = await employeeContext.newPage();
+    await loginAsEmployee(employeePage);
+    const employeeHeaders = await getAuthHeaders(employeePage);
+
+    const overrideRes = await employeePage.request.post(`${API_BASE}/lab-bookings/${date}`, { headers: employeeHeaders });
+    expect(overrideRes.status()).toBe(403);
+    const deleteRes = await employeePage.request.delete(`${API_BASE}/lab-bookings/${date}`, { headers: employeeHeaders });
+    expect(deleteRes.status()).toBe(403);
+
+    // The booking survives both attempts, still attributed to the real booker.
+    const afterRes = await page.request.get(`${API_BASE}/presence?month=${date.slice(0, 7)}`, { headers: labHeaders });
+    const afterDays = (await afterRes.json()) as Array<{ date: string; isLabBooked?: boolean; labBookerName?: string }>;
+    const afterDay = afterDays.find((d) => d.date === date);
+    expect(afterDay?.isLabBooked).toBe(true);
+    expect(afterDay?.labBookerName).toBe('Sara Ferrari');
+
+    // The employee sees it read-only: booked text, no clickable card, no delete button.
+    await openDayCard(employeePage, date);
+    const detail = employeePage.locator('[data-testid="daily-detail"]');
+    await expect(detail.getByText('Lab booked for the day')).toBeVisible();
+    await expect(employeePage.locator('[aria-label="Remove lab booking"]')).toHaveCount(0);
+
+    await employeeContext.close();
+    await page.request.delete(`${API_BASE}/lab-bookings/${date}`, { headers: labHeaders });
+  });
 
   test('[H-45] Admin Member books the Admin Room', async ({ page }) => {
     const date = futureTestDate('H-45');
