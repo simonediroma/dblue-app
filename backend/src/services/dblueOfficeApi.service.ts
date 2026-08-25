@@ -76,6 +76,12 @@ export interface DblueOfficeClosure {
   // parseDblueOfficeDate() per convertirlo, mai `new Date(...)` diretto.
   start: string;
   end: string;
+  // Proposto a dblue-office, non ancora implementato lato loro (vedi email di
+  // richiesta) — distingue un giorno realmente non lavorativo (es. festività
+  // nazionale, nessuna presenza attesa) da un ufficio chiuso ma con lavoro da
+  // remoto regolare. Opzionale finché non lo shippano: undefined si mappa a false
+  // in closures.service.ts (degrado esplicito, stesso pattern di Room.isLab).
+  isNonWorkingDay?: boolean;
 }
 
 export interface DblueOfficeSessionResponse {

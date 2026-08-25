@@ -335,6 +335,7 @@ export interface OfficeClosure {
   start: string; // YYYY-MM-DD
   end: string; // YYYY-MM-DD
   title: string;
+  isNonWorkingDay: boolean;
 }
 
 export function getClosures(): Promise<OfficeClosure[]> {

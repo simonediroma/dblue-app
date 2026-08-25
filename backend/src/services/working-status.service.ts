@@ -10,6 +10,7 @@ import {
 } from './capacity.service';
 import { sendSickLeaveConfirmation } from './email.service';
 import { getLabBookingsByDate } from './labBooking.service';
+import { getClosures, OfficeClosure } from './closures.service';
 
 // Returns true if date is today or tomorrow
 export function isLastMinute(date: string): boolean {
@@ -72,6 +73,10 @@ function nameInitials(name: string): string {
   return name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2);
 }
 
+function closureForDate(closures: OfficeClosure[], date: string): OfficeClosure | undefined {
+  return closures.find((c) => date >= c.start && date <= c.end);
+}
+
 export async function getStatusForUser(
   userId: Types.ObjectId,
   month: string
@@ -82,7 +87,7 @@ export async function getStatusForUser(
 
   const user = await User.findById(userId).lean();
 
-  const [userStatuses, allOfficeStatuses, allWaitingListStatuses, visibleRooms, labBookingsByDate] = await Promise.all([
+  const [userStatuses, allOfficeStatuses, allWaitingListStatuses, visibleRooms, labBookingsByDate, closures] = await Promise.all([
     WorkingStatus.find({ userId, date: { $gte: startDate, $lte: endDate } }).lean(),
     WorkingStatus.find({
       date: { $gte: startDate, $lte: endDate },
@@ -96,6 +101,7 @@ export async function getStatusForUser(
     }).lean(),
     getVisibleRoomsForUser({ role: user?.role ?? 'employee', dblueOfficeRooms: user?.dblueOfficeRooms }),
     getLabBookingsByDate(startDate, endDate),
+    getClosures(user?.email ?? ''),
   ]);
   const totalCapacity = getTotalCapacity(visibleRooms);
 
@@ -156,6 +162,7 @@ export async function getStatusForUser(
 
     const base = existing ?? { date, status: 'pending', isConfirmed: false };
     const labBooking = labBookingsByDate.get(date);
+    const closure = closureForDate(closures, date);
 
     return {
       ...base,
@@ -171,6 +178,13 @@ export async function getStatusForUser(
       officeUserIds,
       isLabBooked: !!labBooking,
       labBookerName: labBooking?.labBookerName,
+      // isClosed: giorno non lavorativo, card interamente disabilitata. isOfficeClosed:
+      // ufficio chiuso ma si lavora da remoto, card interattiva senza l'opzione In
+      // Office — la UI le gestisce già entrambe (DayCard.tsx/DailyDetail.tsx), solo
+      // mai popolate finora. Mutuamente esclusive per costruzione (closureForDate
+      // ritorna al più una chiusura per data).
+      isClosed: closure?.isNonWorkingDay ?? false,
+      isOfficeClosed: closure ? !closure.isNonWorkingDay : false,
     };
   });
 }
