@@ -8,7 +8,11 @@ export interface IUser extends Document {
   role: 'employee' | 'lab_responsible' | 'admin_member' | 'director' | 'owner';
   teammates: Types.ObjectId[];
   contract: {
-    presenceDaysTarget: number;
+    // null = nessun target (es. dblue-office ha mandatory_presence_days:null per
+    // questo utente) — da non confondere con "non ancora impostato": undefined non
+    // dovrebbe più verificarsi grazie al default sotto, ma il tipo lo ammette per
+    // sicurezza sui documenti pre-esistenti.
+    presenceDaysTarget: number | null;
   };
   preferences: {
     theme: 'light' | 'dark' | 'system';

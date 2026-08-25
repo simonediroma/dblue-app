@@ -61,4 +61,29 @@ describe('userSync.service — force option', () => {
     expect(user.dblueOfficeId).toBe('dbl-1');
     expect(user.save).toHaveBeenCalled();
   });
+
+  it('mandatory_presence_days:null clears presenceDaysTarget instead of leaving the previous value', async () => {
+    mockIsEnabled.mockResolvedValue(false);
+    mockGetSession.mockResolvedValue({
+      success: true,
+      user: {
+        dblueOfficeId: 'dbl-1',
+        name: 'Mario Rossi',
+        email: 'mario.rossi@dblue.it',
+        image_url: null,
+        mandatory_presence_days: null,
+        booking_app_role: 'director',
+      },
+      userSpaceAccess: [],
+      userRoomList: [],
+      allRooms: [],
+      roomCategories: [],
+      closures: [],
+    });
+    const user = fakeUser({ contract: { presenceDaysTarget: 10 } });
+
+    await syncUserFromDblueOfficeIfEnabled(user, { force: true });
+
+    expect(user.contract.presenceDaysTarget).toBeNull();
+  });
 });

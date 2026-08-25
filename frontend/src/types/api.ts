@@ -5,7 +5,7 @@ export interface User {
   avatar?: string;
   role: 'employee' | 'lab_responsible' | 'admin_member' | 'director' | 'owner';
   teammates: string[];
-  contract: { presenceDaysTarget: number };
+  contract: { presenceDaysTarget: number | null };
   preferences: {
     theme: 'light' | 'dark' | 'system';
     notifications: {

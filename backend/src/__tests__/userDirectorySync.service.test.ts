@@ -61,6 +61,9 @@ describe('userDirectorySync.service', () => {
           role: 'owner',
           dblueOfficeId: 'dblue-1',
           avatar: 'https://example.com/avatar.jpg',
+          // DIRECTORY_USER.mandatory_presence_days è null — propagato per intero
+          // (= nessun target), non più saltato come prima del fix.
+          'contract.presenceDaysTarget': null,
         },
       },
       { upsert: true }

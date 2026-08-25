@@ -184,7 +184,7 @@ export function updateOffTime(date: string, offTime: { type: string; hours?: num
 export interface MonthlyStats {
   month: string;
   presenceDaysConfirmed: number;
-  presenceDaysTarget: number;
+  presenceDaysTarget: number | null;
   distribution: {
     inOffice: number;
     remote: number;
@@ -203,7 +203,7 @@ export interface AnnualStats {
   monthlyBreakdown: Array<{
     month: string;
     presenceDaysConfirmed: number;
-    presenceDaysTarget: number;
+    presenceDaysTarget: number | null;
   }>;
   totalUnbooking: {
     standard: number;

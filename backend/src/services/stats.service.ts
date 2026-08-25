@@ -5,7 +5,8 @@ import { User, IUser } from '../models/user.model';
 export interface MonthlyStats {
   month: string;
   presenceDaysConfirmed: number;
-  presenceDaysTarget: number;
+  // null = nessun target per questo utente (dblue-office mandatory_presence_days:null)
+  presenceDaysTarget: number | null;
   distribution: {
     inOffice: number;
     remote: number;
@@ -21,7 +22,7 @@ export interface MonthlyStats {
 
 export interface AnnualStats {
   year: number;
-  monthlyBreakdown: Array<{ month: string; presenceDaysConfirmed: number; presenceDaysTarget: number }>;
+  monthlyBreakdown: Array<{ month: string; presenceDaysConfirmed: number; presenceDaysTarget: number | null }>;
   totalUnbooking: { standard: number; lastMinute: number };
   averageMonthlyPresenceDays: number;
 }
@@ -47,7 +48,7 @@ export async function getMonthlyStats(userId: string, month: string): Promise<Mo
     (ws) => ws.status === 'in_office' && ws.isConfirmed
   ).length;
 
-  const presenceDaysTarget = user?.contract?.presenceDaysTarget ?? 10;
+  const presenceDaysTarget = user?.contract?.presenceDaysTarget ?? null;
 
   const distribution = {
     inOffice: statuses.filter((ws) => ws.status === 'in_office' && ws.isConfirmed).length,
@@ -120,6 +121,9 @@ export async function getAreaStats(month: string, requestingUser: IUser): Promis
 
   const totalUsers = allUsers.length;
 
+  // Fuori scope qui: la KPI di adherence dell'area (director/owner) resta con un
+  // default di 10 per chi non ha un target — cambiare questo cambierebbe anche il
+  // significato di totalUsers nel denominatore, non richiesto in questo giro.
   const userTarget = new Map(
     allUsers.map((u) => [u._id.toString(), u.contract?.presenceDaysTarget ?? 10])
   );
