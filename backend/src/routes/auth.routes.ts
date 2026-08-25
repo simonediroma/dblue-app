@@ -12,16 +12,25 @@ import {
 const router = Router();
 
 const isProduction = process.env.NODE_ENV === 'production';
+const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || undefined;
 
-const COOKIE_OPTIONS = {
+// Attributes shared by set and clear (clearing a cookie requires the same domain
+// it was set with, or the browser won't match it). Set on subdomains of one shared
+// root domain (Coolify target, COOKIE_DOMAIN set — e.g. app./api.<root>) only need
+// 'lax': SameSite is based on the shared registrable domain, not the exact host, so
+// those are already same-site. Without COOKIE_DOMAIN (today's Railway two-service
+// setup, unrelated *.up.railway.app domains — a public suffix, so no domain-sharing
+// trick is possible there) the cookie is genuinely cross-site and needs 'none' to be
+// sent at all.
+const COOKIE_ATTRS = {
   httpOnly: true,
   secure: isProduction,
-  sameSite: (isProduction ? 'none' : 'lax') as 'none' | 'lax',
-  maxAge: 7 * 24 * 60 * 60 * 1000,
+  sameSite: (COOKIE_DOMAIN ? 'lax' : isProduction ? 'none' : 'lax') as 'none' | 'lax',
+  domain: COOKIE_DOMAIN,
 };
 
 function setAuthCookie(res: Response, userId: string): void {
-  res.cookie('token', signToken(userId), COOKIE_OPTIONS);
+  res.cookie('token', signToken(userId), { ...COOKIE_ATTRS, maxAge: 7 * 24 * 60 * 60 * 1000 });
 }
 
 const googleStrategyAvailable = !!process.env.GOOGLE_CLIENT_ID;
@@ -61,7 +70,7 @@ router.get('/google/callback', (req: Request, res: Response, next) => {
 });
 
 router.post('/logout', (_req: Request, res: Response) => {
-  res.clearCookie('token');
+  res.clearCookie('token', COOKIE_ATTRS);
   res.json({ message: 'Logout effettuato' });
 });
 
