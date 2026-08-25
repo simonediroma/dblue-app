@@ -36,6 +36,7 @@ router.get('/', requireAuth, async (req: Request, res: Response): Promise<void> 
       type: r.category,
       color: r.color,
       visibleRoles: r.visibleRoles,
+      isLab: r.isLab === true,
     }))
   );
 });

@@ -9,6 +9,7 @@ import statsRoutes from './routes/stats.routes';
 import adminRoutes from './routes/admin.routes';
 import adminTestRoutes from './routes/admin-test.routes';
 import closuresRoutes from './routes/closures.routes';
+import labBookingsRoutes from './routes/lab-bookings.routes';
 
 export function createApp() {
   const app = express();
@@ -29,6 +30,7 @@ export function createApp() {
   app.use('/admin', adminRoutes);
   app.use('/admin/test', adminTestRoutes);
   app.use('/closures', closuresRoutes);
+  app.use('/lab-bookings', labBookingsRoutes);
 
   return app;
 }

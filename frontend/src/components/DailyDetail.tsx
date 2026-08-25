@@ -16,7 +16,7 @@ import {
  getTodayStr,
  months
 } from '../utils/dateUtils';
-import type { Room } from '../services/api';
+import type { Room, Role } from '../services/api';
 import { roomColorInfo } from '../utils/roomColor';
 
 function mapBackendStatus(s: string): WorkStatus {
@@ -79,6 +79,7 @@ interface DailyDetailProps {
  onOpenProfile?: () => void;
  rooms?: Room[];
  currentUserName?: string;
+ currentUserRole?: Role;
 }
 
 type FlowStep = 'VIEW' | 'PLANNING' | 'WORKSPACE' | 'EXTEND' | 'HOURS_OFF' | 'ALL_COLLEAGUES';
@@ -100,10 +101,16 @@ export default function DailyDetail({
  onOpenProfile,
  rooms = [],
  currentUserName = 'You',
+ currentUserRole,
 }: DailyDetailProps) {
  const todayStr = getTodayStr();
  const currentUserInitials = currentUserName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2) || 'ME';
  const currentUserFirstName = currentUserName.split(' ')[0] || currentUserName;
+ // Only lab_responsible/owner can book or cancel the Lab for the day — everyone
+ // else sees a plain "booked"/nothing state (see the Activities section below).
+ // Gated on a lab room actually being visible too, so the action never renders
+ // for someone who would just hit a 409 (e.g. no lab-type room configured).
+ const canManageLab = rooms.some(r => r.isLab) && (currentUserRole === 'lab_responsible' || currentUserRole === 'owner');
  const [step, setStep] = React.useState<FlowStep>(initialStep);
  const [extendedDates, setExtendedDates] = React.useState<string[]>([]);
  const [extendedOfficeConfigs, setExtendedOfficeConfigs] = React.useState<Record<string, { room: string, isUsingDesk: boolean }>>({});
@@ -715,7 +722,7 @@ export default function DailyDetail({
  <h3 className="font-headline font-bold text-lg text-on-surface/70 mb-4 tracking-tight">I plan to use a desk in...</h3>
  <div className="flex flex-col gap-3">
  {rooms.map((room, roomIdx) => {
- const isLab = room.type === 'lab';
+ const isLab = room.isLab === true;
  const hasActivityPlanned = isLab && day.isLabBooked;
  const isCurrentRoom = isLab && day.room === room.name;
  const roomColor = roomColorInfo(room, roomIdx);
@@ -1320,7 +1327,7 @@ export default function DailyDetail({
  <div className="flex items-center gap-1.5 overflow-hidden">
  <div className={`w-2 h-2 rounded-full ${extRoomColor.className ?? ''} shrink-0`} style={extRoomColor.style}/>
  <span className={`text-[10px] font-bold truncate ${isActive ? 'text-on-surface' : 'text-on-surface/80'}`}>
- {room.type === 'lab' ? 'Lab' : room.type === 'management' ? 'Management' : room.name}
+ {room.isLab ? 'Lab' : room.type === 'management' ? 'Management' : room.name}
  </span>
  </div>
  <span className={`text-[9px] font-bold ml-3.5 ${isActive ? 'text-primary' : 'text-on-surface-variant/40'}`}>{room.capacity} seats</span>
@@ -1598,7 +1605,7 @@ export default function DailyDetail({
  </div>
  </section>
 
- {(!day.isPast || day.date === '2026-10-06') && (
+ {!day.isPast && (day.isOfficeClosed || day.isLabBooked || canManageLab) && (
  <section>
  <div className="mb-4 px-1">
  <h2 className="font-sans text-sm font-bold text-on-surface-variant uppercase tracking-wider">Activities</h2>
@@ -1610,8 +1617,8 @@ export default function DailyDetail({
  </div>
  ) : (
  <div className="flex items-center justify-between group">
- <div className={`flex-grow p-6 flex items-center justify-between transition-colors group text-left ${day.date === '2026-10-06' ? 'bg-primary/5' : (day.isLabBooked && day.labBookerName === 'roberto' ? 'bg-surface-container-low/20' : 'hover:bg-surface-container cursor-pointer')}`} onClick={() => {
- if (day.date === '2026-10-06' || (day.isLabBooked && day.labBookerName === 'Roberto')) return;
+ <div data-testid="lab-activity-card" className={`flex-grow p-6 flex items-center justify-between transition-colors group text-left ${day.isLabBooked || !canManageLab ? 'bg-surface-container-low/20' : 'hover:bg-surface-container cursor-pointer'}`} onClick={() => {
+ if (day.isLabBooked || !canManageLab) return;
  setShowLabConfirmModal(true);
  }}
  >
@@ -1621,23 +1628,15 @@ export default function DailyDetail({
  </div>
  <div className="flex flex-col items-start translate-y-[-1px]">
  <span className="font-headline font-bold text-lg text-on-surface">
- {day.date === '2026-10-06' 
- ? 'Lab is occupied'
- : day.isLabBooked && day.labBookerName === 'Roberto' 
- ? 'There is a Lab activity booked for the Day' 
- : 'Book Lab'}
+ {day.isLabBooked ? 'Lab booked for the day' : 'Book Lab'}
  </span>
  <span className="text-xs text-on-surface-variant/70 font-medium font-sans">
- {day.date === '2026-10-06'
- ? 'Lab is occupied'
- : day.isLabBooked && day.labBookerName === 'Roberto' 
- ? 'Lab' 
- : 'Book the lab'}
+ {day.isLabBooked ? 'Lab' : 'Book the lab'}
  </span>
  </div>
  </div>
  </div>
- {!day.isPast && day.isLabBooked && day.labBookerName === 'Roberto' && (
+ {day.isLabBooked && canManageLab && (
  <button onClick={(e) => {
  e.stopPropagation();
  onUpdateLabBooking(day.date, false);
@@ -1831,7 +1830,7 @@ export default function DailyDetail({
  </div>
 
  <div className="flex flex-col gap-3">
- <button onClick={() => {
+ <button data-testid="lab-book-confirm" onClick={() => {
  onUpdateLabBooking(day.date, true);
  setShowLabConfirmModal(false);
  }}

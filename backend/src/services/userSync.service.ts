@@ -60,7 +60,7 @@ export async function syncUserFromDblueOfficeIfEnabled(
   }
   user.dblueOfficeRooms = session.userRoomList
     .filter((r) => r.isActive)
-    .map((r) => ({ id: r.id, name: r.name, capacity: r.capacity, color: r.color, category: r.space }));
+    .map((r) => ({ id: r.id, name: r.name, capacity: r.capacity, color: r.color, category: r.space, isLab: r.isLab ?? false }));
   user.lastSyncedAt = new Date();
   await user.save();
 }

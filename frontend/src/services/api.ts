@@ -39,6 +39,9 @@ export interface Room {
   // in" (la stanza è nella lista solo se l'utente può vederla).
   visibleRoles?: Role[];
   color?: string;
+  // Quale stanza il backend risolve come "il Lab" — vedi labBooking.service.ts's
+  // findLabRoom(). Usarlo al posto di confrontare `type` con 'lab' letterale.
+  isLab?: boolean;
 }
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
@@ -334,6 +337,20 @@ export function getStatsArea(month: string): Promise<AreaStats> {
 
 export function getStatsByUser(userId: string, month: string): Promise<MonthlyStats> {
   return request<MonthlyStats>(`/admin/stats/${userId}/monthly?month=${encodeURIComponent(month)}`);
+}
+
+export interface LabBookingResult {
+  date: string;
+  isLabBooked: boolean;
+  labBookerName?: string;
+}
+
+export function bookLab(date: string): Promise<LabBookingResult> {
+  return request<LabBookingResult>(`/lab-bookings/${date}`, { method: 'POST' });
+}
+
+export function unbookLab(date: string): Promise<LabBookingResult> {
+  return request<LabBookingResult>(`/lab-bookings/${date}`, { method: 'DELETE' });
 }
 
 export interface OfficeClosure {

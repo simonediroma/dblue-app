@@ -9,6 +9,7 @@ import {
   getVisibleRoomsForUser,
 } from './capacity.service';
 import { sendSickLeaveConfirmation } from './email.service';
+import { getLabBookingsByDate } from './labBooking.service';
 
 // Returns true if date is today or tomorrow
 export function isLastMinute(date: string): boolean {
@@ -81,7 +82,7 @@ export async function getStatusForUser(
 
   const user = await User.findById(userId).lean();
 
-  const [userStatuses, allOfficeStatuses, allWaitingListStatuses, visibleRooms] = await Promise.all([
+  const [userStatuses, allOfficeStatuses, allWaitingListStatuses, visibleRooms, labBookingsByDate] = await Promise.all([
     WorkingStatus.find({ userId, date: { $gte: startDate, $lte: endDate } }).lean(),
     WorkingStatus.find({
       date: { $gte: startDate, $lte: endDate },
@@ -94,6 +95,7 @@ export async function getStatusForUser(
       status: 'waiting_list',
     }).lean(),
     getVisibleRoomsForUser({ role: user?.role ?? 'employee', dblueOfficeRooms: user?.dblueOfficeRooms }),
+    getLabBookingsByDate(startDate, endDate),
   ]);
   const totalCapacity = getTotalCapacity(visibleRooms);
 
@@ -153,6 +155,7 @@ export async function getStatusForUser(
     const projectTeammatesCount = officeUserIds.filter((uid) => teammateIds.has(uid)).length;
 
     const base = existing ?? { date, status: 'pending', isConfirmed: false };
+    const labBooking = labBookingsByDate.get(date);
 
     return {
       ...base,
@@ -166,6 +169,8 @@ export async function getStatusForUser(
       colleagueAvatars,
       projectTeammatesCount,
       officeUserIds,
+      isLabBooked: !!labBooking,
+      labBookerName: labBooking?.labBookerName,
     };
   });
 }

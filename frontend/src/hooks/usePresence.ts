@@ -5,6 +5,8 @@ import {
   upsertStatus,
   bulkUpsertStatus,
   updateOffTime as apiUpdateOffTime,
+  bookLab,
+  unbookLab,
 } from '../services/api';
 import { getFictionalDayName } from '../utils/dateUtils';
 
@@ -171,5 +173,27 @@ export function usePresence(months: string[]) {
     }
   };
 
-  return { days, setDays, loading, error, updateStatus, bulkUpdateStatus, updateOffTime };
+  const updateLabBooking = async (date: string, isBooked: boolean) => {
+    const prev = days.find(d => d.date === date);
+
+    setDays(current => current.map(d => d.date === date ? {
+      ...d,
+      isLabBooked: isBooked,
+      labBookerName: isBooked ? d.labBookerName : undefined,
+    } : d));
+
+    try {
+      const result = isBooked ? await bookLab(date) : await unbookLab(date);
+      setDays(current => current.map(d => d.date === date ? {
+        ...d,
+        isLabBooked: result.isLabBooked,
+        labBookerName: result.labBookerName,
+      } : d));
+    } catch (err) {
+      setDays(current => current.map(d => d.date === date ? (prev ?? d) : d));
+      throw err;
+    }
+  };
+
+  return { days, setDays, loading, error, updateStatus, bulkUpdateStatus, updateOffTime, updateLabBooking };
 }
