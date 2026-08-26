@@ -102,7 +102,8 @@ presence-app/
 | `APP_URL` | Backend | URL pubblico del frontend (CORS) |
 | `BACKEND_URL` | Backend | URL pubblico del backend (callback OAuth) |
 | `PORT` | Backend | Default 4000 — Railway lo sovrascrive automaticamente |
-| `NODE_ENV` | Backend | `development` / `production` |
+| `NODE_ENV` | Backend | `development` / `production` — ottimizzazioni Node/Express, resta `production` anche in staging |
+| `APP_ENV` | Backend | `development` / `staging` / `production` — distingue staging da produzione dove `NODE_ENV` da solo non basta. Non ancora letto da nessuna parte nel codice applicativo: predisposizione per quando servirà. |
 | `COOKIE_DOMAIN` | Backend | Solo se frontend e backend condividono un dominio registrabile reale (es. Coolify, `app.dblue.it`/`api.dblue.it`) — abilita il cookie di sessione condiviso tra sottodomini. Vuoto su Railway (domini `*.up.railway.app`, su public suffix list — non condivisibile), il cookie resta cross-site come oggi. Vedi `docs/coolify-deployment-guide.md` §6. |
 | `DEV_LOGIN_USER` | Backend | Email utente dev (solo NODE_ENV=development) |
 | `DEV_LOGIN_PASS` | Backend | Password utente dev (solo NODE_ENV=development) |
