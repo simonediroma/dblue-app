@@ -34,8 +34,13 @@ export interface DblueOfficeUserRoom {
   space: string;
   color: string;
   capacity: number;
-  reserved: boolean;
+  // Posti riservati (non prenotabili da questo utente) su questa stanza — spot
+  // realmente disponibili = capacity - reserved, salvo includeReserved (vedi sotto).
+  reserved: number;
   isActive: boolean;
+  // Se true, questo utente vede l'intera capacity come disponibile (i posti
+  // riservati sono per lui/lei, non sottratti) — es. lab_responsible sulla stanza
+  // Lab. Vedi userSync.service.ts per dove il calcolo avviene davvero.
   includeReserved: boolean;
   // Proposto a dblue-office, non ancora implementato lato loro (vedi email di
   // richiesta) — identifica la stanza come "il Lab" ai fini della prenotazione
@@ -50,7 +55,7 @@ export interface DblueOfficeRoom {
   category: string;
   color: string;
   capacity: number;
-  reserved: boolean;
+  reserved: number;
   isActive: boolean;
   // Vedi DblueOfficeUserRoom.isLab — stessa proposta, stesso campo su allRooms.
   isLab?: boolean;
@@ -71,6 +76,12 @@ export interface DblueOfficeClosure {
   // parseDblueOfficeDate() per convertirlo, mai `new Date(...)` diretto.
   start: string;
   end: string;
+  // Proposto a dblue-office, non ancora implementato lato loro (vedi email di
+  // richiesta) — distingue un giorno realmente non lavorativo (es. festività
+  // nazionale, nessuna presenza attesa) da un ufficio chiuso ma con lavoro da
+  // remoto regolare. Opzionale finché non lo shippano: undefined si mappa a false
+  // in closures.service.ts (degrado esplicito, stesso pattern di Room.isLab).
+  isNonWorkingDay?: boolean;
 }
 
 export interface DblueOfficeSessionResponse {

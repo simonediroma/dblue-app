@@ -10,13 +10,13 @@ const DEV_LOGIN_EMPLOYEE_PASS = process.env.DEV_LOGIN_EMPLOYEE_PASS ?? 'changeme
 // as a different role after test.beforeEach already logged it in once — H-39's exact
 // pattern, traced live: beforeEach logs `page` in as owner, the test body later calls
 // loginAsDirectorRole(page) on that same page, which just auto-redirects straight past
-// the login form to the still-authenticated owner's plan-page since the JWT is still in
-// localStorage — [data-testid="login-page"] never renders, hanging the wait below for
-// the full timeout), clear the stored token first so the login form reliably renders.
+// the login form to the still-authenticated owner's plan-page since the auth cookie is
+// still set — [data-testid="login-page"] never renders, hanging the wait below for the
+// full timeout), clear the session cookie first so the login form reliably renders.
 async function clearStaleSession(page: Page) {
-  const hadToken = await page.evaluate(() => !!localStorage.getItem('auth_token')).catch(() => false);
-  if (hadToken) {
-    await page.evaluate(() => localStorage.removeItem('auth_token'));
+  const hasToken = (await page.context().cookies()).some((c) => c.name === 'token');
+  if (hasToken) {
+    await page.context().clearCookies();
     await page.goto('/?dev=true');
   }
 }
@@ -91,13 +91,12 @@ export const loginAsAdminMember = (page: Page) => loginAs(page, 'admin_member');
 // actual director-role RBAC (e.g. H-39, H-46).
 export const loginAsDirectorRole = (page: Page) => loginAs(page, 'director');
 
-// Raw page.request.* calls in CSV-coverage tests don't automatically carry the app's
-// auth: the frontend stores its JWT in localStorage (frontend/src/services/api.ts,
-// TOKEN_KEY = 'auth_token') and attaches it as an Authorization header on every
-// app-initiated fetch — it's never set as a cookie, so page.request (which only
-// inherits cookies from the browser context) sends these requests unauthenticated
-// unless the header is added explicitly.
-export async function getAuthHeaders(page: Page): Promise<Record<string, string>> {
-  const token = await page.evaluate(() => localStorage.getItem('auth_token'));
-  return token ? { Authorization: `Bearer ${token}` } : {};
+// No-op: auth now travels only via the httpOnly "token" cookie set at login
+// (JWT fix — no more localStorage/Authorization-header token), and page.request
+// already inherits cookies from the browser context, so raw page.request.* calls
+// in CSV-coverage tests are authenticated automatically. Kept as a function (not
+// deleted) so the many `...(await getAuthHeaders(page))` call sites across spec
+// files don't need to change.
+export async function getAuthHeaders(_page: Page): Promise<Record<string, string>> {
+  return {};
 }

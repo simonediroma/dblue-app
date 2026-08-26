@@ -29,11 +29,11 @@ export default async function globalTeardown(_config: FullConfig): Promise<void>
       );
       return;
     }
-    const { token } = (await loginRes.json()) as { token: string };
-
+    // /auth/dev-login sets the auth cookie on this response; playwrightRequest's
+    // APIRequestContext keeps its own cookie jar and replays it on every subsequent
+    // call made through the same `context` — no explicit header needed.
     const restoreRes = await context.post('/admin/test/restore-office-capacity', {
       data: { snapshot: queue },
-      headers: { Authorization: `Bearer ${token}` },
     });
     if (!restoreRes.ok()) {
       console.error(

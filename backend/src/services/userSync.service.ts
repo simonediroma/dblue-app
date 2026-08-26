@@ -55,12 +55,25 @@ export async function syncUserFromDblueOfficeIfEnabled(
   user.name = session.user.name;
   if (session.user.image_url) user.avatar = session.user.image_url;
   user.role = ROLE_MAP[session.user.booking_app_role] ?? 'employee';
-  if (session.user.mandatory_presence_days != null) {
-    user.contract.presenceDaysTarget = session.user.mandatory_presence_days;
-  }
+  // Propaga sempre il valore reale, incluso null (= nessun target per questo
+  // utente secondo dblue-office) — prima veniva saltato su null, lasciando intonso
+  // qualunque valore ci fosse già (spesso il default locale 10 di un primo sync).
+  user.contract.presenceDaysTarget = session.user.mandatory_presence_days;
   user.dblueOfficeRooms = session.userRoomList
     .filter((r) => r.isActive)
-    .map((r) => ({ id: r.id, name: r.name, capacity: r.capacity, color: r.color, category: r.space, isLab: r.isLab ?? false }));
+    .map((r) => ({
+      id: r.id,
+      name: r.name,
+      // Posti realmente disponibili per QUESTO utente: capacity - reserved, a meno
+      // che includeReserved non dica che i posti riservati sono suoi (es. la stanza
+      // Lab per un lab_responsible) — stesso identico dato fisico, valore diverso
+      // per ruolo. Math.max(0, ...) è solo una guardia contro dati inconsistenti da
+      // dblue-office (reserved > capacity), non un caso atteso.
+      capacity: r.includeReserved ? r.capacity : Math.max(0, r.capacity - r.reserved),
+      color: r.color,
+      category: r.space,
+      isLab: r.isLab ?? false,
+    }));
   user.lastSyncedAt = new Date();
   await user.save();
 }

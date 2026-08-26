@@ -13,6 +13,7 @@
 3. **Branch:** ogni sessione ha il suo branch dedicato, generato automaticamente da Claude Code (es. `claude/nome-branch`). Mai push su `main`.
 4. **PR:** una PR per task/sessione. Ogni PR deve essere indipendente e reviewable.
 5. **File invariati:** non toccare mai `presence---office-planner/` (prototipo AI Studio — sola lettura, usato solo come riferimento UI).
+6. **File Coolify:** non toccare mai `backend/Dockerfile`, `frontend/Dockerfile`, `frontend/nginx/default.conf`, `docs/coolify-deployment-guide.md` — modificati dal cliente per il proprio deploy, mai da modificare senza conferma esplicita dell'utente.
 
 ---
 

@@ -5,13 +5,19 @@ export interface OfficeClosure {
   start: string; // YYYY-MM-DD
   end: string; // YYYY-MM-DD
   title: string;
+  // true = giorno non lavorativo (card non interattiva); false = ufficio chiuso ma
+  // si lavora da remoto (card interattiva, solo l'opzione In Office nascosta). Vedi
+  // DblueOfficeClosure.isNonWorkingDay per il degrado quando dblue-office non lo manda.
+  isNonWorkingDay: boolean;
 }
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
 // Stesso placeholder che c'era hardcoded in DailyDetail.tsx (IS_CLOSED_DAYS) — usato
 // finché l'integrazione dblue-office resta disattivata (comportamento invariato).
-const FALLBACK_CLOSURES: OfficeClosure[] = [{ start: '2026-11-01', end: '2026-11-01', title: 'Office closed' }];
+// isNonWorkingDay:false perché il titolo ("Office closed") descrive esattamente il
+// caso "ufficio chiuso ma si lavora da remoto", non una festività.
+const FALLBACK_CLOSURES: OfficeClosure[] = [{ start: '2026-11-01', end: '2026-11-01', title: 'Office closed', isNonWorkingDay: false }];
 
 let cache: { closures: OfficeClosure[]; fetchedAt: number } | null = null;
 
@@ -39,7 +45,7 @@ export async function getClosures(requesterEmail: string): Promise<OfficeClosure
         console.warn(`[dblue-office] chiusura "${c.title || c._id}" scartata, data non valida (atteso DD-MM-YYYY): start="${c.start}" end="${c.end}"`);
         continue;
       }
-      closures.push({ start, end, title: c.title });
+      closures.push({ start, end, title: c.title, isNonWorkingDay: c.isNonWorkingDay ?? false });
     }
     cache = { closures, fetchedAt: Date.now() };
     return closures;

@@ -24,9 +24,9 @@ const DEV_EMAILS = [
 ];
 
 const REAL_ROOMS = [
-  { id: 'room-1', name: 'Sala Leonardo', category: 'open', color: '#111111', capacity: 3, reserved: false, isActive: true },
-  { id: 'room-2', name: 'Sala Galilei', category: 'open', color: '#222222', capacity: 2, reserved: false, isActive: true },
-  { id: 'room-3', name: 'Sala Disattivata', category: 'open', color: '#333333', capacity: 5, reserved: false, isActive: false },
+  { id: 'room-1', name: 'Sala Leonardo', category: 'open', color: '#111111', capacity: 3, reserved: 0, isActive: true },
+  { id: 'room-2', name: 'Sala Galilei', category: 'open', color: '#222222', capacity: 2, reserved: 0, isActive: true },
+  { id: 'room-3', name: 'Sala Disattivata', category: 'open', color: '#333333', capacity: 5, reserved: 0, isActive: false },
 ];
 
 function sessionFor(email: string, role: 'employee' | 'director' = 'employee') {

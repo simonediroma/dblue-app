@@ -95,11 +95,11 @@ describe('dblueOfficeCompliance.service', () => {
       return Promise.resolve({
         ...sessionFor(account.role),
         userRoomList: [
-          { id: 'r1', name: 'Room A', space: 'missing-category', color: '#4A90D9', capacity: 6, reserved: false, isActive: true, includeReserved: true },
+          { id: 'r1', name: 'Room A', space: 'missing-category', color: '#4A90D9', capacity: 6, reserved: 0, isActive: true, includeReserved: true },
         ],
         allRooms: [
-          { id: 'r1', name: 'Room A', category: 'missing-category', color: '', capacity: 0, reserved: false, isActive: true },
-          { id: 'r2', name: '', category: 'cat1', color: '#fff', capacity: 4, reserved: false, isActive: true },
+          { id: 'r1', name: 'Room A', category: 'missing-category', color: '', capacity: 0, reserved: 0, isActive: true },
+          { id: 'r2', name: '', category: 'cat1', color: '#fff', capacity: 4, reserved: 0, isActive: true },
         ],
         roomCategories: [{ id: 'cat1', category: 'Open Space', bgcolor: '#fff', color: '#000' }],
         closures: [{ _id: 'c1', title: 'Bad closure', start: '20-08-2026', end: '15-08-2026' }],

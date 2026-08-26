@@ -5,18 +5,18 @@ import { APIRequestContext, request as playwrightRequest } from '@playwright/tes
 // a "fresh" onboarding account, the nightly auto-confirm cron). Assertions in the tests
 // themselves always go through the real UI/API — this file is setup-only.
 //
-// Uses its own APIRequestContext (owner-authenticated via Bearer token), independent of
-// whatever role a test's `page` is currently logged in as.
+// Uses its own APIRequestContext (owner-authenticated via the httpOnly auth cookie,
+// which the context keeps and replays on every subsequent call made through it),
+// independent of whatever role a test's `page` is currently logged in as.
 
 const API_BASE_URL = process.env.API_BASE_URL ?? 'http://localhost:4000';
 const DEV_LOGIN_USER = process.env.DEV_LOGIN_USER ?? 'dev@dblue.it';
 const DEV_LOGIN_PASS = process.env.DEV_LOGIN_PASS ?? 'changeme';
 
 let ownerContext: APIRequestContext | null = null;
-let ownerToken: string | null = null;
 
-async function getOwnerContext(): Promise<{ context: APIRequestContext; token: string }> {
-  if (ownerContext && ownerToken) return { context: ownerContext, token: ownerToken };
+async function getOwnerContext(): Promise<APIRequestContext> {
+  if (ownerContext) return ownerContext;
 
   const context = await playwrightRequest.newContext({ baseURL: API_BASE_URL });
   const res = await context.post('/auth/dev-login', {
@@ -25,19 +25,14 @@ async function getOwnerContext(): Promise<{ context: APIRequestContext; token: s
   if (!res.ok()) {
     throw new Error(`testAdmin: owner dev-login failed (${res.status()}): ${await res.text()}`);
   }
-  const body = (await res.json()) as { token: string };
 
   ownerContext = context;
-  ownerToken = body.token;
-  return { context, token: ownerToken };
+  return ownerContext;
 }
 
 async function testAdminPost<T>(path: string, data: Record<string, unknown>): Promise<T> {
-  const { context, token } = await getOwnerContext();
-  const res = await context.post(`/admin/test${path}`, {
-    data,
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const context = await getOwnerContext();
+  const res = await context.post(`/admin/test${path}`, { data });
   if (!res.ok()) {
     throw new Error(`testAdmin ${path} failed (${res.status()}): ${await res.text()}`);
   }

@@ -60,9 +60,9 @@ export async function syncUserDirectoryIfEnabled(
             role: ROLE_MAP[u.booking_app_role] ?? 'employee',
             dblueOfficeId: u._id,
             ...(u.image_url ? { avatar: u.image_url } : {}),
-            ...(u.mandatory_presence_days != null
-              ? { 'contract.presenceDaysTarget': u.mandatory_presence_days }
-              : {}),
+            // Sempre il valore reale, incluso null (= nessun target) — stesso motivo
+            // di userSync.service.ts, non saltare più il caso null.
+            'contract.presenceDaysTarget': u.mandatory_presence_days,
           },
         },
         { upsert: true }

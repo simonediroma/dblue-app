@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useId } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
 import { WorkStatus, DayPresence, OffTimeType } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
-import { AlertCircle, CalendarX, AlertTriangle, ChevronDown, Users, Info, Settings } from 'lucide-react';
+import { AlertCircle, AlertTriangle, ChevronDown, Users, Info, Settings } from 'lucide-react';
 import { Alert } from './Alert';
 import { Colleague } from '../constants/colleagues';
 import { useAuth } from '../context/AuthContext';
@@ -75,8 +75,8 @@ export default function Stats({ currentMonth, projectTeammates = [], onAddTeamma
  }, [view, selectedMonth]);
 
  const inOfficeDays = monthlyStats?.presenceDaysConfirmed ?? 0;
- const targetDays = monthlyStats?.presenceDaysTarget ?? user?.contract?.presenceDaysTarget ?? 10;
- const progress = targetDays > 0 ? Math.min((inOfficeDays / targetDays) * 100, 100) : 0;
+ const targetDays = monthlyStats?.presenceDaysTarget ?? user?.contract?.presenceDaysTarget ?? null;
+ const progress = targetDays && targetDays > 0 ? Math.min((inOfficeDays / targetDays) * 100, 100) : 0;
 
  const chartData = monthlyStats ? [
   { name: 'Office', count: monthlyStats.distribution.inOffice, status: WorkStatus.IN_OFFICE },
@@ -169,19 +169,29 @@ export default function Stats({ currentMonth, projectTeammates = [], onAddTeamma
  <div>
  <h3 className="font-headline text-sm font-bold text-on-surface-variant uppercase tracking-wider">Presence Target</h3>
  <p className="font-headline text-4xl font-extrabold text-primary mt-1">
- {inOfficeDays} <span className="text-sm text-on-surface-variant font-medium">/ {targetDays} days</span>
+ {targetDays !== null ? (
+ <>{inOfficeDays} <span className="text-sm text-on-surface-variant font-medium">/ {targetDays} days</span></>
+ ) : (
+ <>{inOfficeDays} <span className="text-sm text-on-surface-variant font-medium">days in office</span></>
+ )}
  </p>
  </div>
  <div className="text-right">
+ {targetDays !== null && (
  <span className="font-headline text-2xl font-extrabold text-primary">{Math.round(progress)}%</span>
+ )}
  </div>
  </div>
- 
+
+ {targetDays !== null && (
  <div className="h-4 bg-surface-container rounded-full overflow-hidden">
  <motion.div initial={{width: 0}} animate={{width: `${progress}%`}} transition={{duration: 1, ease: "easeOut"}} className="h-full bg-primary rounded-full shadow-[0_0_12px_rgba(54,169,194,0.4)]"/>
  </div>
+ )}
  <p className="font-sans text-[10px] text-on-surface-variant mt-3 leading-relaxed">
- {inOfficeDays < targetDays 
+ {targetDays === null
+ ? "No monthly presence target set for your role."
+ : inOfficeDays < targetDays
  ? `You need ${targetDays - inOfficeDays} more "presence days" to reach your monthly goal.`
  : "Congratulations! You've reached your monthly office target."}
  </p>
@@ -306,16 +316,7 @@ export default function Stats({ currentMonth, projectTeammates = [], onAddTeamma
  {/* Unbookings Section */}
  <section className="bg-surface-container-lowest rounded-3xl p-6 shadow-ambient border border-outline-variant/10">
  <h3 className="font-headline text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-6">Booking Changes</h3>
- <div className="grid grid-cols-2 gap-4">
- <div className="bg-surface-container-low/50 p-4 rounded-2xl border border-outline-variant/10 flex flex-col gap-3">
- <div className="w-8 h-8 rounded-xl bg-on-surface/5 flex items-center justify-center">
- <CalendarX className="w-4 h-4 text-on-surface-variant"/>
- </div>
- <div>
- <p className="font-headline text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Unbookings</p>
- <span className="font-headline text-3xl font-extrabold text-on-surface">{monthlyStats?.unbooking.standard ?? 0}</span>
- </div>
- </div>
+ <div className="grid grid-cols-1 gap-4">
  <div className="bg-warning-bg p-4 rounded-2xl border border-warning-stroke flex flex-col gap-3">
  <div className="w-8 h-8 rounded-xl bg-on-surface/5 flex items-center justify-center">
  <AlertTriangle className="w-4 h-4 text-warning-text"/>

@@ -6,11 +6,13 @@ import { getVisibleRoomsForUser, VisibleRoom } from './capacity.service';
 
 const rooms = new Map<string, Set<WebSocket>>();
 
-// Resolved once per connection from its subscribe token — office capacity is
-// per-user (getVisibleRoomsForUser), not per-role: due utenti con lo stesso ruolo
-// possono avere accessi diversi in modalità dblue-office. Falls back to the most
-// restrictive access (employee role, nessuna stanza extra) if the token is
-// missing/invalid rather than over-exposing room-restricted capacity.
+// Resolved once per connection from the "token" cookie sent on the WS handshake
+// (stesso cookie httpOnly usato da requireAuth — mai più un token in chiaro nel
+// messaggio subscribe) — office capacity is per-user (getVisibleRoomsForUser),
+// not per-role: due utenti con lo stesso ruolo possono avere accessi diversi in
+// modalità dblue-office. Falls back to the most restrictive access (employee
+// role, nessuna stanza extra) if the cookie is missing/invalid rather than
+// over-esporre capacità room-restricted.
 const visibleRoomsByConnection = new WeakMap<WebSocket, VisibleRoom[]>();
 const FALLBACK_ROLE = 'employee' as const;
 
@@ -27,7 +29,7 @@ export function initWebSocket(server: http.Server): void {
 
   wss.on('close', () => clearInterval(pingInterval));
 
-  wss.on('connection', (ws) => {
+  wss.on('connection', (ws, req) => {
     (ws as any).isAlive = true;
     ws.on('pong', () => { (ws as any).isAlive = true; });
 
@@ -39,7 +41,7 @@ export function initWebSocket(server: http.Server): void {
           const msg = JSON.parse(data.toString());
           if (msg.type === 'subscribe' && isValidDate(msg.date)) {
             if (subscribedDate) leaveRoom(subscribedDate, ws);
-            visibleRoomsByConnection.set(ws, await resolveVisibleRooms(msg.token));
+            visibleRoomsByConnection.set(ws, await resolveVisibleRoomsFromCookie(req));
             subscribedDate = msg.date;
             joinRoom(msg.date, ws);
           }
@@ -56,12 +58,23 @@ export function initWebSocket(server: http.Server): void {
   });
 }
 
-async function resolveVisibleRooms(token: unknown): Promise<VisibleRoom[]> {
-  if (typeof token !== 'string') return getVisibleRoomsForUser({ role: FALLBACK_ROLE });
+async function resolveVisibleRoomsFromCookie(req: http.IncomingMessage): Promise<VisibleRoom[]> {
+  const token = parseCookie(req.headers.cookie, 'token');
+  if (!token) return getVisibleRoomsForUser({ role: FALLBACK_ROLE });
   const payload = verifyToken(token);
   if (!payload) return getVisibleRoomsForUser({ role: FALLBACK_ROLE });
   const user = await User.findById(payload.sub).select('role dblueOfficeRooms').lean();
   return getVisibleRoomsForUser({ role: user?.role ?? FALLBACK_ROLE, dblueOfficeRooms: user?.dblueOfficeRooms });
+}
+
+function parseCookie(header: string | undefined, name: string): string | undefined {
+  if (!header) return undefined;
+  for (const part of header.split(';')) {
+    const idx = part.indexOf('=');
+    if (idx === -1) continue;
+    if (part.slice(0, idx).trim() === name) return decodeURIComponent(part.slice(idx + 1).trim());
+  }
+  return undefined;
 }
 
 // Chiave stabile per raggruppare connessioni con lo stesso identico accesso —

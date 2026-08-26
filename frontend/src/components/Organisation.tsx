@@ -378,8 +378,8 @@ export default function Organisation({ days: _days = [], activeMonth }: Organisa
  <div className="grid grid-cols-2 gap-4">
  <div className="bg-surface-container-lowest rounded-[24px] p-5 shadow-ambient border border-outline-variant/10 flex flex-col gap-2">
  <span className="text-xs font-bold text-on-surface-variant uppercase tracking-widest opacity-50">Office days</span>
- <span className="text-3xl font-headline font-black text-on-surface">{colleagueStats.presenceDaysConfirmed}<span className="text-base text-on-surface-variant/40 font-bold ml-1">/{colleagueStats.presenceDaysTarget}</span></span>
- <span className="text-xs text-on-surface-variant/50">target days this month</span>
+ <span className="text-3xl font-headline font-black text-on-surface">{colleagueStats.presenceDaysConfirmed}{colleagueStats.presenceDaysTarget !== null && <span className="text-base text-on-surface-variant/40 font-bold ml-1">/{colleagueStats.presenceDaysTarget}</span>}</span>
+ <span className="text-xs text-on-surface-variant/50">{colleagueStats.presenceDaysTarget !== null ? 'target days this month' : 'no monthly target set'}</span>
  </div>
  <div className="bg-surface-container-lowest rounded-[24px] p-5 shadow-ambient border border-outline-variant/10 flex flex-col gap-2">
  <span className="text-xs font-bold text-on-surface-variant uppercase tracking-widest opacity-50">Unbooking</span>

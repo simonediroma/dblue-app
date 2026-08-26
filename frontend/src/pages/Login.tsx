@@ -1,6 +1,6 @@
 import { useState, FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { BASE_URL, setStoredToken } from '../services/api';
+import { BASE_URL } from '../services/api';
 
 const DEV_LOGIN_ENABLED = import.meta.env.VITE_DEV_LOGIN_ENABLED === 'true'
   || new URLSearchParams(window.location.search).get('dev') === 'true';
@@ -31,13 +31,104 @@ export default function Login() {
         setDevError((err as { error?: string }).error || 'Credenziali non valide');
         return;
       }
-      const data = await res.json().catch(() => ({})) as { token?: string };
-      if (data.token) setStoredToken(data.token);
       window.location.href = '/';
     } catch {
       setDevError('Errore di rete');
     } finally {
       setDevLoading(false);
+    }
+  }
+
+  type AuthMode = 'signin' | 'signup-email' | 'signup-password';
+  const [mode, setMode] = useState<AuthMode>('signin');
+
+  const [signinEmail, setSigninEmail] = useState('');
+  const [signinPassword, setSigninPassword] = useState('');
+  const [signinError, setSigninError] = useState('');
+  const [signinLoading, setSigninLoading] = useState(false);
+
+  const [signupEmail, setSignupEmail] = useState('');
+  const [signupPassword, setSignupPassword] = useState('');
+  const [signupConfirm, setSignupConfirm] = useState('');
+  const [signupError, setSignupError] = useState('');
+  const [signupLoading, setSignupLoading] = useState(false);
+
+  async function handleSignin(e: FormEvent) {
+    e.preventDefault();
+    setSigninError('');
+    setSigninLoading(true);
+    try {
+      const res = await fetch(`${BASE_URL}/auth/login`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: signinEmail, password: signinPassword }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setSigninError((err as { error?: string }).error || 'Accesso non riuscito');
+        return;
+      }
+      window.location.href = '/';
+    } catch {
+      setSigninError('Errore di rete');
+    } finally {
+      setSigninLoading(false);
+    }
+  }
+
+  async function handleSignupEmailCheck(e: FormEvent) {
+    e.preventDefault();
+    setSignupError('');
+    setSignupLoading(true);
+    try {
+      const res = await fetch(`${BASE_URL}/auth/signup-check`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: signupEmail }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setSignupError((err as { error?: string }).error || 'Email non valida');
+        return;
+      }
+      setMode('signup-password');
+    } catch {
+      setSignupError('Errore di rete');
+    } finally {
+      setSignupLoading(false);
+    }
+  }
+
+  async function handleSignupSubmit(e: FormEvent) {
+    e.preventDefault();
+    setSignupError('');
+    if (signupPassword.length < 8) {
+      setSignupError('La password deve avere almeno 8 caratteri');
+      return;
+    }
+    if (signupPassword !== signupConfirm) {
+      setSignupError('Le due password non coincidono');
+      return;
+    }
+    setSignupLoading(true);
+    try {
+      const res = await fetch(`${BASE_URL}/auth/signup`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: signupEmail, password: signupPassword }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setSignupError((err as { error?: string }).error || 'Registrazione non riuscita');
+        return;
+      }
+      window.location.href = '/';
+    } catch {
+      setSignupError('Errore di rete');
+    } finally {
+      setSignupLoading(false);
     }
   }
 
@@ -77,7 +168,7 @@ export default function Login() {
           Accedi con Google
         </a>
 
-        {DEV_LOGIN_ENABLED && (
+        {DEV_LOGIN_ENABLED ? (
           <>
             <div className="w-full flex items-center gap-3">
               <div className="flex-1 h-px bg-outline-variant" />
@@ -113,6 +204,115 @@ export default function Login() {
                 {devLoading ? 'Accesso…' : 'Accedi (dev)'}
               </button>
             </form>
+          </>
+        ) : (
+          <>
+            <div className="w-full flex items-center gap-3">
+              <div className="flex-1 h-px bg-outline-variant" />
+              <span className="text-xs text-on-surface-variant">oppure</span>
+              <div className="flex-1 h-px bg-outline-variant" />
+            </div>
+
+            {mode === 'signin' && (
+              <form onSubmit={handleSignin} className="w-full flex flex-col gap-3">
+                <input
+                  type="email"
+                  placeholder="Email"
+                  value={signinEmail}
+                  onChange={e => setSigninEmail(e.target.value)}
+                  required
+                  className="w-full text-sm px-3 py-2 rounded-lg border border-outline-variant bg-surface-container text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={signinPassword}
+                  onChange={e => setSigninPassword(e.target.value)}
+                  required
+                  className="w-full text-sm px-3 py-2 rounded-lg border border-outline-variant bg-surface-container text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+                {signinError && <p className="text-xs text-error">{signinError}</p>}
+                <button
+                  type="submit"
+                  disabled={signinLoading}
+                  className="w-full text-sm font-medium py-2 rounded-lg bg-primary text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {signinLoading ? 'Accesso…' : 'Accedi'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setMode('signup-email'); setSigninError(''); }}
+                  className="text-xs text-on-surface-variant hover:text-on-surface transition-colors"
+                >
+                  Non hai un account? Registrati
+                </button>
+              </form>
+            )}
+
+            {mode === 'signup-email' && (
+              <form onSubmit={handleSignupEmailCheck} className="w-full flex flex-col gap-3">
+                <input
+                  type="email"
+                  placeholder="Email aziendale"
+                  value={signupEmail}
+                  onChange={e => setSignupEmail(e.target.value)}
+                  required
+                  className="w-full text-sm px-3 py-2 rounded-lg border border-outline-variant bg-surface-container text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+                {signupError && <p className="text-xs text-error">{signupError}</p>}
+                <button
+                  type="submit"
+                  disabled={signupLoading}
+                  className="w-full text-sm font-medium py-2 rounded-lg bg-primary text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {signupLoading ? 'Verifica…' : 'Continua'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setMode('signin'); setSignupError(''); }}
+                  className="text-xs text-on-surface-variant hover:text-on-surface transition-colors"
+                >
+                  Hai già un account? Accedi
+                </button>
+              </form>
+            )}
+
+            {mode === 'signup-password' && (
+              <form onSubmit={handleSignupSubmit} className="w-full flex flex-col gap-3">
+                <p className="text-xs text-on-surface-variant -mt-1">{signupEmail}</p>
+                <input
+                  type="password"
+                  placeholder="Scegli una password"
+                  value={signupPassword}
+                  onChange={e => setSignupPassword(e.target.value)}
+                  required
+                  className="w-full text-sm px-3 py-2 rounded-lg border border-outline-variant bg-surface-container text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+                <input
+                  type="password"
+                  placeholder="Conferma password"
+                  value={signupConfirm}
+                  onChange={e => setSignupConfirm(e.target.value)}
+                  required
+                  className="w-full text-sm px-3 py-2 rounded-lg border border-outline-variant bg-surface-container text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+                {signupError && <p className="text-xs text-error">{signupError}</p>}
+                <button
+                  type="submit"
+                  disabled={signupLoading}
+                  className="w-full text-sm font-medium py-2 rounded-lg bg-primary text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {signupLoading ? 'Creazione account…' : 'Crea account'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setMode('signup-email'); setSignupError(''); }}
+                  className="text-xs text-on-surface-variant hover:text-on-surface transition-colors"
+                >
+                  Indietro
+                </button>
+              </form>
+            )}
           </>
         )}
       </div>

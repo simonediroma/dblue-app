@@ -14,7 +14,7 @@ import { getBookingAppSession } from '../services/dblueOfficeApi.service';
 const mockIsEnabled = isDblueOfficeIntegrationEnabled as jest.Mock;
 const mockGetSession = getBookingAppSession as jest.Mock;
 
-const STATIC_FALLBACK = [{ start: '2026-11-01', end: '2026-11-01', title: 'Office closed' }];
+const STATIC_FALLBACK = [{ start: '2026-11-01', end: '2026-11-01', title: 'Office closed', isNonWorkingDay: false }];
 
 // closures.service.ts tiene una cache in-memory a livello di modulo: l'ordine dei
 // test qui sotto è intenzionale (il caso "nessuna cache pregressa" deve girare
@@ -54,7 +54,7 @@ describe('closures.service', () => {
 
     const result = await getClosures('natalia.kravchenko@dblue.it');
 
-    expect(result).toEqual([{ start: '2026-08-15', end: '2026-08-22', title: 'Summer closure' }]);
+    expect(result).toEqual([{ start: '2026-08-15', end: '2026-08-22', title: 'Summer closure', isNonWorkingDay: false }]);
     expect(mockGetSession).toHaveBeenCalledWith('natalia.kravchenko@dblue.it');
   });
 
@@ -64,7 +64,7 @@ describe('closures.service', () => {
 
     const result = await getClosures('dev@dblue.it');
 
-    expect(result).toEqual([{ start: '2026-08-15', end: '2026-08-22', title: 'Summer closure' }]);
+    expect(result).toEqual([{ start: '2026-08-15', end: '2026-08-22', title: 'Summer closure', isNonWorkingDay: false }]);
     expect(mockGetSession).not.toHaveBeenCalled();
   });
 
@@ -76,7 +76,7 @@ describe('closures.service', () => {
 
     const result = await getClosures('dev@dblue.it');
 
-    expect(result).toEqual([{ start: '2026-08-15', end: '2026-08-22', title: 'Summer closure' }]);
+    expect(result).toEqual([{ start: '2026-08-15', end: '2026-08-22', title: 'Summer closure', isNonWorkingDay: false }]);
     expect(mockGetSession).toHaveBeenCalled();
 
     jest.spyOn(Date, 'now').mockRestore();
@@ -102,10 +102,33 @@ describe('closures.service', () => {
 
     const result = await getClosures('dev@dblue.it');
 
-    expect(result).toEqual([{ start: '2026-08-15', end: '2026-08-22', title: 'Valid closure' }]);
+    expect(result).toEqual([{ start: '2026-08-15', end: '2026-08-22', title: 'Valid closure', isNonWorkingDay: false }]);
     expect(warnSpy).toHaveBeenCalled();
 
     jest.spyOn(Date, 'now').mockRestore();
     warnSpy.mockRestore();
+  });
+
+  it('propagates isNonWorkingDay:true when dblue-office sends it', async () => {
+    const realNow = Date.now.bind(Date);
+    jest.spyOn(Date, 'now').mockImplementation(() => realNow() + 30 * 60 * 1000); // oltre il TTL, forza un refetch
+    mockIsEnabled.mockResolvedValue(true);
+    mockGetSession.mockResolvedValue({
+      success: true,
+      user: {},
+      userSpaceAccess: [],
+      userRoomList: [],
+      allRooms: [],
+      roomCategories: [],
+      closures: [
+        { _id: '1', title: 'Christmas', start: '25-12-2026', end: '25-12-2026', isNonWorkingDay: true },
+      ],
+    });
+
+    const result = await getClosures('dev@dblue.it');
+
+    expect(result).toEqual([{ start: '2026-12-25', end: '2026-12-25', title: 'Christmas', isNonWorkingDay: true }]);
+
+    jest.spyOn(Date, 'now').mockRestore();
   });
 });
