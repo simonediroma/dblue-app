@@ -42,10 +42,9 @@ export interface DblueOfficeUserRoom {
   // riservati sono per lui/lei, non sottratti) — es. lab_responsible sulla stanza
   // Lab. Vedi userSync.service.ts per dove il calcolo avviene davvero.
   includeReserved: boolean;
-  // Proposto a dblue-office, non ancora implementato lato loro (vedi email di
-  // richiesta) — identifica la stanza come "il Lab" ai fini della prenotazione
-  // esclusiva per la giornata. Opzionale finché non lo shippano: undefined si
-  // mappa a false in userSync.service.ts, degrado esplicito già esistente.
+  // Confermato implementato da Natalia (23/08) — identifica la stanza come "il Lab"
+  // ai fini della prenotazione esclusiva per la giornata. Resta opzionale per
+  // sicurezza: undefined si mappa a false in userSync.service.ts.
   isLab?: boolean;
 }
 
@@ -57,7 +56,7 @@ export interface DblueOfficeRoom {
   capacity: number;
   reserved: number;
   isActive: boolean;
-  // Vedi DblueOfficeUserRoom.isLab — stessa proposta, stesso campo su allRooms.
+  // Vedi DblueOfficeUserRoom.isLab — stesso campo, confermato anche su allRooms.
   isLab?: boolean;
 }
 
@@ -70,7 +69,9 @@ export interface DblueOfficeRoomCategory {
 
 export interface DblueOfficeClosure {
   _id: string;
-  title: string;
+  // Confermato dalla doc aggiornata di Natalia (23/08): il campo reale si chiama
+  // "motivation", non "title" come indicato erroneamente nella doc precedente.
+  motivation: string;
   // Formato DD-MM-YYYY (confermato da Natalia: la doc originale indicava ISO 8601
   // per errore, il formato dati realmente inviato dall'API è questo) — usare
   // parseDblueOfficeDate() per convertirlo, mai `new Date(...)` diretto.

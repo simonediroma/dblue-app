@@ -48,7 +48,7 @@ describe('closures.service', () => {
       allRooms: [],
       roomCategories: [],
       closures: [
-        { _id: '1', title: 'Summer closure', start: '15-08-2026', end: '22-08-2026' },
+        { _id: '1', motivation: 'Summer closure', start: '15-08-2026', end: '22-08-2026' },
       ],
     });
 
@@ -95,8 +95,8 @@ describe('closures.service', () => {
       allRooms: [],
       roomCategories: [],
       closures: [
-        { _id: '1', title: 'Valid closure', start: '15-08-2026', end: '22-08-2026' },
-        { _id: '2', title: 'Bad closure', start: '2026-08-15T00:00:00.000Z', end: '2026-08-22T00:00:00.000Z' },
+        { _id: '1', motivation: 'Valid closure', start: '15-08-2026', end: '22-08-2026' },
+        { _id: '2', motivation: 'Bad closure', start: '2026-08-15T00:00:00.000Z', end: '2026-08-22T00:00:00.000Z' },
       ],
     });
 
@@ -121,7 +121,7 @@ describe('closures.service', () => {
       allRooms: [],
       roomCategories: [],
       closures: [
-        { _id: '1', title: 'Christmas', start: '25-12-2026', end: '25-12-2026', isNonWorkingDay: true },
+        { _id: '1', motivation: 'Christmas', start: '25-12-2026', end: '25-12-2026', isNonWorkingDay: true },
       ],
     });
 

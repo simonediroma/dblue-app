@@ -102,7 +102,7 @@ describe('dblueOfficeCompliance.service', () => {
           { id: 'r2', name: '', category: 'cat1', color: '#fff', capacity: 4, reserved: 0, isActive: true },
         ],
         roomCategories: [{ id: 'cat1', category: 'Open Space', bgcolor: '#fff', color: '#000' }],
-        closures: [{ _id: 'c1', title: 'Bad closure', start: '20-08-2026', end: '15-08-2026' }],
+        closures: [{ _id: 'c1', motivation: 'Bad closure', start: '20-08-2026', end: '15-08-2026' }],
       });
     });
 
@@ -129,7 +129,7 @@ describe('dblueOfficeCompliance.service', () => {
       const account = DEV_ACCOUNTS.find((a) => a.email === email)!;
       return Promise.resolve({
         ...sessionFor(account.role),
-        closures: [{ _id: 'c1', title: 'Wrong format', start: '2026-08-15T00:00:00.000Z', end: '2026-08-22T00:00:00.000Z' }],
+        closures: [{ _id: 'c1', motivation: 'Wrong format', start: '2026-08-15T00:00:00.000Z', end: '2026-08-22T00:00:00.000Z' }],
       });
     });
 
@@ -145,7 +145,7 @@ describe('dblueOfficeCompliance.service', () => {
       const account = DEV_ACCOUNTS.find((a) => a.email === email)!;
       return Promise.resolve({
         ...sessionFor(account.role),
-        closures: [{ _id: 'c1', title: 'Ferragosto', start: '15-08-2026', end: '22-08-2026' }],
+        closures: [{ _id: 'c1', motivation: 'Ferragosto', start: '15-08-2026', end: '22-08-2026' }],
       });
     });
 
