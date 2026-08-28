@@ -1,6 +1,8 @@
 import { Types } from 'mongoose';
 import { WorkingStatus } from '../models/working-status.model';
 import { User, IUser } from '../models/user.model';
+import { getClosures, OfficeClosure } from './closures.service';
+import { getWorkingDaysOfMonth } from './working-status.service';
 
 export interface MonthlyStats {
   month: string;
@@ -36,7 +38,27 @@ export interface AreaStats {
   totalUnbooking: { standard: number; lastMinute: number };
 }
 
-export async function getMonthlyStats(userId: string, month: string): Promise<MonthlyStats> {
+// Conta, tra le chiusure marcate isNonWorkingDay (festività, nessuna presenza attesa),
+// quanti giorni lavorativi del mese cadono in un range di chiusura — da escludere dal
+// denominatore del target proporzionale. Le chiusure isNonWorkingDay:false ("ufficio
+// chiuso ma si lavora da remoto") non riducono il target: la presenza resta attesa.
+function countClosureNonWorkingDaysInMonth(month: string, closures: OfficeClosure[]): number {
+  const workingDays = new Set(getWorkingDaysOfMonth(month));
+  let count = 0;
+  for (const c of closures) {
+    if (!c.isNonWorkingDay) continue;
+    const cur = new Date(c.start);
+    const end = new Date(c.end);
+    while (cur <= end) {
+      const d = cur.toISOString().slice(0, 10);
+      if (workingDays.has(d)) count++;
+      cur.setDate(cur.getDate() + 1);
+    }
+  }
+  return count;
+}
+
+export async function getMonthlyStats(userId: string, month: string, requesterEmail?: string): Promise<MonthlyStats> {
   const prefix = `${month}-`;
 
   const [statuses, user] = await Promise.all([
@@ -47,8 +69,6 @@ export async function getMonthlyStats(userId: string, month: string): Promise<Mo
   const presenceDaysConfirmed = statuses.filter(
     (ws) => ws.status === 'in_office' && ws.isConfirmed
   ).length;
-
-  const presenceDaysTarget = user?.contract?.presenceDaysTarget ?? null;
 
   const distribution = {
     inOffice: statuses.filter((ws) => ws.status === 'in_office' && ws.isConfirmed).length,
@@ -66,10 +86,23 @@ export async function getMonthlyStats(userId: string, month: string): Promise<Mo
     lastMinute: statuses.filter((ws) => ws.isLastMinuteUnbooking).length,
   };
 
+  const rawTarget = user?.contract?.presenceDaysTarget ?? null;
+  const closures = requesterEmail ? await getClosures(requesterEmail) : [];
+  const allWorkingDays = getWorkingDaysOfMonth(month);
+  const closureNonWorkingDays = countClosureNonWorkingDaysInMonth(month, closures);
+  const workingDaysCount = allWorkingDays.length - closureNonWorkingDays;
+  const absenceDays = distribution.leave + distribution.sick;
+  const effectiveWorkingDays = Math.max(0, workingDaysCount - absenceDays);
+
+  const presenceDaysTarget =
+    rawTarget === null || workingDaysCount === 0
+      ? rawTarget
+      : Math.round((rawTarget * effectiveWorkingDays) / workingDaysCount);
+
   return { month, presenceDaysConfirmed, presenceDaysTarget, distribution, unbooking };
 }
 
-export async function getAnnualStats(userId: string, year: number): Promise<AnnualStats> {
+export async function getAnnualStats(userId: string, year: number, requesterEmail?: string): Promise<AnnualStats> {
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
@@ -81,7 +114,7 @@ export async function getAnnualStats(userId: string, year: number): Promise<Annu
   }
 
   const monthlyResults = await Promise.all(
-    completedMonths.map((month) => getMonthlyStats(userId, month))
+    completedMonths.map((month) => getMonthlyStats(userId, month, requesterEmail))
   );
 
   const monthlyBreakdown = monthlyResults.map(({ month, presenceDaysConfirmed, presenceDaysTarget }) => ({

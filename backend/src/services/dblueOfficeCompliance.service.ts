@@ -53,7 +53,7 @@ function checkRoomShape(room: DblueOfficeUserRoom | DblueOfficeRoom, source: str
 
 function checkClosure(closure: DblueOfficeSessionResponse['closures'][number]): DblueOfficeSanityIssue[] {
   const issues: DblueOfficeSanityIssue[] = [];
-  const label = closure.title?.trim() || closure._id || '(senza titolo)';
+  const label = closure.motivation?.trim() || closure._id || '(senza titolo)';
   const start = parseDblueOfficeDate(closure.start);
   const end = parseDblueOfficeDate(closure.end);
   if (!start) {

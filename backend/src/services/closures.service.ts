@@ -42,10 +42,10 @@ export async function getClosures(requesterEmail: string): Promise<OfficeClosure
       const start = parseDblueOfficeDate(c.start);
       const end = parseDblueOfficeDate(c.end);
       if (!start || !end) {
-        console.warn(`[dblue-office] chiusura "${c.title || c._id}" scartata, data non valida (atteso DD-MM-YYYY): start="${c.start}" end="${c.end}"`);
+        console.warn(`[dblue-office] chiusura "${c.motivation || c._id}" scartata, data non valida (atteso DD-MM-YYYY): start="${c.start}" end="${c.end}"`);
         continue;
       }
-      closures.push({ start, end, title: c.title, isNonWorkingDay: c.isNonWorkingDay ?? false });
+      closures.push({ start, end, title: c.motivation, isNonWorkingDay: c.isNonWorkingDay ?? false });
     }
     cache = { closures, fetchedAt: Date.now() };
     return closures;

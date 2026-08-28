@@ -13,7 +13,7 @@ router.get('/monthly', requireAuth, async (req: Request, res: Response): Promise
     return;
   }
   const user = req.user as IUser;
-  const stats = await getMonthlyStats(user._id.toString(), month);
+  const stats = await getMonthlyStats(user._id.toString(), month, user.email);
   res.json(stats);
 });
 
@@ -25,7 +25,7 @@ router.get('/annual', requireAuth, async (req: Request, res: Response): Promise<
     return;
   }
   const user = req.user as IUser;
-  const stats = await getAnnualStats(user._id.toString(), yearNum);
+  const stats = await getAnnualStats(user._id.toString(), yearNum, user.email);
   res.json(stats);
 });
 

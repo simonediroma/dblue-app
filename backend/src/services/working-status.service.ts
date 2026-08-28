@@ -26,7 +26,7 @@ function getTodayStr(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function getWorkingDaysOfMonth(month: string): string[] {
+export function getWorkingDaysOfMonth(month: string): string[] {
   const [year, mon] = month.split('-').map(Number);
   const days: string[] = [];
   const date = new Date(year, mon - 1, 1);

@@ -70,7 +70,9 @@ export interface DblueOfficeRoomCategory {
 
 export interface DblueOfficeClosure {
   _id: string;
-  title: string;
+  // Confermato da Natalia (thread "motivation vs title", 26/08): l'API manda
+  // davvero `motivation`, la doc precedente indicava erroneamente `title`.
+  motivation: string;
   // Formato DD-MM-YYYY (confermato da Natalia: la doc originale indicava ISO 8601
   // per errore, il formato dati realmente inviato dall'API è questo) — usare
   // parseDblueOfficeDate() per convertirlo, mai `new Date(...)` diretto.
