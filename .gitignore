@@ -7,5 +7,11 @@ dist/
 *.log
 .DS_Store
 
+# environment files — copy the relevant one to .env locally; set vars in Coolify for deploys
+*/.env.development
+*/.env.staging
+*/.env.production
+client_secret_519808031317-35q8j1mga1b2020fnjng1627lbf4grac.apps.googleusercontent.com.json
+
 # PDF generati dai documenti di analisi (artefatti, non versionati)
 docs/*.pdf

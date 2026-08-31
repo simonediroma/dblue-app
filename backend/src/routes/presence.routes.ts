@@ -79,7 +79,7 @@ router.post('/bulk', async (req: Request, res: Response): Promise<void> => {
 
 // GET /presence/:date/offtime
 router.get('/:date/offtime', async (req: Request, res: Response): Promise<void> => {
-  const { date } = req.params;
+  const { date } = req.params as { date: string };
   try {
     const ws = await WorkingStatus.findOne({ userId: userId(req), date }).lean();
     if (!ws) {
@@ -94,7 +94,7 @@ router.get('/:date/offtime', async (req: Request, res: Response): Promise<void> 
 
 // PATCH /presence/:date/offtime
 router.patch('/:date/offtime', async (req: Request, res: Response): Promise<void> => {
-  const { date } = req.params;
+  const { date } = req.params as { date: string };
   const { offTime } = req.body as {
     offTime: { type: 'morning' | 'afternoon' | 'custom'; hours?: number } | null;
   };
@@ -108,7 +108,7 @@ router.patch('/:date/offtime', async (req: Request, res: Response): Promise<void
 
 // POST /presence/:date/checkin
 router.post('/:date/checkin', async (req: Request, res: Response): Promise<void> => {
-  const { date } = req.params;
+  const { date } = req.params as { date: string };
   const todayStr = new Date().toISOString().slice(0, 10);
   if (date !== todayStr) {
     res.status(400).json({ error: 'Il check-in è possibile solo per il giorno corrente' });
@@ -154,7 +154,7 @@ router.post('/:date/checkin', async (req: Request, res: Response): Promise<void>
 
 // DELETE /presence/:date/checkin
 router.delete('/:date/checkin', async (req: Request, res: Response): Promise<void> => {
-  const { date } = req.params;
+  const { date } = req.params as { date: string };
   try {
     const result = await undoCheckIn(userId(req), date);
     res.json(result);
@@ -165,7 +165,7 @@ router.delete('/:date/checkin', async (req: Request, res: Response): Promise<voi
 
 // DELETE /presence/:date/offtime
 router.delete('/:date/offtime', async (req: Request, res: Response): Promise<void> => {
-  const { date } = req.params;
+  const { date } = req.params as { date: string };
   try {
     const result = await updateOffTime(userId(req), date, null);
     res.json(result);
@@ -176,7 +176,7 @@ router.delete('/:date/offtime', async (req: Request, res: Response): Promise<voi
 
 // GET /presence/:date/colleagues
 router.get('/:date/colleagues', async (req: Request, res: Response): Promise<void> => {
-  const { date } = req.params;
+  const { date } = req.params as { date: string };
   try {
     const result = await getColleaguePresences(date, userId(req).toString());
     res.json(result);
@@ -187,7 +187,7 @@ router.get('/:date/colleagues', async (req: Request, res: Response): Promise<voi
 
 // POST /presence/:date/retrofit
 router.post('/:date/retrofit', async (req: Request, res: Response): Promise<void> => {
-  const { date } = req.params;
+  const { date } = req.params as { date: string };
   const { status, offTime } = req.body as {
     status: string;
     offTime?: { type: 'morning' | 'afternoon' | 'custom'; hours?: number };
