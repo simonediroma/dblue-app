@@ -22,7 +22,7 @@ router.post(
   '/retrofit/:userId/:date',
   requireRole('director', 'owner'),
   async (req: Request, res: Response): Promise<void> => {
-    const { userId, date } = req.params;
+    const { userId, date } = req.params as { userId: string; date: string };
     const { status, offTime } = req.body as {
       status: string;
       offTime?: { type: 'morning' | 'afternoon' | 'custom'; hours?: number };
@@ -84,7 +84,7 @@ router.patch(
   '/users/:userId/role',
   requireRole('owner'),
   async (req: Request, res: Response): Promise<void> => {
-    const { userId } = req.params;
+    const { userId } = req.params as { userId: string };
     const { role } = req.body as { role: IUser['role'] };
 
     const validRoles: IUser['role'][] = [
@@ -133,7 +133,7 @@ router.get(
   '/stats/:userId/monthly',
   requireRole('director', 'owner'),
   async (req: Request, res: Response): Promise<void> => {
-    const { userId: targetUserId } = req.params;
+    const { userId: targetUserId } = req.params as { userId: string };
     const { month } = req.query as { month?: string };
 
     if (!month || !/^\d{4}-\d{2}$/.test(month)) {

@@ -15,8 +15,9 @@ function handleError(res: Response, err: unknown): void {
 
 router.post('/:date', requireRole('lab_responsible', 'owner'), async (req: Request, res: Response): Promise<void> => {
   const user = req.user as IUser;
+  const { date } = req.params as { date: string };
   try {
-    const result = await bookLab(req.params.date, {
+    const result = await bookLab(date, {
       _id: user._id as Types.ObjectId,
       role: user.role,
       name: user.name,
@@ -29,8 +30,9 @@ router.post('/:date', requireRole('lab_responsible', 'owner'), async (req: Reque
 });
 
 router.delete('/:date', requireRole('lab_responsible', 'owner'), async (req: Request, res: Response): Promise<void> => {
+  const { date } = req.params as { date: string };
   try {
-    const result = await unbookLab(req.params.date);
+    const result = await unbookLab(date);
     res.json(result);
   } catch (err) {
     handleError(res, err);

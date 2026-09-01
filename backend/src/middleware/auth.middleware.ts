@@ -15,12 +15,15 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     return;
   }
 
-  const user = await User.findById(payload.sub);
-  if (!user) {
-    res.status(401).json({ error: 'Non autenticato' });
-    return;
+  try {
+    const user = await User.findById(payload.sub);
+    if (!user) {
+      res.status(401).json({ error: 'Non autenticato' });
+      return;
+    }
+    req.user = user;
+    next();
+  } catch (err) {
+    next(err);
   }
-
-  req.user = user;
-  next();
 }

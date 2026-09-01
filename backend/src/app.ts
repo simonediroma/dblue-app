@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth.routes';
@@ -31,6 +31,14 @@ export function createApp() {
   app.use('/admin/test', adminTestRoutes);
   app.use('/closures', closuresRoutes);
   app.use('/lab-bookings', labBookingsRoutes);
+
+  // Express 5 forwards async errors automatically — this handler catches them all
+  // and returns a consistent JSON shape instead of the bare text fallback.
+  app.use((err: Error & { statusCode?: number }, _req: Request, res: Response, _next: NextFunction) => {
+    const status = err.statusCode ?? 500;
+    console.error(err);
+    res.status(status).json({ error: err.message ?? 'Errore interno' });
+  });
 
   return app;
 }
