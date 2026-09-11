@@ -14,6 +14,7 @@
 4. **PR:** una PR per task/sessione. Ogni PR deve essere indipendente e reviewable.
 5. **File invariati:** non toccare mai `presence---office-planner/` (prototipo AI Studio — sola lettura, usato solo come riferimento UI).
 6. **File Coolify:** non toccare mai `backend/Dockerfile`, `frontend/Dockerfile`, `frontend/nginx/default.conf`, `docs/coolify-deployment-guide.md` — modificati dal cliente per il proprio deploy, mai da modificare senza conferma esplicita dell'utente.
+7. **Test locale prima del merge su staging (richiesta esplicita del cliente, settembre 2026):** ogni branch va testato su una macchina locale reale (setup già documentato in `docs/technical-guide.md` §5.1: `docker compose up -d` per Mongo + `npm run dev` su backend e frontend) prima di mergiare su main/staging (Coolify) — niente dev-env condiviso separato. Le sessioni Claude Code su web NON possono eseguire questo passo in autonomia: Docker/MongoDB reale non sono raggiungibili da questo sandbox (pull immagini e connessioni TCP dirette bloccate dalla policy di rete, verificato). Claude deve quindi: validare tutto il possibile da remoto (`tsc --noEmit`, lint, unit test mock-only, eventuale click-through UI-only via browser headless) e poi segnalare esplicitamente all'utente che manca il check locale con DB reale prima di procedere al merge — mai mergiare/pushare su staging al posto suo saltando questo passaggio.
 
 ---
 
